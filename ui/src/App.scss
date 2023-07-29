@@ -1,5 +1,16 @@
+html, body, #root, .App {
+  height: 100%;
+}
 .App {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   text-align: center;
+  border-radius: 8px;
+  background: #000;
+  height: 100%;
 }
 
 .App-logo {
@@ -32,6 +43,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

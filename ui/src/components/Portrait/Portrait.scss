@@ -1,0 +1,35 @@
+.portrait {
+  position: relative;
+}
+
+.portrait .suspect-info {
+  position: absolute;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+  padding-top: 50px;
+  width: max-content;
+}
+
+.suspect-info .suspect-name {
+  font-size: 55px;
+  color: #fff;
+  font-weight: 400;
+}
+
+.suspect-info .suspect-age {
+  font-size: 32px;
+  color: #fff;
+  font-weight: 400;
+  text-align: left;
+}
+
+.portrait .flip-card-button {
+  position: absolute;
+  right: 40px;
+  bottom: 40px;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 400;
+  text-align: left;
+}

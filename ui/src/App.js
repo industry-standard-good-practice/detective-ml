@@ -1,9 +1,15 @@
-import './App.css';
+import './App.scss';
 import Home from './components/Home'
+import Chat from './components/Chat/Chat'
+import Navbar from './components/Navbar/Navbar'
 
 function App() {
   return (
-    <Home />
+    <div className='App'>
+      <Navbar />
+      <Chat />
+      {/* <Home /> */}
+    </div>
   );
 }
 

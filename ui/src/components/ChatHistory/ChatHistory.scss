@@ -1,0 +1,46 @@
+@import '../../styles/variables/colors.scss';
+
+.chat-history {
+  text-align: left;
+  list-style-type: none;
+  width: 100%;
+}
+
+.user-chat-message {
+  background: transparent;
+  border: none;
+  color: $text-message-white;
+  width: 100%;
+}
+
+.other-chat-message {
+  background: transparent;
+  border: none;
+  color: $text-message-white;
+  width: 100%;
+}
+
+.message {
+  padding-top: 25px;
+  font-size: 18px;
+}
+
+.message-sender {
+  padding-bottom: 5px;
+}
+
+.user-sender {
+  color: $text-message-user;
+}
+
+.other-sender {
+  color: $text-message-other;
+}
+
+.chat-time {
+  background: transparent;
+  border: none;
+  color: $text-accent-gray;
+  width: 100%;
+  text-align: center;
+}
