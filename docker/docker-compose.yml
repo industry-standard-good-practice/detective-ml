@@ -19,3 +19,4 @@ services:
       - "3001:3001"
     environment:
       - PALM_KEY=${PALM_KEY}
+      
