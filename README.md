@@ -11,10 +11,10 @@ npm start --prefix server
 ### Docker
 To build local dev changes and spin up a running docker container of the project run the following command:
 ```
-#from /docker
+// From /docker
 docker-compose up --build
 ```
 ```
-# From root
+// From project root
 docker-compose -f docker/docker-compose.yml up --build
 ```
