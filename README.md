@@ -1,4 +1,4 @@
-## Local Development
+# Local Development
 
 to run the full stack of this application in your local host machine you will want to run the two following commands:
 ```
