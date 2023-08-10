@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/dockerfile.ui
+    image: detective-ml-ui:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - PALM_KEY=${PALM_KEY}
+  server:
+    build:
+      context: ..
+      dockerfile: docker/dockerfile.server
+    image: detective-ml-server:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - PALM_KEY=${PALM_KEY}

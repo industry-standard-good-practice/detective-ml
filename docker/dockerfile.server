@@ -1,0 +1,16 @@
+FROM node:16.20.1-alpine3.18
+
+# Set the working directory in the container
+WORKDIR /usr/src/app/server
+
+# Bundle application source to the container
+COPY ../server .
+
+# Install application dependencies
+RUN npm install
+
+# Specify the port the app runs on
+EXPOSE 3001
+
+# Command to run the application
+ENTRYPOINT ["npm", "start"]
