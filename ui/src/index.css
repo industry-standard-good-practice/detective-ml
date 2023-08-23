@@ -1,9 +1,11 @@
 body {
   margin: 0;
   font-family: 'Courier';
-  -webkit-font-smoothing: none;
+  /* -webkit-font-smoothing: none; */
   /* -webkit-font-smoothing: antialiased; */
-  -moz-osx-font-smoothing: grayscale;
+  /* -moz-osx-font-smoothing: grayscale; */
+  background: #000;
+
 }
 
 code {
