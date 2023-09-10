@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import logo from '../logo.svg';
-import '../App.css';
+import '../App.scss';
 import { fetchExample } from '../store/actions';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
