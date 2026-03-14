@@ -127,6 +127,7 @@ interface StepConfig {
   requiresMenu?: boolean;
   requiresProfile?: boolean;
   requiresIntel?: boolean;
+  completedTargetId?: string;
 }
 
 const STEPS: Record<number, StepConfig> = {
@@ -170,6 +171,7 @@ const STEPS: Record<number, StepConfig> = {
     title: "Deep Dive",
     description: "Every suspect has a public profile and a hidden side. Click the [Flip Card] button to see their background, role, and known facts.",
     targetId: "flip-card-button",
+    completedTargetId: "active-suspect-card",
     position: "right",
     mobilePosition: "bottom",
     requiresAction: true,
@@ -317,7 +319,8 @@ export const OnboardingTour: React.FC = () => {
       }
     }
 
-    const elements = document.querySelectorAll(`[id="${step.targetId}"], [id="${step.targetId}-mobile"]`);
+    const targetId = (step.completedTargetId && isActionCompleted) ? step.completedTargetId : step.targetId;
+    const elements = document.querySelectorAll(`[id="${targetId}"], [id="${targetId}-mobile"]`);
       const el = Array.from(elements).find(e => {
         const style = window.getComputedStyle(e);
         return style.display !== 'none' && style.visibility !== 'hidden' && (e as HTMLElement).offsetParent !== null;
@@ -429,7 +432,7 @@ export const OnboardingTour: React.FC = () => {
       window.removeEventListener('resize', updatePosition);
       clearInterval(interval);
     };
-  }, [currentStep, isActive, step]);
+  }, [currentStep, isActive, step, isActionCompleted]);
 
   if (!isActive || !step) return null;
 

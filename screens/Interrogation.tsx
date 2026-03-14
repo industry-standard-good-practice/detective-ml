@@ -1459,6 +1459,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         <ModalOverlay id="mobile-profile-modal" onClick={() => setShowMobileProfile(false)}>
           <div onClick={e => e.stopPropagation()}>
             <SuspectCard
+              id="active-suspect-card"
               suspect={suspect}
               emotion={emotion}
               aggravation={aggravationLevel}

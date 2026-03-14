@@ -414,8 +414,9 @@ interface SuspectCardProps {
   variant?: 'default' | 'compact' | 'peek';
   style?: React.CSSProperties; 
   className?: string;
-  turnId?: string; // NEW PROP
+  turnId?: string;
   onFlip?: (isFlipped: boolean) => void;
+  id?: string;
 }
 
 const SuspectCard: React.FC<SuspectCardProps> = ({ 
@@ -430,7 +431,8 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
   style,
   className,
   turnId,
-  onFlip
+  onFlip,
+  id
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -467,6 +469,7 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
 
   return (
     <CardWrapper 
+      id={id}
       $width={finalWidth} 
       $height={finalHeight} 
       $variant={variant}

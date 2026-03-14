@@ -245,6 +245,7 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
             style={{ x: '-50%', y: '-50%' }}
           >
             <SuspectCard
+              id="active-suspect-card"
               suspect={activeSuspect}
               variant={activeVariant}
               width={activeCardWidth}
