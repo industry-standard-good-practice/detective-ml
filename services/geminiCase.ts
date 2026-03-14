@@ -8,15 +8,27 @@ import { generateEvidenceImage } from "./geminiImages";
 // --- HELPERS ---
 
 export const calculateDifficulty = (caseData: Partial<CaseData>): "Easy" | "Medium" | "Hard" => {
-    const aliveSuspects = caseData.suspects?.filter(s => !s.isDeceased) || [];
+    const suspects = caseData.suspects || [];
+    const aliveSuspects = suspects.filter(s => !s.isDeceased);
     const suspectCount = aliveSuspects.length;
     const initialEvidenceCount = caseData.initialEvidence?.length || 0;
-    const hiddenEvidenceCount = caseData.suspects?.reduce((acc, s) => acc + (s.hiddenEvidence?.length || 0), 0) || 0;
+    const hiddenEvidenceCount = suspects.reduce((acc, s) => acc + (s.hiddenEvidence?.length || 0), 0);
     const initialTimelineCount = caseData.initialTimeline?.length || 0;
     const totalEvidence = initialEvidenceCount + hiddenEvidenceCount;
     
-    // Difficulty: suspectCount is main weight. Initial timeline makes it easier.
-    const points = (suspectCount * 2) + totalEvidence - (initialTimelineCount * 0.5);
+    // Multiple victims and multiple guilty suspects significantly increase difficulty
+    const victimCount = suspects.filter(s => s.isDeceased).length;
+    const guiltyCount = suspects.filter(s => s.isGuilty).length;
+    
+    // Base complexity from suspect count and evidence
+    let points = (suspectCount * 2) + totalEvidence - (initialTimelineCount * 0.5);
+    
+    // Extra victims add complexity (each additional victim beyond 1 adds +4)
+    if (victimCount > 1) points += (victimCount - 1) * 4;
+    
+    // Multiple guilty suspects make deduction harder (each additional beyond 1 adds +5)
+    if (guiltyCount > 1) points += (guiltyCount - 1) * 5;
+    
     if (points > 28) return "Hard";
     if (points >= 20) return "Medium";
     return "Easy";
