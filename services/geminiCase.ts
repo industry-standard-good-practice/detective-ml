@@ -4,6 +4,7 @@ import { CaseData } from "../types";
 import { ai } from "./geminiClient";
 import { getRandomVoice } from "../constants";
 import { generateEvidenceImage } from "./geminiImages";
+import { GEMINI_MODELS } from "./geminiModels";
 
 // --- HELPERS ---
 
@@ -93,7 +94,67 @@ export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<s
 };
 
 /**
- * Re-applies user's manual edits (from computeUserDiff) onto an AI-generated case.
+ * Converts a user diff into a human-readable change log that can be injected
+ * into AI prompts. The AI uses this to understand what the user changed and
+ * MUST propagate those changes throughout the entire narrative.
+ */
+export const formatUserChangeLog = (diff: Record<string, any>, baseline: CaseData): string => {
+    if (Object.keys(diff).length === 0) return '';
+    
+    const lines: string[] = [];
+    
+    // Top-level case fields
+    if (diff.title) lines.push(`- Case title changed to: "${diff.title}"`);
+    if (diff.type) lines.push(`- Case type changed to: "${diff.type}"`);
+    if (diff.description) lines.push(`- Case description was rewritten by the user`);
+    
+    // Support characters
+    ['officer', 'partner'].forEach(key => {
+        const charDiff = diff[`_${key}`];
+        if (charDiff) {
+            const label = key === 'officer' ? 'Officer/Chief' : 'Partner';
+            Object.entries(charDiff).forEach(([field, value]) => {
+                const origChar = (baseline as any)[key];
+                const oldVal = origChar?.[field] || 'unknown';
+                lines.push(`- ${label}'s ${field} changed from "${oldVal}" to "${value}"`);
+            });
+        }
+    });
+    
+    // Suspects
+    const suspectDiffs = diff._suspects as Record<string, Record<string, any>> | undefined;
+    if (suspectDiffs) {
+        Object.entries(suspectDiffs).forEach(([suspectId, fields]) => {
+            const baselineSuspect = baseline.suspects.find(s => s.id === suspectId);
+            const suspectLabel = baselineSuspect?.name || suspectId;
+            
+            Object.entries(fields).forEach(([field, value]) => {
+                const oldVal = baselineSuspect ? (baselineSuspect as any)[field] : 'unknown';
+                
+                if (field === 'name') {
+                    lines.push(`- Suspect "${oldVal}" was RENAMED to "${value}" — update ALL references to this character everywhere (description, bios, relationships, alibis, evidence, timeline, motives, secrets, witness observations)`);
+                } else if (field === 'isGuilty') {
+                    lines.push(`- Suspect "${suspectLabel}" guilt status changed to: ${value ? 'GUILTY' : 'INNOCENT'}`);
+                } else if (field === 'isDeceased') {
+                    lines.push(`- Suspect "${suspectLabel}" deceased status changed to: ${value ? 'DECEASED (victim)' : 'ALIVE'}`);
+                } else if (field === 'alibi' && typeof value === 'object') {
+                    lines.push(`- Suspect "${suspectLabel}"'s alibi was modified by the user`);
+                } else if (typeof value === 'string' && value.length > 100) {
+                    lines.push(`- Suspect "${suspectLabel}"'s ${field} was rewritten by the user`);
+                } else {
+                    lines.push(`- Suspect "${suspectLabel}"'s ${field} changed from "${oldVal}" to "${value}"`);
+                }
+            });
+        });
+    }
+    
+    return lines.join('\n');
+};
+
+/**
+ * Simple safety-net: re-applies user's manual field-level edits onto an AI-generated case.
+ * This ensures the AI didn't accidentally revert any explicit user values.
+ * The AI prompt handles narrative propagation; this just enforces raw field values.
  */
 export const applyUserDiff = (aiCase: CaseData, userDiff: Record<string, any>): void => {
     // Top-level fields
@@ -126,6 +187,7 @@ export const applyUserDiff = (aiCase: CaseData, userDiff: Record<string, any>): 
         });
     }
 };
+
 
 export const stripImagesFromCase = (caseData: CaseData): { stripped: any, imageMap: Record<string, string> } => {
     const imageMap: Record<string, string> = {};
@@ -420,11 +482,33 @@ const REPORT_SCHEMA = {
 export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
   console.log(`[DEBUG] checkCaseConsistency: Starting for case "${caseData.title}"`);
   
+  // Compute user changes from baseline for the AI prompt
+  let userChangeLog = '';
+  if (baseline) {
+      const userDiff = computeUserDiff(baseline, caseData);
+      userChangeLog = formatUserChangeLog(userDiff, baseline);
+      if (userChangeLog) {
+          console.log('[DEBUG] checkCaseConsistency: User change log:\n' + userChangeLog);
+      }
+  }
+  
   if (onProgress) onProgress("Stripping visual assets for analysis...");
   const { stripped: lightweightCase, imageMap } = stripImagesFromCase(caseData);
 
   const guiltySuspects = caseData.suspects.filter(s => s.isGuilty);
   const guiltyNames = guiltySuspects.length > 0 ? guiltySuspects.map(s => s.name).join(', ') : "Unknown";
+
+  // Build dynamic user-edits prompt section
+  const userEditsSection = userChangeLog ? `
+    **0. USER MANUAL EDITS (HIGHEST PRIORITY — DO NOT REVERT):**
+       The user has made the following manual changes to the case since the last save.
+       These changes are IMMUTABLE and MUST be respected as ground truth.
+       You MUST propagate these changes throughout the ENTIRE case narrative — update every reference, relationship, description, bio, alibi, motive, secret, timeline entry, evidence description, and witness observation to be consistent with these user-requested changes.
+       DO NOT revert any of these. DO NOT suggest reverting them in the report.
+       
+       USER CHANGES:
+${userChangeLog}
+` : '';
 
   if (onProgress) onProgress("Initializing Narrative Audit...");
 
@@ -448,13 +532,13 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
 
   try {
     const result = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: GEMINI_MODELS.CASE_ENGINE,
         contents: `You are a Master Mystery Editor and Narrative Architect.
     I will provide a JSON object representing a detective mystery game case.
     
     YOUR MISSION:
     Perform a deep narrative audit and structural repair. The case must be perfectly consistent, logically sound, and satisfyingly solvable.
-    
+    ${userEditsSection}
     1. **NARRATIVE INTEGRITY & SOLVABILITY (CRITICAL):**
        - **GROUND TRUTH:** The 'isGuilty' flags in the provided JSON are the ABSOLUTE SOURCE OF TRUTH.
        - The suspects currently marked as 'isGuilty: true' (${guiltyNames}) MUST remain the killers. 
@@ -551,13 +635,13 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
 
     const finalData = enforceRelationships(hydratedCase);
     
-    // --- RE-APPLY USER'S MANUAL EDITS ---
-    // If a baseline was provided, compute what the user changed and re-apply it
+    // --- SAFETY NET: Re-apply user's field-level edits ---
+    // The AI was instructed to respect these, but we enforce them as a fallback
     if (baseline) {
         const userDiff = computeUserDiff(baseline, caseData);
         if (Object.keys(userDiff).length > 0) {
             applyUserDiff(finalData, userDiff);
-            console.log('[DEBUG] checkCaseConsistency: Re-applied user edits on top of AI result');
+            console.log('[DEBUG] checkCaseConsistency: Safety-net re-applied user field values');
         }
     }
 
@@ -603,6 +687,16 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
 export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
     console.log(`[DEBUG] editCaseWithPrompt: Starting with prompt "${userPrompt}"`);
     
+    // Compute user changes from baseline for the AI prompt
+    let userChangeLog = '';
+    if (baseline) {
+        const userDiff = computeUserDiff(baseline, caseData);
+        userChangeLog = formatUserChangeLog(userDiff, baseline);
+        if (userChangeLog) {
+            console.log('[DEBUG] editCaseWithPrompt: User change log:\n' + userChangeLog);
+        }
+    }
+    
     if (onProgress) onProgress("Stripping visual assets for transformation...");
     const { stripped: lightweightCase, imageMap } = stripImagesFromCase(caseData);
 
@@ -626,9 +720,19 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
         }
     }, 3000);
 
+    // Build dynamic user-edits prompt section for edit
+    const userEditsSection = userChangeLog ? `
+      **IMPORTANT — USER MANUAL EDITS (DO NOT REVERT):**
+      The user has also made the following manual changes to the case.
+      These changes are IMMUTABLE. Preserve them and propagate them throughout the narrative.
+      
+      USER CHANGES:
+${userChangeLog}
+` : '';
+
     try {
         const result = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
+            model: GEMINI_MODELS.CASE_ENGINE,
             contents: `You are a Master Narrative Architect.
       I will provide a JSON object representing a detective mystery game case and a USER REQUEST for modification.
       
@@ -636,7 +740,7 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
       Transform the case according to the user's request. This can range from minor tweaks to a complete overhaul of the setting, characters, and plot.
       
       USER REQUEST: "${userPrompt}"
-      
+      ${userEditsSection}
       GUIDELINES:
       1. **COMPREHENSIVE TRANSFORMATION:**
          - If the user wants to change the setting (e.g., from 1920s to Sci-Fi), you must update EVERYTHING: titles, descriptions, suspect bios, roles, personality, secrets, alibis, evidence, etc.
@@ -788,12 +892,12 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
 
         const finalData = enforceRelationships(hydratedCase);
 
-        // --- RE-APPLY USER'S MANUAL EDITS ---
+        // --- SAFETY NET: Re-apply user's field-level edits ---
         if (baseline) {
             const userDiff = computeUserDiff(baseline, caseData);
             if (Object.keys(userDiff).length > 0) {
                 applyUserDiff(finalData, userDiff);
-                console.log('[DEBUG] editCaseWithPrompt: Re-applied user edits on top of AI result');
+                console.log('[DEBUG] editCaseWithPrompt: Safety-net re-applied user field values');
             }
         }
 
@@ -944,7 +1048,7 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
   `;
   
   const res = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
+    model: GEMINI_MODELS.CASE_GENERATION,
     contents: systemPrompt,
     config: {
       responseMimeType: "application/json",

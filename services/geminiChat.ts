@@ -2,6 +2,7 @@
 import { Type } from "@google/genai";
 import { Suspect, CaseData, Emotion, Evidence, ChatMessage } from "../types";
 import { ai } from "./geminiClient";
+import { GEMINI_MODELS } from "./geminiModels";
 
 export const getSuspectResponse = async (
   suspect: Suspect,
@@ -179,7 +180,7 @@ export const getSuspectResponse = async (
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODELS.CHAT,
     contents: systemPrompt,
     config: {
       responseMimeType: "application/json",
@@ -286,7 +287,7 @@ export const generateCaseSummary = async (
 
     try {
         const res = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: GEMINI_MODELS.CHAT,
             contents: prompt
         });
         return res.text!;
@@ -320,7 +321,7 @@ export const getOfficerChatResponse = async (
   `;
   
   const res = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODELS.CHAT,
     contents: prompt
   });
   return res.text!;
@@ -374,7 +375,7 @@ export const getPartnerIntervention = async (
   }
 
   const res = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODELS.CHAT,
     contents: prompt
   });
   return res.text!;
@@ -395,7 +396,7 @@ export const getBadCopHint = async (suspect: Suspect, unrevealed: Evidence[], re
     Keep it very short.
   `;
   const res = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: GEMINI_MODELS.CHAT,
     contents: prompt
   });
   return res.text!;

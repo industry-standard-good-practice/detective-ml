@@ -3,7 +3,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 const Overlay = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -39,6 +39,17 @@ const Text = styled.p`
   line-height: 1.5;
 `;
 
+const UnsavedWarning = styled.div`
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  color: #fa0;
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  font-size: var(--type-small);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
+
 const Buttons = styled.div`
   display: flex;
   gap: 15px;
@@ -65,13 +76,19 @@ const Button = styled.button<{ $danger?: boolean }>`
 interface ExitCaseDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
+  hasUnsavedChanges?: boolean;
 }
 
-const ExitCaseDialog: React.FC<ExitCaseDialogProps> = ({ onConfirm, onCancel }) => {
+const ExitCaseDialog: React.FC<ExitCaseDialogProps> = ({ onConfirm, onCancel, hasUnsavedChanges }) => {
   return (
     <Overlay onClick={onCancel}>
       <DialogBox onClick={e => e.stopPropagation()}>
         <Title>⚠ Exit Case</Title>
+        {hasUnsavedChanges && (
+          <UnsavedWarning>
+            ⚠ You have unsaved changes to this case that will be lost.
+          </UnsavedWarning>
+        )}
         <Text>
           All case progress will be lost. Evidence gathered, interrogation history, and timeline entries will not be saved.
         </Text>

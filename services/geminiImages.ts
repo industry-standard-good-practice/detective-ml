@@ -4,6 +4,7 @@ import { getPixelArtUrl, getSuspectColorDescription } from "./gameHelpers";
 import { ai } from "./geminiClient";
 import { STYLE_REF_URL, PIXEL_ART_BASE, INSTRUCTION_NEW_CHAR, INSTRUCTION_PRESERVE_CHAR, INSTRUCTION_RELATED_EVIDENCE, getStyleRefBase64 } from "./geminiStyles";
 import { uploadImage } from "./firebase";
+import { GEMINI_MODELS } from "./geminiModels";
 
 // --- IMAGE GENERATION HELPER ---
 
@@ -62,7 +63,7 @@ const generateImageRaw = async (
         parts.push({ text: fullPrompt });
 
         const res = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
+            model: GEMINI_MODELS.IMAGE,
             contents: { parts },
             config: { imageConfig: { aspectRatio } }
         });
@@ -295,7 +296,7 @@ export const generateSuspectFromUpload = async (suspect: Suspect, userImageBase6
             { text: conversionPrompt }
         ];
         const res = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
+            model: GEMINI_MODELS.IMAGE,
             contents: { parts },
             config: { imageConfig: { aspectRatio: '3:4' } }
         });
