@@ -1,0 +1,402 @@
+
+import { Type } from "@google/genai";
+import { Suspect, CaseData, Emotion, Evidence, ChatMessage } from "../types";
+import { ai } from "./geminiClient";
+
+export const getSuspectResponse = async (
+  suspect: Suspect,
+  caseData: CaseData,
+  userInput: string,
+  type: 'talk' | 'action',
+  evidenceAttachment: string | null,
+  currentAggravation: number,
+  isFirstTurn: boolean,
+  discoveredEvidence: Evidence[] = []
+): Promise<{ 
+  text: string; 
+  emotion: Emotion; 
+  aggravationDelta: number; 
+  revealedEvidence: string | null; 
+  revealedTimelineStatement: { time: string; statement: string } | null;
+  hints: string[] 
+}> => {
+  
+  console.log(`[DEBUG] getSuspectResponse: ${suspect.name} | Input: "${userInput}" | Type: ${type} | Agg: ${currentAggravation}`);
+
+  const isDeceased = suspect.isDeceased;
+  const isBadCop = userInput.includes('[PARTNER INTERVENTION (BAD COP)]');
+  const partnerName = caseData.partner?.name || "The Partner";
+  
+  // Robust Knowledge Injection
+  const alibiStr = suspect.alibi ? `"${suspect.alibi.statement}" (Loc: ${suspect.alibi.location}, Verified: ${suspect.alibi.isTrue})` : "None";
+  const relsStr = (suspect.relationships || []).map(r => `${r.targetName} (${r.type}): ${r.description}`).join('; ');
+  const factsStr = (suspect.knownFacts || []).join('; ');
+  const timelineStr = (suspect.timeline || []).map(t => `[${t.time}] ${t.activity}`).join(' -> ');
+  
+  // Separation of Evidence: Revealed vs Unrevealed
+  const discoveredTitles = new Set(discoveredEvidence.map(e => e.title.toLowerCase()));
+  const unrevealedItems = (suspect.hiddenEvidence || []).filter(e => !discoveredTitles.has(e.title.toLowerCase()));
+  const revealedItems = (suspect.hiddenEvidence || []).filter(e => discoveredTitles.has(e.title.toLowerCase()));
+
+  const unrevealedStr = unrevealedItems.length > 0 ? unrevealedItems.map(e => `${e.title} (${e.description})`).join('; ') : "None";
+  const revealedStr = revealedItems.length > 0 ? revealedItems.map(e => `${e.title} (${e.description})`).join('; ') : "None";
+
+  const observations = suspect.witnessObservations || "None";
+
+  // --- STRICT NAME ANTI-HALLUCINATION LOGIC ---
+  const allSuspectNames = (caseData.suspects || []).map(s => s.name);
+  const relationshipNames = (suspect.relationships || []).map(r => r.targetName);
+  const supportNames = [caseData.officer?.name, caseData.partner?.name].filter(n => n);
+  
+  const validNamesSet = new Set([
+    ...allSuspectNames,
+    ...relationshipNames,
+    ...supportNames
+  ]);
+  
+  const validNamesList = Array.from(validNamesSet).filter(Boolean).join(', ');
+
+  let systemPrompt = "";
+
+  if (isDeceased) {
+      systemPrompt = `
+      You are the narrator / Game Master.
+      The user is examining the corpse of ${suspect.name} (${suspect.role}).
+      
+      PHYSICAL CLUES ON BODY (UNREVEALED): ${unrevealedStr}
+      ALREADY FOUND CLUES: ${revealedStr}
+      
+      User Action: "${userInput}"
+      
+      INSTRUCTIONS:
+      1. Describe the result of the examination in a gritty, noir style.
+      2. If the user's action logically uncovers one of the UNREVEALED clues (e.g. "Check pockets" reveals "Pocket Lint"), YOU MUST REVEAL IT. 
+         - Set 'revealedEvidence' to the EXACT title.
+         - Describe finding it clearly.
+      3. **VISUAL UPDATE (STRICT MAPPING):**
+         - If user says 'check pockets', 'search jacket', 'look at chest', 'examine torso' -> Set emotion to 'TORSO'.
+         - If user says 'check face', 'examine head', 'look at eyes', 'check mouth' -> Set emotion to 'HEAD'.
+         - If user says 'check hands', 'look at fingers', 'examine nails' -> Set emotion to 'HANDS'.
+         - If user says 'check legs', 'look at shoes', 'examine feet' -> Set emotion to 'LEGS'.
+         - If user says 'examine body' or 'step back' -> Set emotion to 'NEUTRAL'.
+         - If the action is vague, keep the previous view or default to 'NEUTRAL'.
+      4. Hints: Return an EMPTY ARRAY []. Do not give suggestion chips for a corpse.
+      `;
+  } else {
+      systemPrompt = `
+        You are an NPC in a noir detective game.
+        Character: ${suspect.name}, ${suspect.role}.
+        Bio: ${suspect.bio}.
+        Professional Skills: ${suspect.professionalBackground || "None"}.
+        Personality: ${suspect.personality}.
+        Secret: ${suspect.secret}.
+        
+        --- KNOWLEDGE BASE (STRICT SOURCE OF TRUTH) ---
+        1. ALIBI: ${alibiStr}
+        2. MOTIVE: "${suspect.motive || 'Unknown'}"
+        3. RELATIONSHIPS: ${relsStr}
+        4. TIMELINE (Activities): ${timelineStr}
+        5. KNOWN FACTS (True info): ${factsStr}
+        6. WITNESS OBSERVATIONS (What you saw): ${observations}
+        7. UNREVEALED SECRETS (You possess these but haven't told the detective yet): ${unrevealedStr}
+        8. REVEALED SECRETS (You have already told the detective about these): ${revealedStr}
+        
+        Case Context: ${caseData.description}
+        Other Suspects: ${(caseData.suspects || []).map(s => s.name).join(', ')}.
+        
+        *** VALID NAMES ALLOWED IN DIALOGUE: ${validNamesList} ***
+        
+        Current Aggravation: ${currentAggravation}/100.
+        ${currentAggravation > 80 ? "You are furious and near breaking point." : "You are composed but guarded."}
+        
+        User Input: "${userInput}" (Type: ${type})
+        Evidence Shown: ${evidenceAttachment || "None"}
+
+        INSTRUCTIONS:
+        1. Reply in character (short, noir style).
+        2. **NEGATIVE CONSTRAINT:** Do NOT invent new locations, people, time events, or facts. 
+           - ONLY refer to your Alibi, Relationships, Timeline, and Known Facts. 
+           - If asked about something not in your Knowledge Base, say you don't know or deflect.
+           - NEVER hallucinate new evidence.
+           - **STRICT NAME CONSTRAINT:** You must NEVER mention a proper name that is not in the "VALID NAMES ALLOWED" list above. 
+             - If you need to refer to a third party not on the list, use a generic description like "the bartender", "some guy", "the landlord", or "a witness".
+             - NEVER invent a name like "Steve" or "Sarah" if they are not in the list.
+        3. **RELATIONSHIPS:** If asked about another suspect (including the victim), check your 'RELATIONSHIPS' list. If no specific entry exists, assume a neutral acquaintance.
+        
+        4. CALCULATE 'aggravationDelta' (Change in anger -100 to +100) based on the Suspect's PERSONALITY ARCHETYPE:
+
+           **ARCHETYPE A: "THE TOUGH / STREET"** (Traits: Street-smart, Hardened, Rebellious, Cynical, Punk, Gangster, Cool)
+           - **Reaction to Rudeness/Swearing:** RESPECT. They prefer grit over fake politeness.
+           - **Effect:** Aggravation might LOWER (-5 to -15) or stay NEUTRAL (0).
+           - **Dialogue Style:** Banter back. "Heh, you got a mouth on you, Detective. I like that."
+           - **Bad Cop Effect:** Less effective (+10). They've seen worse.
+
+           **ARCHETYPE B: "THE ELITE / PRISSY"** (Traits: Arrogant, Wealthy, Religious, Strict, Polite, Snobby, Proper)
+           - **Reaction to Rudeness/Swearing:** EXTREME OFFENSE.
+           - **Effect:** CRITICAL SPIKE (+50 to +90).
+           - **Dialogue Style:** "How dare you speak to me like that! Get out!"
+           
+           **ARCHETYPE C: "THE NERVOUS / COWARD"** (Traits: Anxious, Shy, Cowardly, Timid, Paranoid)
+           - **Reaction to Rudeness/Swearing:** PANIC.
+           - **Effect:** High Spike (+25 to +45).
+           - **Special:** High chance to accidentally reveal evidence out of fear if intimidated.
+           - **Bad Cop Effect:** Highly effective (+40).
+
+           **ARCHETYPE D: "THE HOTHEAD"** (Traits: Aggressive, Violent, Impatient, Angry, Short-tempered)
+           - **Reaction to Rudeness/Swearing:** CONFRONTATION.
+           - **Effect:** High Spike (+40 to +80). "You want a piece of me?!"
+           
+           **STANDARD RULES (If no archetype matches):**
+           - **Calming:** Hard to do (-5 to -15).
+           - **Accusations:** +15 to +25.
+           - **Swearing/Insults:** +30 to +60.
+           - **Bad Cop:** +20 to +40.
+
+           **GENERAL RULE:** If Current Aggravation > 80, the suspect is irrational. Calming is 50% less effective.
+
+        5. Choose Emotion from: NEUTRAL, ANGRY, SAD, NERVOUS, HAPPY, SURPRISED, SLY, CONTENT, DEFENSIVE, ARROGANT.
+        6. **TIMELINE REVEAL (CRITICAL):** If your response explicitly mentions an activity or location from your TIMELINE (Activities), you MUST set 'revealedTimelineStatement' to the matching entry.
+           - 'time': The exact time string from your timeline.
+           - 'statement': The activity/statement you just made about that time.
+           - **IMPORTANT:** If you mention a time or location in your 'text', you MUST populate this field.
+        7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
+
+        ${isBadCop ? `
+        CRITICAL BAD COP INSTRUCTION:
+        The partner (${partnerName}) is intimidating you. 
+        Analyze your ARCHETYPE to decide if you are 'Rattled' (Nervous/Standard), 'Offended' (Elite), or 'Defensive/Angry' (Tough/Hothead).
+        Regardless, you must defensively MENTION or ALLUDE to one of your UNREVEALED SECRETS in your text response as a slip-up.
+        Example: "I don't know anything about that missing ledger!" (referencing a Hidden Ledger).
+        IMPORTANT: DO NOT set the 'revealedEvidence' JSON field. Keep it null. Just mention it in the text so the detectives catch the slip.
+        ` : `
+        REVEALING EVIDENCE RULES:
+        1. If the user explicitly asks about a specific piece of UNREVEALED SECRETS you possess (e.g., "What about the ledger?"), YOU MUST REVEAL IT. Set 'revealedEvidence' to the EXACT title.
+        2. If the user asks about a topic related to your UNREVEALED SECRETS, YOU MUST REVEAL IT. Do not hide it behind an aggravation check. Reveal it regardless of your anger level.
+        3. If the user presents evidence that proves your guilt or contradicts your story, confess and REVEAL related UNREVEALED SECRETS.
+        4. DO NOT set 'revealedEvidence' for items in REVEALED SECRETS. The detective already knows them. You can discuss them freely.
+        `}
+      `;
+  }
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: systemPrompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          text: { type: Type.STRING },
+          emotion: { type: Type.STRING },
+          aggravationDelta: { type: Type.NUMBER },
+          revealedEvidence: { type: Type.STRING, nullable: true },
+          revealedTimelineStatement: {
+            type: Type.OBJECT,
+            nullable: true,
+            properties: {
+              time: { type: Type.STRING },
+              statement: { type: Type.STRING }
+            }
+          },
+          hints: { type: Type.ARRAY, items: { type: Type.STRING } }
+        }
+      }
+    }
+  });
+
+  const data = JSON.parse(response.text!);
+  console.log(`[DEBUG] getSuspectResponse: AI Output`, data);
+  
+  return {
+    text: data.text,
+    emotion: (data.emotion as Emotion) || Emotion.NEUTRAL,
+    aggravationDelta: data.aggravationDelta || 0,
+    revealedEvidence: data.revealedEvidence || null,
+    revealedTimelineStatement: data.revealedTimelineStatement || null,
+    hints: data.hints || []
+  };
+};
+
+export const generateCaseSummary = async (
+    caseData: CaseData,
+    accusedId: string | null,
+    gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE',
+    evidenceDiscovered: Evidence[]
+): Promise<string> => {
+    if (!accusedId) return "No accusation was made.";
+
+    const suspect = caseData.suspects.find(s => s.id === accusedId);
+    const guiltySuspect = caseData.suspects.find(s => s.isGuilty);
+    
+    // Safeguard map over hiddenEvidence
+    const hiddenStatus = caseData.suspects.flatMap(s => 
+        (s.hiddenEvidence || []).map(e => {
+            const isFound = evidenceDiscovered.map(d => d.title).includes(e.title);
+            return `- "${e.title}": ${isFound ? "FOUND" : `MISSED (Held by ${s.name})`}`;
+        })
+    ).join("\n");
+
+    const mergedTimelines = caseData.suspects.map(s => 
+        `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.time}] ${t.activity}`).join('\n')}`
+    ).join('\n\n');
+
+    const prompt = `
+        System: DetectiveOS Case Report Generator.
+        Status: Case Closed.
+        
+        --- CASE DATA (STRICT SOURCE OF TRUTH) ---
+        Title: ${caseData.title}
+        Description: ${caseData.description}
+        Guilty Party: ${guiltySuspect?.name}
+        Accused: ${suspect?.name} (${gameResult})
+        
+        --- SUSPECT PROFILES & TIMELINES (MERGED) ---
+        ${mergedTimelines}
+        
+        --- EVIDENCE STATUS ---
+        ${hiddenStatus}
+        
+        --- INSTRUCTIONS ---
+        Generate a case report in two sections. 
+        Output format: Plain Text with special tags.
+        
+        **CRITICAL: PRONOUN CHECK**
+        - You MUST use the correct pronouns for each character based on the "Gender" field in their PROFILE above.
+        - **IF Gender is "Non-binary" or "Unknown": YOU MUST USE "they/them/theirs".**
+        - If Gender is "Female", use "she/her/hers".
+        - If Gender is "Male", use "he/him/his".
+        - Review every sentence. If you wrote "he" for a non-binary character, CORRECT IT to "they".
+        
+        SECTION 1: INVESTIGATION LOG
+        - 3-4 short bullet points describing "The Detective's" performance.
+        - Third-person perspective (e.g., "The Detective successfully uncovered...").
+        - Mention specific key evidence found or missed.
+        
+        SECTION 2: THE TRUE TIMELINE
+        - Reconstruct the events of the crime based *strictly* on the provided SUSPECT TIMELINES and CASE DESCRIPTION.
+        - Do NOT invent new events or hallucinations.
+        - Chronological order.
+        - When mentioning specific evidence items from the list above:
+          - If FOUND: Write it as "{{FOUND:Evidence Name [FOUND]}}".
+          - If MISSED: Write it as "{{MISSED:Evidence Name [MISSED - Held by Name]}}".
+        - Highlight OTHER key objects/moments in **bold** (double asterisks). Do not bold the evidence inside the braces.
+        
+        Style: Noir, Clinical, Police Report.
+    `;
+
+    try {
+        const res = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt
+        });
+        return res.text!;
+    } catch (e) {
+        return "The case file is sealed. (Error generating summary).";
+    }
+};
+
+export const getOfficerChatResponse = async (
+  caseData: CaseData,
+  userMessage: string,
+  evidenceFound: Evidence[],
+  notes: Record<string, string[]>,
+  chatHistory: Record<string, ChatMessage[]>
+): Promise<string> => {
+  console.log(`[DEBUG] getOfficerChatResponse: "${userMessage}"`);
+  const officerName = caseData.officer?.name || "Chief";
+  const officerRole = caseData.officer?.role || "Police Chief";
+  const officerPersona = caseData.officer?.personality || "Gruff";
+
+  const prompt = `
+    You are ${officerName}, the ${officerRole}.
+    Personality: ${officerPersona}.
+    Case: ${caseData.title}.
+    Description: ${caseData.description}.
+    Evidence Found: ${(evidenceFound || []).map(e => e.title).join(', ')}.
+    User asks: "${userMessage}".
+    
+    Provide a helpful hint, but stay in character. If they are stuck, suggest a suspect to talk to or evidence to look for.
+    Keep it under 30 words.
+  `;
+  
+  const res = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt
+  });
+  return res.text!;
+};
+
+export const getPartnerIntervention = async (
+    type: 'goodCop' | 'badCop' | 'examine' | 'hint', 
+    suspect: Suspect, 
+    caseData: CaseData,
+    history: ChatMessage[]
+): Promise<string> => {
+  console.log(`[DEBUG] getPartnerIntervention: ${type} on ${suspect.name}`);
+  const lastMsg = history[history.length - 1]?.text || "Hello.";
+  const partnerName = caseData.partner?.name || "Partner";
+  const partnerRole = caseData.partner?.role || "Detective";
+  const partnerPersonality = caseData.partner?.personality || "Helpful";
+  
+  let prompt = "";
+  if (type === 'examine') {
+      prompt = `
+        You are ${partnerName}, the ${partnerRole}.
+        Action: Perform an initial visual examination of the victim's body (${suspect.name}).
+        Victim Bio: ${suspect.bio}.
+        Hidden Evidence they have: ${(suspect.hiddenEvidence || []).map(e => e.title).join(', ')}.
+        
+        Generate a 1-2 sentence observation. Mention one obvious detail but don't solve the case. 
+        Tone: Professional, grim. Speak in first person.
+      `;
+  } else if (type === 'hint') {
+      prompt = `
+        You are ${partnerName}, the ${partnerRole}.
+        Action: Suggest where the detective should look on the victim's body (${suspect.name}).
+        Hidden Evidence they have: ${(suspect.hiddenEvidence || []).map(e => e.title).join(', ')}.
+        
+        Generate a 1-sentence hint. e.g., "Check the pockets." or "Look closely at the hands."
+        Speak in first person.
+      `;
+  } else {
+      prompt = `
+        You are ${partnerName}, the ${partnerRole}.
+        Personality: ${partnerPersonality}.
+        Role: You are the partner.
+        Action: ${type === 'goodCop' ? "GOOD COP (Sympathetic, trying to bond, calming)" : "BAD COP (Aggressive, intimidating, slamming table)"}.
+        Suspect: ${suspect.name} (${suspect.personality}).
+        Last thing said in chat: "${lastMsg}".
+        
+        Generate a 1-sentence intervention line addressed TO the suspect.
+        CRITICAL: Speak in FIRST PERSON ("I"). Do NOT narrate actions (e.g. *slams table*). JUST DIALOGUE.
+        Do not use your own name.
+      `;
+  }
+
+  const res = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt
+  });
+  return res.text!;
+};
+
+export const getBadCopHint = async (suspect: Suspect, unrevealed: Evidence[], responseText: string): Promise<string> => {
+  const prompt = `
+    You are the partner.
+    Suspect: ${suspect.name}.
+    Unrevealed Items they have: ${(unrevealed || []).map(e => e.title).join(', ')}.
+    
+    Suspect just said: "${responseText}".
+    
+    Did the suspect mention or allude to any of the unrevealed items? 
+    If yes, whisper a hint: "Did you hear that? He mentioned [Item]! Press him on it!"
+    If no, just say: "He's tough. We need to find a weak spot."
+    
+    Keep it very short.
+  `;
+  const res = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt
+  });
+  return res.text!;
+};

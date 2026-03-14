@@ -1,0 +1,1477 @@
+
+import React, { useState, useEffect, useRef } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { CaseData, Suspect, ChatMessage, Emotion, Evidence, TimelineStatement } from '../types';
+import SuspectCard from '../components/SuspectCard';
+import SuspectCardDock from '../components/SuspectCardDock';
+import AsciiCelebration from '../components/AsciiCelebration';
+import SuspectPortrait from '../components/SuspectPortrait';
+import { generateTTS } from '../services/geminiTTS';
+import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  
+  @media (max-width: 768px) {
+    overflow-y: auto;
+  }
+  
+  /* CSS Variable for card deck spacing, responsive */
+  --card-spacing: 190px;
+`;
+
+
+const MainContent = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 20px 20px 40px 20px;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+  justify-content: center;
+
+  @media (max-width: 1280px) {
+    gap: 15px;
+    padding: 15px 15px 50px 15px;
+  }
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+  }
+`;
+
+const GhostLeftPanel = styled.div`
+  flex: 1;
+  min-width: 280px;
+  height: 100%;
+  pointer-events: none;
+  transition: flex-basis 0.3s ease;
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const ChatPanel = styled.div`
+  flex: 0 1 900px;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #333;
+  padding: 0; /* REMOVED PADDING to flush scrollbar */
+  height: 100%;
+  background: rgba(0,0,0,0.2);
+  position: relative;
+  min-width: 350px;
+  overflow: hidden; 
+  
+  @media (max-width: 768px) {
+    min-width: 0;
+    width: 100%;
+    border: none;
+    flex: 1;
+    max-width: none;
+  }
+`;
+
+const ChatLog = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px; /* Added padding inside scrolling area */
+  padding-bottom: 20px;
+
+  /* Flush Scrollbar Styling */
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #0a0a0a;
+    border-left: 1px solid #333;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #333;
+    border: 1px solid #555;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+`;
+
+const EvidenceChip = styled.div<{ $collected: boolean }>`
+  margin-top: 8px;
+  background: ${props => props.$collected ? '#2d4' : '#ffc'};
+  color: #000;
+  border: 2px dashed ${props => props.$collected ? '#2d4' : '#cc0'};
+  padding: 5px 10px;
+  font-size: var(--type-small);
+  font-weight: bold;
+  cursor: ${props => props.$collected ? 'default' : 'pointer'};
+  display: inline-block;
+  align-self: flex-start;
+  animation: fadeIn 0.5s;
+
+  &:hover {
+    background: ${props => props.$collected ? '#2d4' : '#fff'};
+  }
+  
+  &::before {
+    content: '${props => props.$collected ? '✓ EVIDENCE LOGGED: ' : '⚠ NEW EVIDENCE: '} ';
+  }
+`;
+
+const MessageBubble = styled.div<{ $sender: 'player' | 'suspect' | 'officer' | 'partner' | 'system', $isAction?: boolean, $customColor?: string }>`
+  align-self: ${props => {
+    if (props.$sender === 'system') return 'center';
+    return props.$sender === 'player' ? 'flex-end' : 'flex-start';
+  }};
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  text-align: ${props => props.$sender === 'system' ? 'center' : 'left'};
+  
+  .sender-name {
+    font-size: var(--type-small);
+    color: ${props => {
+      if (props.$sender === 'player') return '#f55';
+      if (props.$sender === 'partner') return '#5f5';
+      if (props.$sender === 'system') return '#f00';
+      if (props.$customColor) return props.$customColor;
+      return '#5af';
+    }};
+    margin-bottom: 4px;
+    display: block;
+    align-self: ${props => {
+       if (props.$sender === 'system') return 'center';
+       return props.$sender === 'player' ? 'flex-end' : 'flex-start';
+    }};
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+  }
+
+  .text {
+    color: ${props => {
+       if (props.$sender === 'partner') return '#afa';
+       if (props.$sender === 'system') return '#f55';
+       return '#eee';
+    }};
+    font-size: var(--type-body-lg);
+    line-height: 1.4;
+    font-style: ${props => props.$isAction ? 'italic' : 'normal'};
+    background: ${props => {
+      if (props.$sender === 'player') return '#311';
+      if (props.$sender === 'partner') return '#131'; 
+      if (props.$sender === 'system') return 'rgba(50, 0, 0, 0.5)';
+      return 'transparent';
+    }};
+    padding: ${props => (props.$sender === 'player' || props.$sender === 'partner' || props.$sender === 'system') ? '8px 12px' : '0'};
+    border-radius: 8px;
+    border: ${props => {
+      if (props.$isAction && props.$sender === 'player') return '1px dashed #f55';
+      if (props.$sender === 'partner') return '1px solid #252';
+      if (props.$sender === 'system') return '1px solid #f00';
+      return 'none';
+    }};
+  }
+
+  .attachment {
+    align-self: flex-end;
+    font-size: var(--type-small);
+    background: #333;
+    color: #aaa;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+    border: 1px solid #555;
+  }
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  width: 100%;
+  background: #080808; /* Solid background to obscure scrolling text */
+  border-top: 1px solid #333;
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+`;
+
+const UnifiedInputBar = styled.div<{ $disabled: boolean }>`
+  display: flex;
+  align-items: center;
+  border: 1px solid #444;
+  background: #050505;
+  height: 50px;
+  opacity: ${props => props.$disabled ? 0.6 : 1};
+  transition: all 0.2s;
+  
+  &:focus-within {
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255,255,255,0.1);
+  }
+`;
+
+const TypeSelect = styled.select`
+  background-color: transparent;
+  color: #888;
+  border: none;
+  border-right: 1px solid #333;
+  height: 100%;
+  padding: 0 35px 0 15px;
+  font-family: 'VT323', monospace;
+  font-size: var(--type-body);
+  cursor: pointer;
+  text-transform: uppercase;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath fill='%23888' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  background-size: 20px;
+  
+  &:focus { 
+    outline: none; 
+    background-color: #111; 
+    color: #fff; 
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath fill='%23fff' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  }
+  option { background: #000; }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0 20px 0 5px;
+    background-position: right 0px center;
+    font-size: 1rem;
+    width: 70px;
+  }
+`;
+
+const PlusButtonWrapper = styled.div`
+  position: relative;
+  height: 100%;
+`;
+
+const PlusButton = styled.button<{ $active: boolean }>`
+  background: transparent;
+  border: none;
+  color: ${props => props.$active ? '#fff' : '#444'};
+  width: 40px;
+  height: 100%;
+  font-size: var(--type-h2);
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #fff;
+  }
+`;
+
+const MicButton = styled.button<{ $listening: boolean }>`
+  background: ${props => props.$listening ? '#f00' : '#222'};
+  border: none;
+  border-left: 1px solid #333;
+  color: ${props => props.$listening ? '#fff' : '#666'};
+  width: 50px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.$listening ? '#d00' : '#333'};
+    color: #fff;
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+  }
+`;
+
+const EvidenceMenu = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 0;
+  background: #050505;
+  border: 1px solid #555;
+  width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 0 20px #000;
+  display: flex;
+  flex-direction: column;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #333;
+  }
+`;
+
+const TimelineEvidenceOption = styled.button`
+  background: #1b263b;
+  color: #fff;
+  border: 1px solid #415a77;
+  padding: 12px;
+  margin: 5px 10px;
+  border-radius: 4px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: transform 0.1s, background 0.2s;
+  
+  &:hover {
+    background: #2c3e50;
+    transform: translateY(-2px);
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(65, 90, 119, 0.5);
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+  }
+
+  .time {
+    font-family: 'VT323', monospace;
+    color: #0f0;
+    font-size: 1.1rem;
+  }
+
+  .suspect {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .statement {
+    font-size: var(--type-body);
+    color: #ddd;
+    line-height: 1.3;
+    font-style: italic;
+  }
+`;
+
+const EvidenceOption = styled.button`
+  background: transparent;
+  color: #ccc;
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--type-body);
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  
+  &:hover {
+    background: #222;
+    color: #fff;
+  }
+`;
+
+const GhostInput = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: 'VT323', monospace;
+  font-size: var(--type-body-lg);
+  padding: 0 15px;
+  height: 100%;
+  min-width: 0;
+  
+  &:focus { outline: none; }
+  &::placeholder { color: #333; }
+  &:disabled { color: #500; cursor: not-allowed; }
+`;
+
+const SendActionBtn = styled.button`
+  height: 100%;
+  padding: 0 25px;
+  background: #fff;
+  color: #000;
+  border: none;
+  border-left: 1px solid #333;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: var(--type-body);
+  cursor: pointer;
+  transition: background 0.2s;
+  
+  &:disabled {
+    background: #222;
+    color: #555;
+    cursor: not-allowed;
+  }
+  
+  &:hover:not(:disabled) {
+    background: #ddd;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0 15px;
+  }
+`;
+
+const AttachmentChip = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1a1a1a;
+  border: 1px dashed #555;
+  color: #fff;
+  padding: 5px 10px;
+  align-self: flex-start;
+  font-size: var(--type-small);
+  margin-bottom: 5px;
+
+  button {
+    background: transparent;
+    border: none;
+    color: #f55;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: var(--type-body);
+  }
+`;
+
+const SuggestionChips = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  width: calc(100% + 40px);
+  max-width: calc(100% + 40px);
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444; 
+    border-radius: 2px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent; 
+  }
+`;
+
+const Chip = styled.button`
+  background: #222;
+  border: 1px solid #444;
+  color: #aaa;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-family: inherit;
+  font-size: var(--type-body);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  
+  &:hover {
+    border-color: #777;
+    color: #fff;
+  }
+`;
+
+const RightPanel = styled.div<{ $mobileOpen: boolean }>`
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: transform 0.3s ease;
+  height: 100%; 
+  overflow: hidden; 
+
+  @media (max-width: 768px) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background: #0a0a0a;
+    z-index: 100;
+    padding: 20px;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+    border-left: 2px solid #333;
+    transform: translateX(${props => props.$mobileOpen ? '0' : '100%'});
+    flex: none;
+    min-width: 0;
+  }
+`;
+
+const AggravationMeter = styled.div`
+  border: 1px solid #444;
+  padding: 15px;
+  background: #0a0a0a;
+  flex-shrink: 0; 
+  
+  h3 { margin: 0 0 10px 0; font-size: var(--type-body); color: #888; text-transform: uppercase; }
+`;
+
+const ProgressBar = styled.div<{ $level: number }>`
+  height: 20px;
+  width: 100%;
+  background: #222;
+  position: relative;
+  
+  &::after {
+    content: '';
+    display: block;
+    height: 100%;
+    width: ${props => props.$level}%;
+    background: ${props => props.$level > 80 ? 'red' : props.$level > 50 ? 'orange' : '#ccc'};
+    transition: width 0.5s ease, background 0.5s ease;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 5px,
+      rgba(0,0,0,0.2) 5px,
+      rgba(0,0,0,0.2) 10px
+    );
+  }
+`;
+
+const SidekickContainer = styled.div`
+  flex: 1; 
+  border: 1px solid #444;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  position: relative;
+  gap: 10px;
+  overflow: hidden; 
+  min-height: 0; 
+
+  & > h3 { 
+    margin: 0; 
+    font-size: var(--type-body); 
+    color: #888; 
+    text-transform: uppercase; 
+  }
+`;
+
+const SidekickHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-shrink: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    
+    h3 {
+      margin: 0;
+      font-size: var(--type-body);
+      color: #9f9; 
+      text-transform: uppercase;
+    }
+    
+    span {
+      font-size: var(--type-small);
+      color: #686;
+    }
+  }
+`;
+
+const BubbleScrollArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-right: 5px;
+  padding-top: 15px; 
+  padding-bottom: 10px;
+  min-height: 0;
+  
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; }
+`;
+
+const float = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0px); }
+`;
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const WhisperBubble = styled.div`
+  background: #081008;
+  border: 1px dashed #282;
+  padding: 15px;
+  border-radius: 8px;
+  position: relative;
+  color: #8c8;
+  font-size: var(--type-body);
+  font-style: italic;
+  line-height: 1.4;
+  width: 100%;
+  animation: ${float} 4s ease-in-out infinite;
+
+  p {
+    margin: 0;
+    animation: ${fadeIn} 0.5s ease-out;
+  }
+`;
+
+const SidekickActions = styled.div`
+    display: flex;
+    gap: 10px;
+    margin-top: 0;
+    flex-shrink: 0;
+    padding-top: 10px;
+    border-top: none;
+`;
+
+const ActionButton = styled.button<{ $type: 'good' | 'bad' | 'neutral' }>`
+    flex: 1;
+    background: ${props => props.$type === 'good' ? '#003300' : props.$type === 'bad' ? '#330000' : '#222'};
+    color: ${props => props.$type === 'good' ? '#6f6' : props.$type === 'bad' ? '#f66' : '#ccc'};
+    border: 1px solid ${props => props.$type === 'good' ? '#0f0' : props.$type === 'bad' ? '#f00' : '#555'};
+    padding: 10px 5px;
+    font-family: inherit;
+    font-size: var(--type-body);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+        background: ${props => props.$type === 'good' ? '#0f0' : props.$type === 'bad' ? '#f00' : '#444'};
+        color: #000;
+    }
+    
+    &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        filter: grayscale(1);
+    }
+`;
+
+
+
+const DebugToggle = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #300;
+  color: #f55;
+  border: 1px solid #f00;
+  font-family: 'VT323', monospace;
+  font-size: var(--type-small);
+  cursor: pointer;
+  z-index: 50;
+  opacity: 0.5;
+  &:hover { opacity: 1; }
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const DebugMenu = styled.div`
+  position: absolute;
+  top: 40px;
+  right: 10px;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid #f00;
+  padding: 10px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 300px;
+`;
+
+const DebugItem = styled.button`
+  background: #200;
+  color: #f88;
+  border: none;
+  text-align: left;
+  padding: 5px;
+  cursor: pointer;
+  font-family: 'VT323';
+  font-size: var(--type-small);
+  &:hover { background: #400; }
+`;
+
+const DeceasedBadge = styled.div`
+  color: #f00; 
+  font-weight: bold; 
+  font-size: var(--type-body-lg);
+  margin-top: 5px;
+  border: 2px solid #f00;
+  padding: 5px;
+  text-align: center;
+  text-transform: uppercase;
+`;
+
+const MobileHeader = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #111;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+  }
+`;
+
+const MobileNavBtn = styled.button`
+  background: #222;
+  color: #ccc;
+  border: 1px solid #444;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: var(--type-body);
+  cursor: pointer;
+  &:hover { background: #333; }
+`;
+
+const MobileProfileBtn = styled.button`
+  background: #333;
+  color: #fff;
+  border: 1px solid #666;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: var(--type-small);
+  cursor: pointer;
+`;
+
+const ModalOverlay = styled.div`
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+`;
+
+interface InterrogationProps {
+  activeCase: CaseData;
+  suspect: Suspect;
+  chatHistory: ChatMessage[];
+  aggravationLevel: number;
+  emotion: Emotion;
+  partnerEmotion: Emotion;
+  suspectTurnIds: Record<string, string | undefined>;
+  evidenceDiscovered: Evidence[];
+  suggestions: (string | { label: string; text: string })[];
+  isThinking: boolean;
+  sidekickComment: string | null;
+  partnerCharges: number;
+  gameTime?: number; // New prop
+  timelineStatementsDiscovered: TimelineStatement[];
+  onSendMessage: (text: string, type: 'talk' | 'action', evidence?: string) => void;
+  onCollectEvidence: (msgIndex: number, evidenceName: string, suspectId: string) => void;
+  onSwitchSuspect: (suspectId: string) => void;
+  onForceEvidence: (suspectId: string, evidenceTitle: string) => void;
+  onPartnerAction: (type: 'goodCop' | 'badCop' | 'examine' | 'hint') => void;
+  mobileIntelOpen?: boolean;
+  soundEnabled?: boolean;
+  isAdmin: boolean;
+  userId?: string;
+}
+
+const Interrogation: React.FC<InterrogationProps> = ({
+  activeCase,
+  suspect,
+  chatHistory,
+  aggravationLevel,
+  emotion,
+  partnerEmotion,
+  suspectTurnIds,
+  evidenceDiscovered,
+  suggestions,
+  isThinking,
+  sidekickComment,
+  partnerCharges,
+  gameTime,
+  timelineStatementsDiscovered,
+  onSendMessage,
+  onCollectEvidence,
+  onSwitchSuspect,
+  onForceEvidence,
+  onPartnerAction,
+  mobileIntelOpen = false,
+  soundEnabled = true,
+  isAdmin,
+  userId
+}) => {
+  const [inputVal, setInputVal] = useState('');
+  const { completeStep } = useOnboarding();
+  const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
+  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | TimelineStatement | null>(null);
+  const [showEvidencePicker, setShowEvidencePicker] = useState(false);
+  const [celebratingItem, setCelebratingItem] = useState<{index: number, name: string, suspectId: string} | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [initialExamDone, setInitialExamDone] = useState(false);
+  const [showMobileProfile, setShowMobileProfile] = useState(false);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [leftPanelCenter, setLeftPanelCenter] = useState(170);
+  const [leftPanelMiddle, setLeftPanelMiddle] = useState(400);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(300);
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const lastPlayedRef = useRef<{timestamp: string | null, index: number, text: string}>({timestamp: null, index: -1, text: ''});
+  const prevSoundEnabled = useRef(soundEnabled);
+
+  useEffect(() => {
+    const updateCenter = () => {
+      if (leftPanelRef.current && containerRef.current) {
+        const rect = leftPanelRef.current.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        
+        setLeftPanelCenter(rect.left - containerRect.left + rect.width / 2);
+        setLeftPanelMiddle(rect.top - containerRect.top + rect.height / 2);
+        setLeftPanelWidth(rect.width);
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    // Initial measure
+    updateCenter();
+    
+    // Backup for font loads or other layout shifts
+    const timer = setTimeout(updateCenter, 500);
+
+    const observer = new ResizeObserver(updateCenter);
+    if (leftPanelRef.current) {
+      observer.observe(leftPanelRef.current);
+    }
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    
+    window.addEventListener('resize', updateCenter);
+    
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateCenter);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Calculate dynamic card size based on panel width and viewport height
+  // Aspect ratio is 1:1.6 (280x450)
+  // We want it to fill about 85% of the panel width, but also not overflow vertically
+  const maxW = leftPanelWidth * 0.85;
+  const maxH = (viewportHeight - 120) * 0.85; // 120px buffer for header/footer
+  
+  const activeCardWidth = Math.min(maxW, maxH / 1.6);
+  const activeCardHeight = activeCardWidth * 1.6;
+  
+  const isCreator = userId === activeCase.authorId;
+  const canDebug = isAdmin || isCreator;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceRef = useRef<string | null>(null);
+  const [lastPlayedAudioUrl, setLastPlayedAudioUrl] = useState<string | null>(() => {
+    if (chatHistory.length === 0) return null;
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    return lastMsg.sender === 'suspect' ? lastMsg.audioUrl || null : null;
+  });
+  const isMounted = useRef(true);
+  
+  useEffect(() => {
+    voiceRef.current = suspect.voice || 'Zephyr';
+  }, [suspect.id]);
+  
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const evidenceMenuRef = useRef<HTMLDivElement>(null);
+
+  // Determine if initial exam is done based on chat history
+  useEffect(() => {
+      // Simple heuristic: if the partner has spoken at least once in this chat history, assume they did the exam or are active
+      // For a more robust "Once Only", we'd track a flag in GameState, but local state works per session for now.
+      // Actually, let's scan history for the "Examination logged" comment we set in App.tsx
+      const hasExam = chatHistory.some(m => m.sender === 'partner' && m.type === 'action' && !m.text.includes("hint"));
+      setInitialExamDone(hasExam);
+  }, [chatHistory, suspect.id]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [chatHistory, isThinking]);
+
+  // TTS Playback Logic
+  useEffect(() => {
+    if (!soundEnabled || chatHistory.length === 0) return;
+    
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    
+    if (lastMsg.sender === 'suspect' && lastMsg.audioUrl && lastMsg.audioUrl !== lastPlayedAudioUrl) {
+      console.log("TTS Playing message from audioUrl", { text: lastMsg.text, audioUrl: lastMsg.audioUrl });
+      setLastPlayedAudioUrl(lastMsg.audioUrl);
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      
+      const audio = new Audio(lastMsg.audioUrl);
+      audioRef.current = audio;
+      audio.play().catch(e => console.error("Audio playback failed", e));
+    }
+  }, [chatHistory, soundEnabled, lastPlayedAudioUrl]);
+
+  // Force Action type if Deceased, reset to Talk otherwise (when switching)
+  useEffect(() => {
+      if (suspect.isDeceased) {
+          setInputType('action');
+      } else {
+          setInputType('talk');
+      }
+  }, [suspect.isDeceased, suspect.id]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (evidenceMenuRef.current && !evidenceMenuRef.current.contains(event.target as Node)) {
+        setShowEvidencePicker(false);
+      }
+    }
+    
+    if (showEvidencePicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEvidencePicker]);
+
+  const handleSend = () => {
+    if (inputVal.trim() && !isThinking) {
+      const evidenceTitle = selectedEvidence 
+        ? ('title' in selectedEvidence ? selectedEvidence.title : `Timeline: ${selectedEvidence.time} - ${selectedEvidence.statement}`)
+        : undefined;
+      onSendMessage(inputVal, inputType, evidenceTitle);
+      setInputVal('');
+      setSelectedEvidence(null);
+      if (inputType === 'action' && !suspect.isDeceased) setInputType('talk');
+    }
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (listening) return; 
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      if (transcript) {
+        setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
+      }
+    };
+
+    recognition.start();
+  };
+
+  const getShortEvidenceTitle = (ev: string | null | undefined) => {
+    if (!ev) return '';
+    if (ev.includes(':')) return ev.split(':')[0].trim();
+    return ev;
+  };
+
+  const findEvidenceImage = (rawName: string) => {
+    const cleanName = getShortEvidenceTitle(rawName).toLowerCase();
+    
+    // Check current suspect hidden evidence first
+    let match = suspect.hiddenEvidence.find(e => e.title.toLowerCase() === cleanName);
+    if (match) return match.imageUrl;
+
+    // Check case initial evidence
+    match = activeCase.initialEvidence.find(e => e.title.toLowerCase() === cleanName);
+    if (match) return match.imageUrl;
+    
+    // Fallback: check all suspects
+    for (const s of activeCase.suspects) {
+        match = s.hiddenEvidence.find(e => e.title.toLowerCase() === cleanName);
+        if (match) return match.imageUrl;
+    }
+    
+    return undefined;
+  };
+
+  const handleEvidenceClick = (index: number, name: string, suspectId: string) => {
+     // Pass the full name string (including description if present) to celebration
+     setCelebratingItem({ index, name, suspectId });
+  };
+
+  const handleCelebrationComplete = () => {
+    if (celebratingItem) {
+      onCollectEvidence(celebratingItem.index, celebratingItem.name, celebratingItem.suspectId);
+      setCelebratingItem(null);
+    }
+  };
+
+  const getSuspectColor = (suspectId: string) => {
+    let hash = 0;
+    for (let i = 0; i < suspectId.length; i++) {
+        hash = suspectId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash % 360);
+    return `hsl(${h}, 70%, 70%)`;
+  };
+
+  // Helper for mobile navigation
+  const cycleSuspect = (direction: 'prev' | 'next') => {
+    const currentIndex = activeCase.suspects.findIndex(s => s.id === suspect.id);
+    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex >= activeCase.suspects.length) nextIndex = 0;
+    if (nextIndex < 0) nextIndex = activeCase.suspects.length - 1;
+    onSwitchSuspect(activeCase.suspects[nextIndex].id);
+  };
+
+  const isLocked = aggravationLevel >= 100 && !suspect.isDeceased;
+  
+  // Disable suggestions for deceased suspects (Forensic mode should be explorative)
+  const showSuggestions = !chatHistory.some(m => m.sender === 'player' || m.sender === 'partner') && !suspect.isDeceased;
+
+  const partnerName = activeCase.partner?.name || "Junior Detective Al";
+  // We use the generic Suspect type to pass partner data to SuspectPortrait
+  // We mock a 'suspect' object from the partner support character data
+  const partnerAsSuspect: Suspect = {
+      id: 'partner',
+      name: activeCase.partner?.name || "Partner",
+      role: activeCase.partner?.role || "Junior Detective",
+      avatarSeed: activeCase.partner?.avatarSeed || 999,
+      portraits: activeCase.partner?.portraits || {},
+      // Dummy required fields
+      gender: activeCase.partner?.gender || "Unknown",
+      age: 25,
+      bio: "Your partner.",
+      personality: activeCase.partner?.personality || "Helpful",
+      baseAggravation: 0,
+      isGuilty: false,
+      secret: "",
+      alibi: { statement: "", isTrue: true, location: "", witnesses: [] },
+      motive: "",
+      relationships: [],
+      timeline: [],
+      knownFacts: [],
+      professionalBackground: "",
+      witnessObservations: "",
+      hiddenEvidence: []
+  };
+
+  const formattedTime = gameTime 
+    ? new Date(gameTime).toLocaleString('en-US', { 
+        year: 'numeric', month: 'long', day: 'numeric', 
+        hour: 'numeric', minute: '2-digit' 
+      }) 
+    : "10:05am September 12, 2030";
+
+  return (
+    <Container ref={containerRef}>
+      
+      <SuspectCardDock
+        suspects={activeCase.suspects}
+        activeSuspectId={suspect.id}
+        activePosition={{ x: leftPanelCenter, y: leftPanelMiddle }}
+        activeCardWidth={`${activeCardWidth}px`}
+        activeCardHeight={`${activeCardHeight}px`}
+        activeEmotion={emotion}
+        activeAggravation={aggravationLevel}
+        activeTurnId={suspectTurnIds[suspect.id]}
+        onSelectSuspect={onSwitchSuspect}
+        inactiveActionLabel="SWITCH"
+        onFlipCard={(flipped) => {
+          if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
+        }}
+      />
+
+      <MainContent>
+        <GhostLeftPanel ref={leftPanelRef} />
+
+        <ChatPanel>
+          {/* NEW MOBILE HEADER */}
+          <MobileHeader>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
+                 <SuspectPortrait 
+                    suspect={suspect} 
+                    emotion={emotion}
+                    aggravation={aggravationLevel}
+                    size={60} 
+                    style={{ border: '1px solid #333', flexShrink: 0 }} 
+                 />
+                 <div style={{ minWidth: 0 }}>
+                     <div style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{suspect.name}</div>
+                     {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
+                 </div>
+             </div>
+             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                 <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)}>PROFILE</MobileProfileBtn>
+                 <div style={{ display: 'flex' }}>
+                    <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none' }}>&lt;</MobileNavBtn>
+                    <MobileNavBtn onClick={() => cycleSuspect('next')}>&gt;</MobileNavBtn>
+                 </div>
+             </div>
+          </MobileHeader>
+
+          {celebratingItem && (
+            <AsciiCelebration 
+              evidenceName={getShortEvidenceTitle(celebratingItem.name)} 
+              evidenceImage={findEvidenceImage(celebratingItem.name)}
+              onComplete={handleCelebrationComplete} 
+            />
+          )}
+
+          {canDebug && <DebugToggle onClick={() => setDebugMode(!debugMode)}>[DEBUG]</DebugToggle>}
+          {debugMode && (
+            <DebugMenu>
+              <div style={{color: '#f00', borderBottom:'1px solid #500', marginBottom:'5px'}}>FORCE EVIDENCE</div>
+              {suspect.hiddenEvidence.map((ev) => (
+                <DebugItem key={ev.id} onClick={() => {
+                   onForceEvidence(suspect.id, ev.title);
+                   setDebugMode(false);
+                }}>
+                  {ev.title}
+                </DebugItem>
+              ))}
+            </DebugMenu>
+          )}
+
+          <div style={{ textAlign: 'center', padding: '10px', color: '#555', borderBottom: '1px solid #222' }}>
+            {formattedTime}
+          </div>
+          <ChatLog ref={scrollRef}>
+            {chatHistory.map((msg, idx) => (
+              <MessageBubble 
+                key={`${msg.sender}-${idx}-${msg.text.substring(0, 10)}`} 
+                $sender={msg.sender} 
+                $isAction={msg.type === 'action'}
+                $customColor={msg.sender === 'suspect' ? getSuspectColor(suspect.id) : undefined}
+              >
+                <span className="sender-name">
+                   {msg.sender === 'player' ? 'Detective' : msg.sender === 'partner' ? partnerName : msg.sender === 'system' ? 'SYSTEM' : suspect.name}
+                </span>
+                <span className="text">
+                  {msg.type === 'action' && '* '}{msg.text}{msg.type === 'action' && ' *'}
+                </span>
+                {msg.attachment && (
+                  <div className="attachment">📎 Evidence Shown: {getShortEvidenceTitle(msg.attachment)}</div>
+                )}
+                {msg.evidence && (
+                  <EvidenceChip 
+                    $collected={!!msg.isEvidenceCollected}
+                    onClick={() => !msg.isEvidenceCollected && handleEvidenceClick(idx, msg.evidence!, suspect.id)}
+                  >
+                    {getShortEvidenceTitle(msg.evidence)}
+                  </EvidenceChip>
+                )}
+              </MessageBubble>
+            ))}
+            {isThinking && (
+              <div style={{ color: '#555', fontStyle: 'italic' }}>
+                Thinking
+                <span className="animate-typewriter-dots"></span>
+              </div>
+            )}
+          </ChatLog>
+          
+          <InputContainer>
+            {!isLocked && showSuggestions && suggestions.length > 0 && (
+              <SuggestionChips>
+                {suggestions.map((s, i) => {
+                  const label = typeof s === 'string' ? s : s.label;
+                  const text = typeof s === 'string' ? s : s.text;
+                  return (
+                    <Chip key={`${label}-${i}`} onClick={() => setInputVal(text)}>{label}</Chip>
+                  );
+                })}
+              </SuggestionChips>
+            )}
+
+            {selectedEvidence && (
+              <AttachmentChip>
+                <span>📎 {'title' in selectedEvidence ? selectedEvidence.title : `Timeline: ${selectedEvidence.time}`}</span>
+                <button onClick={() => setSelectedEvidence(null)}>[x]</button>
+              </AttachmentChip>
+            )}
+
+            <UnifiedInputBar $disabled={isLocked || isThinking} id="unified-input-bar">
+              <TypeSelect 
+                value={inputType} 
+                onChange={(e) => setInputType(e.target.value as 'talk' | 'action')}
+                disabled={isLocked || suspect.isDeceased}
+              >
+                <option value="talk">Talk</option>
+                <option value="action">Action</option>
+              </TypeSelect>
+
+              <PlusButtonWrapper ref={evidenceMenuRef}>
+                <PlusButton 
+                  onClick={() => setShowEvidencePicker(!showEvidencePicker)}
+                  $active={!!selectedEvidence}
+                  disabled={isLocked}
+                  title="Present Evidence"
+                >
+                  +
+                </PlusButton>
+                {showEvidencePicker && (
+                  <EvidenceMenu>
+                    {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
+                      <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
+                    )}
+                    
+                    {evidenceDiscovered.length > 0 && (
+                      <>
+                        <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
+                        {evidenceDiscovered.map((ev) => (
+                          <EvidenceOption 
+                            key={ev.id} 
+                            onClick={() => {
+                              setSelectedEvidence(ev);
+                              setShowEvidencePicker(false);
+                            }}
+                          >
+                            <div style={{ fontWeight: 'bold', color: '#fff' }}>{ev.title}</div>
+                            <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
+                          </EvidenceOption>
+                        ))}
+                      </>
+                    )}
+
+                    {timelineStatementsDiscovered.length > 0 && (
+                      <>
+                        <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
+                        {timelineStatementsDiscovered.map((ts) => (
+                          <TimelineEvidenceOption 
+                            key={ts.id} 
+                            onClick={() => {
+                              setSelectedEvidence(ts);
+                              setShowEvidencePicker(false);
+                            }}
+                          >
+                            <div className="header">
+                                <span className="time">{ts.time}</span>
+                                <span className="suspect">BY {ts.suspectName}</span>
+                            </div>
+                            <div className="statement">"{ts.statement}"</div>
+                          </TimelineEvidenceOption>
+                        ))}
+                      </>
+                    )}
+                  </EvidenceMenu>
+                )}
+              </PlusButtonWrapper>
+
+              <GhostInput 
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder={isLocked 
+                  ? "Suspect has requested a lawyer." 
+                  : suspect.isDeceased 
+                    ? "Perform action..." 
+                    : inputType === 'talk' ? "Ask question..." : "Action..."
+                }
+                disabled={isLocked || isThinking}
+              />
+              
+              <SendActionBtn 
+                onClick={handleSend} 
+                disabled={isLocked || isThinking}
+              >
+                SEND
+              </SendActionBtn>
+
+              <MicButton $listening={listening} onClick={startListening} title="Voice Input">
+                {listening ? (
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                )}
+              </MicButton>
+            </UnifiedInputBar>
+          </InputContainer>
+        </ChatPanel>
+
+        <RightPanel id="right-panel" $mobileOpen={mobileIntelOpen}>
+          <AggravationMeter id="aggravation-meter">
+            <h3>{suspect.isDeceased ? "Status" : "Aggravation"}</h3>
+            {!suspect.isDeceased && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span>{`${aggravationLevel}%`}</span>
+                </div>
+            )}
+            {!suspect.isDeceased && <ProgressBar $level={aggravationLevel} />}
+            {isLocked && <div style={{ color: 'red', marginTop: '5px', fontSize: '0.9rem' }}>LAWYER REQUESTED</div>}
+            {suspect.isDeceased && <DeceasedBadge>DECEASED</DeceasedBadge>}
+          </AggravationMeter>
+          
+          <SidekickContainer id="partner-support">
+            <h3>Partner Support</h3>
+            <SidekickHeader>
+                <div style={{ width: '60px', height: '60px', border: '2px solid #555', background: '#222' }}>
+                  <SuspectPortrait 
+                    suspect={partnerAsSuspect} 
+                    size={60} 
+                    emotion={partnerEmotion}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+                <div className="info">
+                    <h3>{partnerName}</h3>
+                    <span>CHARGES: {partnerCharges}/3</span>
+                </div>
+            </SidekickHeader>
+            
+            <BubbleScrollArea>
+                <WhisperBubble>
+                    <p key={sidekickComment}>
+                        {sidekickComment ? `(Whispering) "${sidekickComment}"` : `(${partnerName} is watching carefully...)`}
+                    </p>
+                </WhisperBubble>
+            </BubbleScrollArea>
+            
+            <SidekickActions>
+                {suspect.isDeceased ? (
+                    <>
+                        <ActionButton 
+                            $type="neutral" 
+                            onClick={() => onPartnerAction('examine')}
+                            disabled={partnerCharges <= 0 || initialExamDone}
+                            title="Perform Initial Examination (Once)"
+                        >
+                            {initialExamDone ? "Exam Done" : "Initial Exam"}
+                        </ActionButton>
+                    </>
+                ) : (
+                    <>
+                        <ActionButton 
+                            $type="good" 
+                            onClick={() => onPartnerAction('goodCop')}
+                            disabled={partnerCharges <= 0 || isLocked}
+                            title="Calm Suspect (-50% Aggravation)"
+                        >
+                            Good Cop
+                        </ActionButton>
+                        <ActionButton 
+                            $type="bad"
+                            onClick={() => onPartnerAction('badCop')}
+                            disabled={partnerCharges <= 0 || isLocked}
+                            title="Force Evidence (+Aggravation)"
+                        >
+                            Bad Cop
+                        </ActionButton>
+                    </>
+                )}
+            </SidekickActions>
+          </SidekickContainer>
+
+        </RightPanel>
+      </MainContent>
+
+      {/* MOBILE PROFILE MODAL */}
+      {showMobileProfile && (
+          <ModalOverlay id="mobile-profile-modal" onClick={() => setShowMobileProfile(false)}>
+              <div onClick={e => e.stopPropagation()}>
+                  <SuspectCard 
+                      suspect={suspect} 
+                      emotion={emotion} 
+                      aggravation={aggravationLevel}
+                      width="300px"
+                      height="450px"
+                      variant="default"
+                      onFlip={(flipped) => {
+                          if (flipped) {
+                              completeStep(OnboardingStep.FLIP_CARD, false);
+                          }
+                      }}
+                  />
+              </div>
+          </ModalOverlay>
+      )}
+    </Container>
+  );
+};
+
+export default Interrogation;

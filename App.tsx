@@ -1,0 +1,1189 @@
+
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
+import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
+import { generateTTS } from './services/geminiTTS';
+import { fetchCommunityCases, publishCase, deleteCase, updateCase } from './services/persistence';
+import { auth, logout } from './services/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+
+// Import Modular Components
+import Layout from './components/Layout';
+import CaseSelection from './screens/CaseSelection';
+import CaseHub from './screens/CaseHub';
+import Interrogation from './screens/Interrogation';
+import Accusation from './screens/Accusation';
+import EndGame from './screens/EndGame';
+import CreateCase from './screens/CreateCase';
+import CaseReview from './screens/CaseReview';
+import BootSequence from './components/BootSequence';
+import Login from './components/Login';
+import { OnboardingTour } from './components/OnboardingTour';
+
+// --- STYLES FOR MODAL ---
+const Overlay = styled.div`
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const ConfirmBox = styled.div`
+  background: #050505;
+  border: 2px solid #f00;
+  padding: 30px;
+  width: 500px;
+  max-width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 0 30px #500;
+  text-align: center;
+`;
+
+const WarningTitle = styled.h2`
+  color: #f00;
+  margin: 0;
+  text-transform: uppercase;
+  font-size: var(--type-h2);
+  text-shadow: 0 0 10px #f00;
+`;
+
+const WarningText = styled.p`
+  color: #ddd;
+  font-size: var(--type-body-lg);
+  line-height: 1.5;
+  margin: 0;
+`;
+
+const ButtonRow = styled.div`
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 10px;
+`;
+
+const ModalButton = styled.button<{ $variant: 'cancel' | 'confirm' }>`
+  background: ${props => props.$variant === 'confirm' ? '#500' : '#222'};
+  color: #fff;
+  border: 1px solid ${props => props.$variant === 'confirm' ? '#f00' : '#555'};
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: var(--type-body-lg);
+  cursor: pointer;
+  flex: 1;
+  text-transform: uppercase;
+
+  &:hover {
+    background: ${props => props.$variant === 'confirm' ? '#f00' : '#444'};
+    box-shadow: ${props => props.$variant === 'confirm' ? '0 0 15px #f00' : 'none'};
+  }
+`;
+
+const TIME_INCREMENT_MS = 5 * 60 * 1000; // 5 minutes per action
+const WAIT_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes before they get mad
+const INITIAL_TIME_MS = new Date('2030-09-12T09:00:00').getTime();
+
+const DEFAULT_SUGGESTIONS = [
+  { label: "Where were you?", text: "Good evening. I'm the detective assigned to this case. Can you tell me where you were at the time of the crime?" },
+  { label: "Connection to Victim", text: "I apologize for the intrusion during this difficult time, but I need to ask: how exactly did you know the victim?" },
+  { label: "Any Witnesses?", text: "We're verifying timelines. Is there anyone who can confirm your whereabouts during the incident?" }
+];
+
+const App: React.FC = () => {
+  // --- AUTH ---
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const isAdmin = user?.email === 'noahsemus@gmail.com';
+
+  // --- STATE ---
+  const [hasBooted, setHasBooted] = useState(false);
+  const [powerState, setPowerState] = useState<'on' | 'off' | 'turning-on' | 'turning-off'>('turning-on');
+  
+  const [communityCases, setCommunityCases] = useState<CaseData[]>([]);
+  const [loadingCommunity, setLoadingCommunity] = useState(false);
+  
+  const [gameState, setGameState] = useState<GameState>({
+    currentScreen: ScreenState.CASE_SELECTION,
+    selectedCaseId: null,
+    currentSuspectId: null,
+    aggravationLevels: {},
+    notes: {},
+    evidenceDiscovered: [],
+    timelineStatementsDiscovered: [],
+    chatHistory: {},
+    officerHistory: [],
+    suspectEmotions: {},
+    partnerEmotion: Emotion.NEUTRAL,
+    suspectTurnIds: {},
+    gameResult: null,
+    accusedSuspectIds: [],
+    officerHintsRemaining: 10,
+    currentOfficerHint: null,
+    sidekickComment: null,
+    partnerCharges: 3,
+    gameTime: INITIAL_TIME_MS,
+    lastInteractionTimes: {},
+    suspectSuggestions: {}
+  });
+
+  const [draftCase, setDraftCase] = useState<CaseData | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string>("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  
+  const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
+  const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
+  const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('isMuted', String(isMuted));
+  }, [isMuted]);
+
+  // Sync draftCase changes back to communityCases for UI consistency
+  useEffect(() => {
+    if (draftCase) {
+      setCommunityCases(prev => prev.map(c => c.id === draftCase.id ? draftCase : c));
+    }
+  }, [draftCase]);
+
+  // DEBUG: Log State Transitions
+  useEffect(() => {
+    console.log("[DEBUG] Game State Update:", { 
+      screen: gameState.currentScreen,
+      case: gameState.selectedCaseId,
+      suspect: gameState.currentSuspectId,
+      aggravation: gameState.aggravationLevels,
+      time: new Date(gameState.gameTime).toLocaleTimeString()
+    });
+  }, [gameState.currentScreen, gameState.selectedCaseId, gameState.currentSuspectId, gameState.aggravationLevels, gameState.gameTime]);
+
+  // Handle Boot Sequence Completion
+  const handleBootComplete = () => {
+    // 1. Start turning off (collapse screen)
+    setPowerState('turning-off');
+    
+    // 2. Wait for collapse (500ms), then switch to game mode and turn on again
+    setTimeout(() => {
+       setHasBooted(true);
+       setPowerState('turning-on');
+    }, 600);
+  };
+
+  // Load voices on mount
+  useEffect(() => {
+    const loadVoices = () => window.speechSynthesis.getVoices();
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }, []);
+
+  // Handle Auth
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch Community Cases on Mount
+  useEffect(() => {
+    if (user) {
+      loadCommunity();
+    }
+  }, [user]);
+
+  const loadCommunity = async () => {
+    setLoadingCommunity(true);
+    const remoteCases = await fetchCommunityCases();
+    // Filter out corrupted cases (missing ID or title or empty strings)
+    const validCases = remoteCases.filter(c => 
+      c && 
+      c.id && typeof c.id === 'string' && c.id.trim() !== '' &&
+      c.title && typeof c.title === 'string' && c.title.trim() !== ''
+    );
+    setCommunityCases(validCases);
+    setLoadingCommunity(false);
+  };
+
+  useEffect(() => {
+    window.speechSynthesis.cancel();
+  }, [gameState.currentScreen, gameState.currentSuspectId, isMuted]);
+
+  // --- AUDIO HELPER ---
+  const playCharacterVoice = (text: string, characterId: string, voiceName?: string) => {
+    if (isMuted || !window.speechSynthesis || voiceName === 'None') return;
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) return;
+
+    const qualityKeywords = ['Google', 'Microsoft', 'Natural', 'Premium', 'Enhanced'];
+    const preferredVoices = voices.filter(v => 
+      v.lang.startsWith('en') && 
+      qualityKeywords.some(keyword => v.name.includes(keyword))
+    );
+    const fallbackVoices = voices.filter(v => v.lang.startsWith('en'));
+    const targetPool = preferredVoices.length > 0 ? preferredVoices : (fallbackVoices.length > 0 ? fallbackVoices : voices);
+
+    const hash = characterId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const voiceIndex = hash % targetPool.length;
+    
+    utterance.voice = targetPool[voiceIndex];
+
+    if (characterId === 'officer') {
+      utterance.pitch = 0.9;
+      utterance.rate = 1.05;
+    } else if (characterId === 'partner') {
+      utterance.pitch = 1.2;
+      utterance.rate = 1.1;
+    } else if (characterId === 'system') {
+      utterance.pitch = 0.5;
+      utterance.rate = 1.0;
+    } else {
+      const normHash = (hash % 100) / 100; 
+      utterance.pitch = 0.95 + (normHash * 0.2); 
+      utterance.rate = 0.95 + ((hash % 10) / 50); 
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // --- ACTIONS ---
+
+  const selectCase = (caseInput: string | CaseData) => {
+    console.log('[DEBUG] selectCase:', typeof caseInput === 'string' ? caseInput : caseInput.title);
+    let selectedCase: CaseData | undefined;
+    if (typeof caseInput === 'string') {
+        selectedCase = communityCases.find(c => c.id === caseInput);
+    } else {
+        selectedCase = caseInput;
+    }
+    if (!selectedCase) return;
+
+    const initialAggravation: Record<string, number> = {};
+    const initialNotes: Record<string, string[]> = {};
+    const initialHistory: Record<string, ChatMessage[]> = {};
+    const initialEmotions: Record<string, Emotion> = {};
+    const initialTurnIds: Record<string, string | undefined> = {};
+    // Don't pre-fill time. Timer starts on first interaction.
+    const initialInteractionTimes: Record<string, number> = {}; 
+    
+    selectedCase.suspects.forEach(s => {
+      initialAggravation[s.id] = s.baseAggravation;
+      initialNotes[s.id] = [];
+      initialHistory[s.id] = [];
+      initialEmotions[s.id] = Emotion.NEUTRAL;
+      initialTurnIds[s.id] = undefined; 
+    });
+
+    const officerName = selectedCase.officer?.name || "The Chief";
+    const officerGreeting = `This is ${officerName}. I'm busy, so make it quick. What do you have?`;
+
+    setGameState(prev => ({
+      ...prev,
+      currentScreen: ScreenState.CASE_HUB,
+      selectedCaseId: selectedCase!.id,
+      currentSuspectId: null,
+      aggravationLevels: initialAggravation,
+      notes: initialNotes,
+      evidenceDiscovered: [...selectedCase!.initialEvidence],
+      timelineStatementsDiscovered: (selectedCase!.initialTimeline || []).map((t, i) => ({
+        id: `initial-ts-${i}`,
+        suspectId: 'system',
+        suspectName: 'POLICE REPORT',
+        time: t.time,
+        statement: t.activity || (t as any).statement || ''
+      })),
+      chatHistory: initialHistory,
+      officerHistory: [{ sender: 'officer', text: officerGreeting, timestamp: new Date(INITIAL_TIME_MS).toLocaleTimeString() }],
+      suspectEmotions: initialEmotions,
+      partnerEmotion: Emotion.NEUTRAL,
+      suspectTurnIds: initialTurnIds,
+      officerHintsRemaining: 10,
+      currentOfficerHint: null,
+      sidekickComment: "I'm ready to back you up, Detective. I've got 3 moves I can pull if things get hairy.",
+      partnerCharges: 3,
+      winner: null,
+      accusedSuspectId: null,
+      gameTime: INITIAL_TIME_MS,
+      lastInteractionTimes: initialInteractionTimes,
+      suspectSuggestions: {} // Reset suggestions for new case
+    }));
+
+    // Pre-load default suggestions but don't persist them yet (since no suspect is selected)
+    setCurrentSuggestions(DEFAULT_SUGGESTIONS);
+  };
+
+  const startInterrogation = (suspectId: string) => {
+    // Check for "Kept Waiting" Penalty logic
+    const { gameTime, lastInteractionTimes, aggravationLevels, chatHistory, selectedCaseId, suspectSuggestions } = gameState;
+    const currentCase = communityCases.find(c => c.id === selectedCaseId)!;
+    const suspect = currentCase.suspects.find(s => s.id === suspectId)!;
+    
+    let newAgg = aggravationLevels[suspectId] || 0;
+    let newHistory = chatHistory[suspectId] || [];
+    let updatedInteractionTimes = { ...lastInteractionTimes };
+
+    if (!suspect.isDeceased) {
+        const lastSeen = lastInteractionTimes[suspectId];
+        
+        // ONLY check penalty if we have spoken before (timer is running)
+        if (lastSeen !== undefined) {
+            const diffMs = gameTime - lastSeen;
+            
+            if (diffMs > WAIT_THRESHOLD_MS) {
+                const hours = Math.floor(diffMs / (60 * 60 * 1000));
+                const mins = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+                const penalty = 5 + Math.floor(diffMs / (60 * 60 * 1000)) * 5; // +5, then +5 more per hour
+                
+                newAgg = Math.min(100, newAgg + penalty);
+                
+                const timeStr = hours > 0 ? `${hours} hour${hours > 1 ? 's' : ''}` : `${mins} mins`;
+                
+                newHistory = [...newHistory, {
+                    sender: 'system',
+                    text: `[SYSTEM] Subject is annoyed. You kept them waiting for ${timeStr}. (+${penalty}% Aggravation)`,
+                    timestamp: new Date(gameTime).toLocaleTimeString()
+                }];
+            }
+            // Update interaction time to NOW since we are back with them
+            updatedInteractionTimes[suspectId] = gameTime;
+        }
+    }
+
+    // LOAD PERSISTED SUGGESTIONS OR DEFAULTS
+    const savedSuggestions = suspectSuggestions[suspectId];
+    if (savedSuggestions && savedSuggestions.length > 0) {
+        setCurrentSuggestions(savedSuggestions);
+    } else {
+        setCurrentSuggestions(DEFAULT_SUGGESTIONS);
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      currentScreen: ScreenState.INTERROGATION,
+      currentSuspectId: suspectId,
+      sidekickComment: prev.sidekickComment,
+      aggravationLevels: { ...prev.aggravationLevels, [suspectId]: newAgg },
+      chatHistory: { ...prev.chatHistory, [suspectId]: newHistory },
+      lastInteractionTimes: updatedInteractionTimes
+    }));
+  };
+
+  const handlePartnerAction = async (action: 'goodCop' | 'badCop' | 'examine' | 'hint') => {
+      console.log('[DEBUG] handlePartnerAction:', action);
+      const { currentSuspectId, partnerCharges, aggravationLevels, selectedCaseId, evidenceDiscovered, chatHistory, gameTime } = gameState;
+      if (!currentSuspectId || !selectedCaseId || partnerCharges <= 0) return;
+
+      const currentCase = communityCases.find(c => c.id === selectedCaseId)!;
+      const suspect = currentCase.suspects.find(s => s.id === currentSuspectId)!;
+      const currentAgg = aggravationLevels[currentSuspectId] || 0;
+      
+      // ADVANCE TIME
+      const newGameTime = gameTime + TIME_INCREMENT_MS;
+      
+      setIsThinking(true);
+
+      // Reaction Logic
+      let newPartnerEmotion = Emotion.NEUTRAL;
+      if (action === 'goodCop') newPartnerEmotion = Emotion.HAPPY;
+      else if (action === 'badCop') newPartnerEmotion = Emotion.ANGRY;
+      else if (action === 'examine' || action === 'hint') newPartnerEmotion = Emotion.NEUTRAL;
+
+      try {
+        const partnerDialogue = await getPartnerIntervention(
+           action, 
+           suspect,
+           currentCase,
+           chatHistory[currentSuspectId] || []
+        );
+
+        let newAgg = currentAgg;
+        let whisperComment = "";
+
+        if (action === 'goodCop') {
+            newAgg = Math.floor(currentAgg * 0.5);
+            whisperComment = "I smoothed things over. They seem calmer now.";
+        } else if (action === 'badCop') {
+            let aggIncrease = 20 + Math.floor(Math.random() * 15);
+            newAgg = Math.min(100, currentAgg + aggIncrease);
+            whisperComment = "Reading their reaction...";
+        } else if (action === 'examine') {
+            whisperComment = "Examination logged.";
+        } else if (action === 'hint') {
+            whisperComment = "Hope that helps.";
+        }
+
+        const partnerMsg: ChatMessage = {
+            sender: 'partner',
+            text: partnerDialogue,
+            timestamp: new Date(newGameTime).toLocaleTimeString(),
+            type: action === 'badCop' ? 'action' : 'talk'
+        };
+
+        // Partner clears suggestions for now, as context changes
+        setCurrentSuggestions([]);
+
+        setGameState(prev => ({
+          ...prev,
+          partnerCharges: prev.partnerCharges - 1,
+          chatHistory: { ...prev.chatHistory, [currentSuspectId]: [...(prev.chatHistory[currentSuspectId] || []), partnerMsg] },
+          sidekickComment: whisperComment,
+          partnerEmotion: newPartnerEmotion,
+          gameTime: newGameTime,
+          // Partner action counts as interaction, starting/resetting timer
+          lastInteractionTimes: { ...prev.lastInteractionTimes, [currentSuspectId]: newGameTime },
+          suspectSuggestions: { ...prev.suspectSuggestions, [currentSuspectId]: [] } // Clear persisted
+        }));
+        
+        playCharacterVoice(partnerDialogue, 'partner', currentCase.partner.voice);
+
+        // IF Deceased, we don't need a response from the suspect for these actions, the partner just talks.
+        if (suspect.isDeceased) {
+             setIsThinking(false);
+             return; 
+        }
+
+        const promptForSuspect = `[PARTNER INTERVENTION (${action === 'goodCop' ? 'GOOD COP' : 'BAD COP'})]: "${partnerDialogue}"`;
+
+        const response = await getSuspectResponse(
+          suspect,
+          currentCase,
+          promptForSuspect,
+          'action', 
+          null, 
+          newAgg, 
+          false,
+          evidenceDiscovered // Pass discovered evidence
+        );
+
+        let finalAgg = newAgg + response.aggravationDelta;
+        finalAgg = Math.max(0, Math.min(100, finalAgg));
+        
+        const suspectMsg: ChatMessage = {
+            sender: 'suspect',
+            text: finalAgg >= 100 ? "That's it! I want my lawyer!" : response.text,
+            timestamp: new Date(newGameTime).toLocaleTimeString(),
+            evidence: response.revealedEvidence,
+            isEvidenceCollected: false
+        };
+
+        // Generate TTS Audio
+        let audioUrl: string | null = null;
+        if (!isMuted && suspect.voice !== 'None') {
+            audioUrl = await generateTTS(suspectMsg.text, suspect.voice || 'Kore');
+        }
+
+        let finalWhisper = whisperComment;
+        if (action === 'badCop') {
+            const unrevealed = suspect.hiddenEvidence.filter(hiddenEv => {
+                const cleanHiddenTitle = hiddenEv.title.toLowerCase();
+                
+                const isDiscovered = evidenceDiscovered.some(discoveredEv => 
+                    discoveredEv.title.toLowerCase().includes(cleanHiddenTitle)
+                );
+                
+                const isJustRevealed = response.revealedEvidence 
+                    ? response.revealedEvidence.toLowerCase().includes(cleanHiddenTitle)
+                    : false;
+
+                return !isDiscovered && !isJustRevealed;
+            });
+            finalWhisper = await getBadCopHint(suspect, unrevealed, response.text);
+        }
+
+        setGameState(prev => {
+            const prevHistory = prev.chatHistory[currentSuspectId] || [];
+            const newHistory = [...prevHistory, suspectMsg];
+
+            return {
+                ...prev,
+                aggravationLevels: { ...prev.aggravationLevels, [currentSuspectId]: finalAgg },
+                sidekickComment: finalWhisper,
+                suspectEmotions: { ...prev.suspectEmotions, [currentSuspectId]: response.emotion },
+                chatHistory: { ...prev.chatHistory, [currentSuspectId]: newHistory }
+            };
+        });
+
+        // Play Audio
+        if (audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(e => console.error("Audio playback failed", e));
+        } else if (!isMuted && suspect.voice !== 'None') {
+            playCharacterVoice(suspectMsg.text, suspect.id, suspect.voice);
+        }
+
+    } catch (e: any) {
+        console.error("Partner Action Error:", e);
+        setGameState(prev => ({
+          ...prev,
+          sidekickComment: "I... lost my train of thought. Let's try that again.",
+          chatHistory: {
+            ...prev.chatHistory,
+            [currentSuspectId]: [
+               ...(prev.chatHistory[currentSuspectId] || []),
+               { sender: 'system', text: "[ERROR] Connection Interrupted. Please retry.", timestamp: new Date(newGameTime).toLocaleTimeString() }
+            ]
+          }
+        }));
+      } finally {
+        setIsThinking(false);
+      }
+  };
+
+  const handleSendMessage = async (text: string, type: 'talk' | 'action' = 'talk', attachment?: string) => {
+    console.log('[DEBUG] handleSendMessage:', { text, type, attachment });
+    const { selectedCaseId, currentSuspectId, chatHistory, aggravationLevels, evidenceDiscovered, gameTime } = gameState;
+    if (!selectedCaseId || !currentSuspectId) return;
+
+    const currentCase = communityCases.find(c => c.id === selectedCaseId);
+    if (!currentCase) return;
+
+    const currentSuspect = currentCase.suspects.find(s => s.id === currentSuspectId)!;
+    const currentAgg = aggravationLevels[currentSuspectId];
+
+    if (currentAgg >= 100) return;
+
+    // ADVANCE TIME
+    const newGameTime = gameTime + TIME_INCREMENT_MS;
+
+    const suspectHistory = chatHistory[currentSuspectId] || [];
+    const isFirstTurn = !suspectHistory.some(m => m.sender === 'player');
+
+    let finalText = text;
+    if (type === 'action') {
+      const words = text.trim().split(' ');
+      let verb = words[0].toLowerCase();
+      if (verb === 'i' && words.length > 1) {
+         verb = words[1].toLowerCase();
+         words.shift(); 
+      }
+      if (verb === 'be') verb = 'is';
+      else if (verb === 'have') verb = 'has';
+      else if (verb.match(/(ss|x|ch|sh|o)$/)) verb += 'es';
+      else if (verb.endsWith('y') && !verb.match(/[aeiou]y$/)) verb = verb.slice(0, -1) + 'ies';
+      else if (!verb.endsWith('s')) verb += 's';
+      words[0] = verb;
+      finalText = `* ${words.join(' ')} *`;
+    }
+
+    const userMsg: ChatMessage = { 
+      sender: 'player', 
+      text: finalText, 
+      type: type,
+      attachment: attachment || null,
+      timestamp: new Date(newGameTime).toLocaleTimeString() 
+    };
+
+    setGameState(prev => ({
+      ...prev,
+      gameTime: newGameTime,
+      // Message interaction starts/resets the timer
+      lastInteractionTimes: { ...prev.lastInteractionTimes, [currentSuspectId]: newGameTime },
+      chatHistory: { ...prev.chatHistory, [currentSuspectId]: [...(chatHistory[currentSuspectId] || []), userMsg] },
+    }));
+    
+    setIsThinking(true);
+
+    try {
+      const response = await getSuspectResponse(
+        currentSuspect, 
+        currentCase, 
+        userMsg.text, 
+        type,
+        attachment || null,
+        currentAgg,
+        isFirstTurn,
+        evidenceDiscovered // Pass discovered evidence
+      );
+
+      let newAgg = (aggravationLevels[currentSuspectId] || 0) + response.aggravationDelta;
+      newAgg = Math.max(0, Math.min(100, newAgg));
+
+      const finalMsgText = newAgg >= 100 
+        ? "That's it! I'm done talking. I want my lawyer. Now!"
+        : response.text;
+
+      // Generate TTS Audio
+      let audioUrl: string | null = null;
+      if (!isMuted && currentSuspect.voice !== 'None') {
+          audioUrl = await generateTTS(finalMsgText, currentSuspect.voice || 'Kore');
+      }
+      
+      const suspectMsg: ChatMessage = { 
+          sender: 'suspect', 
+          text: finalMsgText, 
+          timestamp: new Date(newGameTime).toLocaleTimeString(),
+          evidence: newAgg >= 100 ? null : response.revealedEvidence, 
+          isEvidenceCollected: false,
+          audioUrl: audioUrl
+      };
+
+      setGameState(prev => {
+        const updatedHistory = [...prev.chatHistory[currentSuspectId], suspectMsg];
+        let newTimelineStatements = [...prev.timelineStatementsDiscovered];
+
+        if (response.revealedTimelineStatement && newAgg < 100) {
+          console.log("[DEBUG] Timeline Statement Revealed:", response.revealedTimelineStatement);
+          const alreadyExists = newTimelineStatements.some(ts => 
+            ts.suspectId === currentSuspectId && 
+            ts.time === response.revealedTimelineStatement!.time &&
+            ts.statement === response.revealedTimelineStatement!.statement
+          );
+
+          if (!alreadyExists) {
+            newTimelineStatements.push({
+              id: `ts-${Date.now()}`,
+              suspectId: currentSuspectId,
+              suspectName: currentSuspect.name,
+              suspectPortrait: currentSuspect.portraits[Emotion.NEUTRAL] || undefined,
+              time: response.revealedTimelineStatement.time,
+              statement: response.revealedTimelineStatement.statement
+            });
+          }
+        }
+
+        return {
+          ...prev,
+          chatHistory: { ...prev.chatHistory, [currentSuspectId]: updatedHistory },
+          aggravationLevels: { ...prev.aggravationLevels, [currentSuspectId]: newAgg },
+          suspectEmotions: { ...prev.suspectEmotions, [currentSuspectId]: response.emotion },
+          timelineStatementsDiscovered: newTimelineStatements,
+          // PERSIST SUGGESTIONS PER SUSPECT
+          suspectSuggestions: { ...prev.suspectSuggestions, [currentSuspectId]: response.hints }
+        };
+      });
+
+      // Play Audio
+      if (audioUrl) {
+          const audio = new Audio(audioUrl);
+          audio.play().catch(e => console.error("Audio playback failed", e));
+      } else if (!isMuted && currentSuspect.voice !== 'None') {
+          playCharacterVoice(finalMsgText, currentSuspect.id, currentSuspect.voice);
+      }
+
+      setCurrentSuggestions(response.hints);
+    } catch (e: any) {
+      console.error("AI Generation Error:", e);
+      setGameState(prev => ({
+        ...prev,
+        chatHistory: {
+           ...prev.chatHistory,
+           [currentSuspectId]: [
+             ...(prev.chatHistory[currentSuspectId] || []),
+             { sender: 'system', text: "[ERROR] Uplink Interrupted. Please retransmit.", timestamp: new Date(newGameTime).toLocaleTimeString() }
+           ]
+        }
+      }));
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleSendOfficerMessage = async (text: string) => {
+    if (gameState.officerHintsRemaining <= 0 || !gameState.selectedCaseId) return;
+    
+    // Officer chat also advances time, though maybe less? Let's stick to consistent 5 mins for simplicity
+    const newGameTime = gameState.gameTime + TIME_INCREMENT_MS;
+
+    const userMsg: ChatMessage = { sender: 'player', text, timestamp: new Date(newGameTime).toLocaleTimeString() };
+    setGameState(prev => ({
+      ...prev,
+      gameTime: newGameTime,
+      officerHistory: [...prev.officerHistory, userMsg],
+      officerHintsRemaining: prev.officerHintsRemaining - 1
+    }));
+
+    setIsThinking(true);
+    
+    try {
+      const currentCase = communityCases.find(c => c.id === gameState.selectedCaseId)!;
+      
+      const responseText = await getOfficerChatResponse(
+        currentCase, 
+        text, 
+        gameState.evidenceDiscovered, 
+        gameState.notes,
+        gameState.chatHistory 
+      );
+      
+      playCharacterVoice(responseText, 'officer', currentCase.officer.voice);
+      
+      const officerMsg: ChatMessage = { sender: 'officer', text: responseText, timestamp: new Date(newGameTime).toLocaleTimeString() };
+      
+      setGameState(prev => ({
+        ...prev,
+        officerHistory: [...prev.officerHistory, officerMsg]
+      }));
+    } catch (e: any) {
+      console.error("Officer Chat Error:", e);
+      setGameState(prev => ({
+        ...prev,
+        officerHistory: [...prev.officerHistory, { sender: 'system', text: "[SECURE LINE DISCONNECTED]", timestamp: new Date(newGameTime).toLocaleTimeString() }]
+      }));
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleGenerateCase = async (prompt: string, isLucky: boolean) => {
+    setIsGenerating(true);
+    setGenerationStatus("Creating criminal profiles...");
+    try {
+        const newCase = await generateCaseFromPrompt(prompt, isLucky);
+        newCase.authorId = user?.uid || undefined;
+        setGenerationStatus("Generating suspect portraits and evidence... (0%)");
+        await pregenerateCaseImages(newCase, (msg) => setGenerationStatus(msg), user?.uid);
+        setGenerationStatus("");
+        
+        // Open edit screen first
+        setDraftCase(newCase);
+        setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_REVIEW }));
+    } catch (e: any) {
+        console.error("Generation Error:", e);
+        alert(`Case generation failed: ${e.message || "Unknown error"}`);
+    } finally {
+        setIsGenerating(false);
+        setGenerationStatus("");
+    }
+  };
+
+  const handleSaveAndStart = async () => {
+    if (draftCase) {
+        if (draftCase.isUploaded) {
+            // Persist the edit to the server
+            const success = await updateCase(draftCase.id, draftCase);
+            if (!success) {
+                alert("Failed to save changes to the server.");
+                return;
+            }
+            // Fetch updated case to get the new version number
+            const remoteCases = await fetchCommunityCases();
+            setCommunityCases(remoteCases);
+            const updatedCase = remoteCases.find(c => c.id === draftCase.id);
+            if (updatedCase) {
+                selectCase(updatedCase);
+            } else {
+                selectCase(draftCase);
+            }
+        } else {
+            setCommunityCases(prev => {
+                console.log("[DEBUG] Updating communityCases, draftCase:", draftCase);
+                // Ensure draft case is valid before adding
+                if (!draftCase || !draftCase.id || !draftCase.title) {
+                    console.log("[DEBUG] Invalid draftCase, not adding");
+                    return prev;
+                }
+                
+                const exists = prev.some(c => c.id === draftCase.id);
+                if (exists) {
+                    console.log("[DEBUG] Case exists, updating");
+                    return prev.map(c => c.id === draftCase.id ? draftCase : c);
+                }
+                console.log("[DEBUG] Case new, adding");
+                return [draftCase, ...prev];
+            });
+            selectCase(draftCase);
+        }
+        setDraftCase(null);
+    }
+  };
+
+  const handleEditCase = (caseId?: string | any) => {
+    const idToEdit = (typeof caseId === 'string') ? caseId : gameState.selectedCaseId;
+    const caseToEdit = communityCases.find(c => c.id === idToEdit);
+    if (!caseToEdit) return;
+
+    setDraftCase(caseToEdit);
+    setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_REVIEW }));
+  };
+
+  const initiatePublish = () => {
+    if (!gameState.selectedCaseId) return;
+    setShowPublishConfirm(true);
+  };
+
+  const executePublish = async () => {
+    setShowPublishConfirm(false); 
+    if (!gameState.selectedCaseId) return;
+    const caseToPublish = communityCases.find(c => c.id === gameState.selectedCaseId);
+    if (!caseToPublish) return;
+
+    setIsPublishing(true);
+    const success = await publishCase({ ...caseToPublish, isUploaded: true }, user?.uid);
+    
+    if (success) {
+      // Re-fetch to get the version and authorId
+      const remoteCases = await fetchCommunityCases();
+      setCommunityCases(remoteCases);
+    }
+    setIsPublishing(false);
+  };
+
+  const collectEvidence = (msgIndex: number, rawEvidenceString: string, suspectId: string) => {
+    setGameState(prev => {
+      const history = [...(prev.chatHistory[suspectId] || [])];
+      if (history[msgIndex]) {
+        history[msgIndex] = { ...history[msgIndex], isEvidenceCollected: true };
+      }
+      
+      const currentCase = communityCases.find(c => c.id === prev.selectedCaseId);
+      if (!currentCase) return prev;
+
+      // PARSE STRING: Support "Title: Description" format from AI
+      let parsedTitle = rawEvidenceString;
+      let parsedDesc = `Evidence discovered from ${currentCase.suspects.find(s=>s.id===suspectId)?.name || 'Unknown'}.`;
+      
+      if (rawEvidenceString.includes(':')) {
+          const parts = rawEvidenceString.split(':');
+          parsedTitle = parts[0].trim();
+          if (parts.length > 1 && parts[1].trim().length > 0) {
+             parsedDesc = parts.slice(1).join(':').trim();
+          }
+      }
+
+      // Find actual Evidence object in known lists
+      let foundEvidence: Evidence | undefined;
+      
+      // Check Hidden Evidence for Suspects
+      const suspect = currentCase.suspects.find(s => s.id === suspectId);
+      if (suspect) {
+          foundEvidence = suspect.hiddenEvidence.find(e => 
+              e.title.toLowerCase() === parsedTitle.toLowerCase() || 
+              parsedTitle.toLowerCase().includes(e.title.toLowerCase())
+          );
+      }
+      
+      // Fallback: Check Initial Evidence
+      if (!foundEvidence) {
+          foundEvidence = currentCase.initialEvidence.find(e => 
+            e.title.toLowerCase() === parsedTitle.toLowerCase()
+          );
+      }
+
+      // If not found (AI hallucinated new item), create entry with parsed title/desc
+      if (!foundEvidence) {
+          foundEvidence = {
+              id: `discovered-${Date.now()}`,
+              title: parsedTitle,
+              description: parsedDesc, // Uses parsed description from AI or generic fallback
+              imageUrl: undefined
+          };
+      }
+
+      const alreadyHas = prev.evidenceDiscovered.some(e => e.title === foundEvidence!.title);
+      
+      return {
+        ...prev,
+        chatHistory: { ...prev.chatHistory, [suspectId]: history },
+        evidenceDiscovered: alreadyHas ? prev.evidenceDiscovered : [...prev.evidenceDiscovered, foundEvidence!]
+      };
+    });
+  };
+
+  const handleForceEvidence = (suspectId: string, evidenceTitle: string) => {
+    const msg: ChatMessage = {
+      sender: 'suspect',
+      text: "[DEBUG FORCE] Okay, fine! I'll tell you about this.",
+      timestamp: new Date(gameState.gameTime).toLocaleTimeString(),
+      evidence: evidenceTitle,
+      isEvidenceCollected: false
+    };
+    
+    setGameState(prev => ({
+      ...prev,
+      chatHistory: {
+        ...prev.chatHistory,
+        [suspectId]: [...(prev.chatHistory[suspectId] || []), msg]
+      }
+    }));
+  };
+
+  const makeAccusation = (suspectIds: string[]) => {
+    const currentCase = communityCases.find(c => c.id === gameState.selectedCaseId)!;
+    
+    const guiltySuspectIds = currentCase.suspects.filter(s => s.isGuilty).map(s => s.id);
+    const accusedGuiltyIds = suspectIds.filter(id => guiltySuspectIds.includes(id));
+    const accusedInnocentIds = suspectIds.filter(id => !guiltySuspectIds.includes(id));
+
+    let result: 'SUCCESS' | 'PARTIAL' | 'FAILURE';
+    if (accusedGuiltyIds.length === guiltySuspectIds.length && accusedInnocentIds.length === 0) {
+        result = 'SUCCESS';
+    } else if (accusedGuiltyIds.length > 0) {
+        result = 'PARTIAL';
+    } else {
+        result = 'FAILURE';
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      gameResult: result,
+      accusedSuspectIds: suspectIds,
+      currentScreen: ScreenState.ENDGAME
+    }));
+  };
+
+  const resetGame = () => {
+    setGameState({
+      ...gameState, 
+      currentScreen: ScreenState.CASE_SELECTION, 
+      selectedCaseId: null, 
+      gameResult: null 
+    });
+  };
+
+  const navigateTo = (screen: ScreenState) => {
+    if (screen === ScreenState.CASE_SELECTION) {
+       resetGame();
+       return;
+    }
+    setGameState(prev => ({ ...prev, currentScreen: screen }));
+  };
+
+  const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
+
+  const handleDeleteCase = async (caseId: string) => {
+    if (!isAdmin) return;
+    setCaseToDelete(caseId);
+  };
+
+  const confirmDeleteCase = async () => {
+    if (!caseToDelete || !isAdmin) return;
+    const success = await deleteCase(caseToDelete);
+    if (success) {
+      setCommunityCases(prev => prev.filter(c => c.id !== caseToDelete));
+    }
+    setCaseToDelete(null);
+  };
+
+  const handleToggleFeatured = async (caseId: string, isFeatured: boolean) => {
+    if (!isAdmin) return;
+    const success = await updateCase(caseId, { isFeatured });
+    if (success) {
+      setCommunityCases(prev => prev.map(c => c.id === caseId ? { ...c, isFeatured } : c));
+    }
+  };
+
+  const currentCase = gameState.selectedCaseId 
+    ? communityCases.find(c => c.id === gameState.selectedCaseId)
+    : undefined;
+  
+  const isGameplay = 
+    gameState.currentScreen === ScreenState.CASE_HUB || 
+    gameState.currentScreen === ScreenState.INTERROGATION || 
+    gameState.currentScreen === ScreenState.ACCUSATION ||
+    gameState.currentScreen === ScreenState.ENDGAME;
+
+  const isCustomCase = currentCase?.id.startsWith('custom-');
+  const isNetworkCase = communityCases.some(c => c.id === currentCase?.id && c.isUploaded);
+  const isCreator = currentCase?.authorId === user?.uid;
+
+  const canPublish = !!(isCustomCase && !currentCase?.isUploaded && isGameplay && gameState.currentScreen !== ScreenState.ENDGAME);
+  const canEdit = !!(isCustomCase && (isAdmin || isCreator) && isGameplay && gameState.currentScreen !== ScreenState.ENDGAME);
+
+  if (authLoading) {
+    return (
+      <Layout screenState={gameState.currentScreen} isMuted={isMuted} onToggleMute={() => setIsMuted(!isMuted)} onNavigate={() => {}} isBooting>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#0f0' }}>
+          INITIALIZING SECURE CONNECTION...
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout screenState={gameState.currentScreen} isMuted={isMuted} onToggleMute={() => setIsMuted(!isMuted)} onNavigate={() => {}} isBooting>
+        <Login />
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout 
+      screenState={gameState.currentScreen}
+      caseTitle={currentCase?.title}
+      onNavigate={navigateTo}
+      isMuted={isMuted}
+      onToggleMute={() => setIsMuted(!isMuted)}
+      onPublish={initiatePublish}
+      canPublish={canPublish}
+      isPublishing={isPublishing}
+      onEdit={handleEditCase}
+      canEdit={canEdit}
+      isBooting={!hasBooted}
+      powerState={powerState}
+      mobileAction={gameState.currentScreen === ScreenState.INTERROGATION ? {
+        label: mobileIntelOpen ? 'CLOSE' : 'OPEN INTEL',
+        onClick: () => setMobileIntelOpen(!mobileIntelOpen),
+        active: mobileIntelOpen
+      } : undefined}
+      user={user}
+      onLogout={logout}
+    >
+      {!hasBooted ? (
+        <BootSequence onComplete={handleBootComplete} />
+      ) : (
+        <>
+          {gameState.currentScreen === ScreenState.CASE_SELECTION && (
+            <CaseSelection 
+                key="screen-selection"
+                communityCases={communityCases}
+                isLoadingCommunity={loadingCommunity}
+                onSelectCase={selectCase} 
+                onCreateNew={() => setGameState(prev => ({ ...prev, currentScreen: ScreenState.CREATE_CASE }))}
+                isAdmin={isAdmin}
+                userId={user?.uid}
+                onDeleteCase={handleDeleteCase}
+                onToggleFeatured={handleToggleFeatured}
+                onEditCase={handleEditCase}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.CREATE_CASE && (
+            <CreateCase 
+                key="screen-create"
+                onGenerate={handleGenerateCase}
+                isLoading={isGenerating}
+                loadingStatus={generationStatus}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.CASE_REVIEW && draftCase && (
+            <CaseReview 
+                key="screen-review"
+                draftCase={draftCase}
+                onUpdateDraft={(updated) => {
+                    const withDiff = { ...updated, difficulty: calculateDifficulty(updated) };
+                    setDraftCase(withDiff);
+                }}
+                onStart={handleSaveAndStart}
+                onCancel={() => {
+                    setDraftCase(null);
+                    setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_SELECTION }));
+                }}
+                userId={user?.uid}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.CASE_HUB && currentCase && (
+            <CaseHub 
+              key="screen-hub"
+              caseData={currentCase} 
+              evidenceDiscovered={gameState.evidenceDiscovered}
+              timelineStatements={gameState.timelineStatementsDiscovered}
+              notes={gameState.notes}
+              officerHintsRemaining={gameState.officerHintsRemaining}
+              officerHistory={gameState.officerHistory}
+              isThinking={isThinking}
+              onStartInterrogation={startInterrogation}
+              onNavigate={navigateTo}
+              onSendOfficerMessage={handleSendOfficerMessage}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.INTERROGATION && currentCase && gameState.currentSuspectId && (
+            <Interrogation 
+              key="screen-interrogation"
+              activeCase={currentCase}
+              suspect={currentCase.suspects.find(s => s.id === gameState.currentSuspectId)!}
+              chatHistory={gameState.chatHistory[gameState.currentSuspectId] || []}
+              aggravationLevel={gameState.aggravationLevels[gameState.currentSuspectId] || 0}
+              emotion={gameState.suspectEmotions[gameState.currentSuspectId] || Emotion.NEUTRAL}
+              partnerEmotion={gameState.partnerEmotion}
+              suspectTurnIds={gameState.suspectTurnIds}
+              evidenceDiscovered={gameState.evidenceDiscovered}
+              timelineStatementsDiscovered={gameState.timelineStatementsDiscovered}
+              suggestions={currentSuggestions}
+              isThinking={isThinking}
+              sidekickComment={gameState.sidekickComment}
+              partnerCharges={gameState.partnerCharges}
+              gameTime={gameState.gameTime}
+              soundEnabled={!isMuted}
+              onSendMessage={handleSendMessage}
+              onCollectEvidence={collectEvidence}
+              onSwitchSuspect={startInterrogation}
+              onForceEvidence={handleForceEvidence}
+              onPartnerAction={handlePartnerAction}
+              mobileIntelOpen={mobileIntelOpen}
+              isAdmin={isAdmin}
+              userId={user?.uid}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.ACCUSATION && currentCase && (
+            <Accusation 
+              key="screen-accusation"
+              suspects={currentCase.suspects} 
+              onAccuse={makeAccusation}
+              onBack={() => navigateTo(ScreenState.CASE_HUB)}
+            />
+          )}
+
+          {gameState.currentScreen === ScreenState.ENDGAME && currentCase && (
+            <EndGame 
+              key="screen-endgame"
+              gameResult={gameState.gameResult} 
+              caseData={currentCase}
+              accusedIds={gameState.accusedSuspectIds}
+              evidenceDiscovered={gameState.evidenceDiscovered}
+              onReset={resetGame}
+            />
+          )}
+        </>
+      )}
+
+      {showPublishConfirm && (
+        <Overlay>
+          <ConfirmBox>
+            <WarningTitle>⚠ WARNING ⚠</WarningTitle>
+            <WarningText>
+              Uploading this case to the Network will make it <strong>PUBLICLY AVAILABLE</strong>.
+            </WarningText>
+            <ButtonRow>
+              <ModalButton $variant="cancel" onClick={() => setShowPublishConfirm(false)}>
+                [ Cancel ]
+              </ModalButton>
+              <ModalButton $variant="confirm" onClick={executePublish}>
+                [ CONFIRM UPLOAD ]
+              </ModalButton>
+            </ButtonRow>
+          </ConfirmBox>
+        </Overlay>
+      )}
+
+      {caseToDelete && (
+        <Overlay>
+          <ConfirmBox>
+            <WarningTitle>⚠ DELETE CASE ⚠</WarningTitle>
+            <WarningText>
+              Are you sure you want to delete this case permanently? This action cannot be undone.
+            </WarningText>
+            <ButtonRow>
+              <ModalButton $variant="cancel" onClick={() => setCaseToDelete(null)}>
+                [ Cancel ]
+              </ModalButton>
+              <ModalButton $variant="confirm" onClick={confirmDeleteCase}>
+                [ DELETE ]
+              </ModalButton>
+            </ButtonRow>
+          </ConfirmBox>
+        </Overlay>
+      )}
+      <OnboardingTour />
+    </Layout>
+  );
+};
+
+export default App;

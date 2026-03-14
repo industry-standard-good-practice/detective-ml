@@ -1,20 +1,20 @@
-# Local Development
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-to run the full stack of this application in your local host machine you will want to run the two following commands:
-```
-npm start --prefix ui
-```
-```
-npm start --prefix server
-```
+# Run and deploy your AI Studio app
 
-### Docker
-To build local dev changes and spin up a running docker container of the project run the following command:
-```
-// From /docker
-docker-compose up --build
-```
-```
-// From project root
-docker-compose -f docker/docker-compose.yml up --build
-```
+This contains everything you need to run your app locally.
+
+View your app in AI Studio: https://ai.studio/apps/66268a12-5e14-4f27-804e-78a1c9fc1eac
+
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

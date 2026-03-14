@@ -1,0 +1,8 @@
+{
+  "name": "[V24] DetectiveML",
+  "description": "A noir detective game where you interrogate suspects powered by Gemini AI to solve pixelated crimes.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
