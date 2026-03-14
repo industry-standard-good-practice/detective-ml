@@ -652,11 +652,9 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
          - You MUST update initialEvidence and hiddenEvidence to fit the new narrative.
          - Ensure all evidence is logically linked to the crime and the suspects.
          
-      4. **CONSISTENCY (CRITICAL):**
-         - After making the requested changes, perform a full consistency check.
-         - Timelines MUST align.
-         - Motives MUST be logical.
-         - The case MUST be solvable.
+      4. **BASIC CONSISTENCY:**
+         - Make a reasonable effort to keep timelines, names, and relationships consistent with your changes.
+         - A separate, thorough consistency check will run after your edits, so focus on the transformation.
          
       5. **OUTPUT FORMAT:**
          - You must return a JSON object with two fields:

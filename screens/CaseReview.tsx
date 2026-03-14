@@ -864,11 +864,23 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     setLoadingState({ visible: true, message: "Initializing Case Transformation..." });
     
     try {
-      const { updatedCase, report } = await editCaseWithPrompt(draftCase, editPrompt, (msg) => {
+      const { updatedCase: editedCase, report: editReport } = await editCaseWithPrompt(draftCase, editPrompt, (msg) => {
         setLoadingState({ visible: true, message: msg });
       }, baselineRef.current);
+
+      // Run consistency check on the edited result
+      setLoadingState({ visible: true, message: "Running consistency check on edited case..." });
+      const { updatedCase, report: consistencyReport } = await checkCaseConsistency(editedCase, (msg) => {
+        setLoadingState({ visible: true, message: msg });
+      });
       
-      setConsistencyModal({ visible: true, report, updatedCase });
+      // Combine reports
+      const combinedReport = {
+        editChanges: editReport,
+        consistencyAudit: consistencyReport
+      };
+      
+      setConsistencyModal({ visible: true, report: combinedReport, updatedCase });
       setEditPrompt(''); // Clear prompt after success
     } catch (e) {
       console.error("Case Transformation Failed:", e);
