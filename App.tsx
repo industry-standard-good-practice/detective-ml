@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
 import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
@@ -156,6 +156,8 @@ const App: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
+  const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
   
   const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
@@ -829,6 +831,26 @@ const App: React.FC = () => {
     }
   };
 
+  // Test Investigation: starts the case without saving
+  const handleTestInvestigation = () => {
+    if (draftCase) {
+      selectCase(draftCase);
+      // Don't clear draftCase — user can return to editing
+    }
+  };
+
+  // App-level save for when CaseReview is unmounted (e.g., during gameplay testing)
+  const handleSaveDraftFromHeader = async () => {
+    if (!draftCase) return;
+    const { updateCase, saveLocalDraft } = await import('./services/persistence');
+    const success = await updateCase(draftCase.id, draftCase);
+    if (!success) {
+      saveLocalDraft(draftCase);
+    }
+    setHasUnsavedDraftChanges(false);
+    alert(success ? 'Case saved successfully!' : 'Saved locally as a fallback.');
+  };
+
   const handleEditCase = (caseId?: string | any) => {
     const idToEdit = (typeof caseId === 'string') ? caseId : gameState.selectedCaseId;
     const caseToEdit = communityCases.find(c => c.id === idToEdit) || localDrafts.find(d => d.id === idToEdit);
@@ -1161,6 +1183,14 @@ const App: React.FC = () => {
       } : undefined}
       user={user}
       onLogout={logout}
+      hasUnsavedChanges={hasUnsavedDraftChanges}
+      onSaveCase={() => {
+        if (draftSaveFnRef.current && gameState.currentScreen === ScreenState.CASE_REVIEW) {
+          draftSaveFnRef.current();
+        } else {
+          handleSaveDraftFromHeader();
+        }
+      }}
     >
       {!hasBooted ? (
         <BootSequence onComplete={handleBootComplete} />
@@ -1205,12 +1235,15 @@ const App: React.FC = () => {
                     const withDiff = { ...updated, difficulty: calculateDifficulty(updated) };
                     setDraftCase(withDiff);
                 }}
-                onStart={handleSaveAndStart}
+                onStart={handleTestInvestigation}
                 onCancel={() => {
                     setDraftCase(null);
+                    setHasUnsavedDraftChanges(false);
                     setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_SELECTION }));
                 }}
                 userId={user?.uid}
+                onRegisterSave={(fn) => { draftSaveFnRef.current = fn; }}
+                onHasUnsavedChanges={setHasUnsavedDraftChanges}
             />
           )}
 

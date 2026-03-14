@@ -289,6 +289,7 @@ const NavButton = styled.button`
   padding: 0 10px;
   transition: color 0.2s;
   text-transform: uppercase;
+  text-align: left;
   
   &:hover {
     color: #fff;
@@ -346,26 +347,35 @@ const NavGroup = styled.div`
   align-items: center;
   
   @media (max-width: 768px) {
-    display: none; /* Hidden on mobile, replaced by Menu */
+    min-width: auto;
+    gap: 10px;
   }
 `;
 
-const HamburgerButton = styled.button`
-  display: none;
+const HamburgerButton = styled.button<{ $visible?: boolean }>`
+  display: ${props => props.$visible ? 'flex' : 'none'};
   background: transparent;
   border: none;
   color: #0f0;
   font-family: inherit;
-  font-size: var(--type-h3);
+  font-size: var(--type-body-lg);
   font-weight: bold;
   cursor: pointer;
   z-index: 20;
   text-transform: uppercase;
+  flex-shrink: 0;
+  padding: 0 10px;
+  align-items: center;
+  
+  &:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #0f0;
+  }
   
   @media (max-width: 768px) {
-    display: block;
+    display: flex;
     position: absolute;
-    left: 15px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
   }
@@ -396,24 +406,81 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
   }
 `;
 
-const MobileMenu = styled.div<{ $isOpen: boolean }>`
+const SlideMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: 60px; /* Below header */
+  top: 70px;
   left: 0;
-  width: 100%;
+  width: 280px;
+  height: calc(100% - 80px);
   background: #0a0a0a;
-  border-bottom: 2px solid #0f0;
+  border-right: 2px solid #0f0;
   display: flex;
   flex-direction: column;
   padding: 20px;
   gap: 10px;
   z-index: 100;
-  transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(-150%)'};
+  transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-110%)'};
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+  box-shadow: ${props => props.$isOpen ? '10px 0 30px rgba(0,0,0,0.9)' : 'none'};
+  overflow-y: auto;
 
-  @media (min-width: 769px) {
-    display: none;
+  /* Force all buttons left-aligned and full-width in menu */
+  button {
+    text-align: left;
+    width: 100%;
+    padding: 8px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  ${UploadButton} {
+    margin-right: 0;
+    border: none;
+    background: transparent;
+    border-bottom: 1px solid #1a1a1a;
+    border-radius: 0;
+  }
+
+  @media (max-width: 768px) {
+    top: 60px;
+    width: 100%;
+    height: auto;
+    max-height: calc(100% - 60px);
+    border-right: none;
+    border-bottom: 2px solid #0f0;
+    transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(calc(-100% - 60px))'};
+    box-shadow: ${props => props.$isOpen ? '0 10px 30px rgba(0,0,0,0.9)' : 'none'};
+  }
+`;
+
+const SlideMenuBackdrop = styled.div<{ $isOpen: boolean }>`
+  position: absolute;
+  top: 70px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  transition: opacity 0.3s;
+
+  @media (max-width: 768px) {
+    top: 60px;
+  }
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
   }
 `;
 
@@ -438,12 +505,14 @@ interface LayoutProps {
   };
   user?: User | null;
   onLogout?: () => void;
+  hasUnsavedChanges?: boolean;
+  onSaveCase?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ 
-  children, 
-  screenState, 
-  caseTitle, 
+const Layout: React.FC<LayoutProps> = ({
+  children,
+  screenState,
+  caseTitle,
   onNavigate,
   isMuted,
   onToggleMute,
@@ -456,21 +525,25 @@ const Layout: React.FC<LayoutProps> = ({
   powerState = 'on',
   mobileAction,
   user,
-  onLogout
+  onLogout,
+  hasUnsavedChanges,
+  onSaveCase
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const { startTour } = useOnboarding();
 
   // Logic to determine if we are in "Gameplay" mode
-  const isGameplay = 
-    screenState === ScreenState.CASE_HUB || 
-    screenState === ScreenState.INTERROGATION || 
+  const isGameplay =
+    screenState === ScreenState.CASE_HUB ||
+    screenState === ScreenState.INTERROGATION ||
     screenState === ScreenState.ACCUSATION ||
     screenState === ScreenState.ENDGAME;
 
+  const isCaseReview = screenState === ScreenState.CASE_REVIEW;
+
   const toggleMenu = () => setMenuOpen(!menuOpen);
-  const handleMobileNav = (action: () => void) => {
+  const handleMenuNav = (action: () => void) => {
     action();
     setMenuOpen(false);
   };
@@ -490,35 +563,17 @@ const Layout: React.FC<LayoutProps> = ({
             {!isBooting && (
               <>
                 <TopBar>
-                  {/* MOBILE HAMBURGER */}
-                    <HamburgerButton id="hamburger-button" onClick={toggleMenu}>
-                      {menuOpen ? '[X]' : '[MENU]'}
-                    </HamburgerButton>
-                    
-                  {/* MOBILE CUSTOM ACTION */}
-                    {mobileAction && (
-                      <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
-                        {mobileAction.label}
-                      </MobileActionButton>
-                    )}
+                  {/* HAMBURGER — always visible */}
+                  <HamburgerButton id="hamburger-button" $visible onClick={toggleMenu}>
+                    {menuOpen ? '[X]' : '[Menu]'}
+                  </HamburgerButton>
 
-                  {/* DESKTOP LEFT */}
-                  <NavGroup>
-                    {isGameplay && <NavButton onClick={() => setShowExitDialog(true)}>[Exit Case]</NavButton>}
-                    <NavButton onClick={onToggleMute} style={{ color: isMuted ? '#777' : '#0f0' }}>
-                      {isMuted ? '[SOUND: OFF]' : '[SOUND: ON]'}
-                    </NavButton>
-                    {screenState === ScreenState.CASE_HUB && (
-                      <NavButton onClick={() => startTour()} title="Restart Tutorial" style={{ color: '#0f0' }}>
-                        [?]
-                      </NavButton>
-                    )}
-                    {canEdit && (
-                      <NavButton onClick={onEdit} style={{ color: '#eb0' }}>
-                        [Edit]
-                      </NavButton>
-                    )}
-                  </NavGroup>
+                  {/* MOBILE CUSTOM ACTION */}
+                  {mobileAction && (
+                    <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
+                      {mobileAction.label}
+                    </MobileActionButton>
+                  )}
 
                   {/* CENTER TITLE */}
                   <TitleContainer>
@@ -528,75 +583,85 @@ const Layout: React.FC<LayoutProps> = ({
                     <SubTitle>v1.0.0 // SYSTEM READY</SubTitle>
                   </TitleContainer>
 
-                  {/* DESKTOP RIGHT */}
-                  <NavGroup style={{ justifyContent: 'flex-end' }}>
-                    {user && (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '15px' }}>
-                        <span style={{ color: '#0f0', fontSize: '0.8rem' }}>{user.displayName}</span>
-                        <button 
-                          onClick={onLogout} 
-                          style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 0, textTransform: 'uppercase', fontSize: '0.7rem' }}
-                        >
-                          [Logout]
-                        </button>
-                      </div>
-                    )}
-                    {canPublish && (
-                      <UploadButton onClick={onPublish} disabled={isPublishing}>
-                        {isPublishing ? '...' : '[PUBLISH TO NETWORK]'}
-                      </UploadButton>
+                  {/* RIGHT — always-visible key items */}
+                  <NavGroup style={{ justifyContent: 'flex-end', minWidth: 'auto' }}>
+                    {hasUnsavedChanges && (
+                      <span style={{
+                        color: '#fa0', fontSize: '0.75rem',
+                        textTransform: 'uppercase', letterSpacing: '1px',
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                        UNSAVED
+                      </span>
                     )}
                     {isGameplay && screenState !== ScreenState.ENDGAME && (
-                      <>
-                        <NavButton id="hub-button" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Hub]</NavButton>
-                      </>
+                      <NavButton id="hub-button" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
                     )}
                   </NavGroup>
                 </TopBar>
 
-                {/* MOBILE MENU DROPDOWN */}
-                <MobileMenu $isOpen={menuOpen}>
-                    {isGameplay && (
-                      <NavButton onClick={() => handleMobileNav(() => setShowExitDialog(true))}>
-                          [Exit Game]
-                      </NavButton>
-                    )}
-                    
-                    <NavButton onClick={() => handleMobileNav(onToggleMute)} style={{ color: isMuted ? '#777' : '#0f0' }}>
-                        {isMuted ? '[SOUND: OFF]' : '[SOUND: ON]'}
-                    </NavButton>
-
-                    {screenState === ScreenState.CASE_HUB && (
-                      <NavButton onClick={() => handleMobileNav(startTour)} style={{ color: '#0f0' }}>
-                        [Tutorial]
-                      </NavButton>
-                    )}
-
-                    {isGameplay && screenState !== ScreenState.ENDGAME && (
-                        <NavButton id="hub-button-mobile" onClick={() => handleMobileNav(() => onNavigate(ScreenState.CASE_HUB))}>
-                            [Return to Hub]
-                        </NavButton>
-                    )}
-
-                    {canEdit && (
-                        <NavButton onClick={() => handleMobileNav(onEdit!)} style={{ color: '#eb0' }}>
-                            [Edit Case]
-                        </NavButton>
-                    )}
-
-                    {canPublish && (
-                        <UploadButton onClick={() => handleMobileNav(onPublish!)} disabled={isPublishing}>
-                            {isPublishing ? 'PUBLISHING...' : '[PUBLISH TO NETWORK]'}
-                        </UploadButton>
-                    )}
-
-                    {user && (
-                      <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: '10px' }}>
-                        <div style={{ color: '#0f0', fontSize: '0.9rem', marginBottom: '5px' }}>USER: {user.displayName}</div>
-                        <NavButton onClick={onLogout}>[Logout]</NavButton>
+                {/* SLIDE-OUT MENU */}
+                <SlideMenuBackdrop $isOpen={menuOpen} onClick={() => setMenuOpen(false)} />
+                <SlideMenu $isOpen={menuOpen}>
+                  {hasUnsavedChanges && (
+                    <>
+                      <div style={{
+                        color: '#fa0', fontSize: '0.9rem',
+                        textTransform: 'uppercase', letterSpacing: '1px',
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                        padding: '5px 0', borderBottom: '1px solid #333', marginBottom: '5px'
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                        UNSAVED CHANGES
                       </div>
-                    )}
-                </MobileMenu>
+                      {onSaveCase && (
+                        <NavButton onClick={() => handleMenuNav(onSaveCase)} style={{ color: '#0f0', fontWeight: 'bold' }}>[Save Case]</NavButton>
+                      )}
+                    </>
+                  )}
+
+                  {isGameplay && screenState !== ScreenState.ENDGAME && (
+                    <NavButton id="hub-button-mobile" onClick={() => handleMenuNav(() => onNavigate(ScreenState.CASE_HUB))}>
+                      [Return to Case Hub]
+                    </NavButton>
+                  )}
+
+                  <NavButton onClick={() => handleMenuNav(onToggleMute)} style={{ color: isMuted ? '#777' : '#0f0' }}>
+                    {isMuted ? '[Sound: OFF]' : '[Sound: ON]'}
+                  </NavButton>
+
+                  {screenState === ScreenState.CASE_HUB && (
+                    <NavButton onClick={() => handleMenuNav(startTour)} style={{ color: '#0f0' }}>
+                      [Tutorial]
+                    </NavButton>
+                  )}
+
+                  {canEdit && (
+                    <NavButton onClick={() => handleMenuNav(onEdit!)} style={{ color: '#eb0' }}>
+                      [Edit Case]
+                    </NavButton>
+                  )}
+
+                  {canPublish && (
+                    <UploadButton onClick={() => handleMenuNav(onPublish!)} disabled={isPublishing}>
+                      {isPublishing ? 'Publishing...' : '[Publish to Network]'}
+                    </UploadButton>
+                  )}
+
+                  {isGameplay && (
+                    <NavButton onClick={() => handleMenuNav(() => setShowExitDialog(true))} style={{ color: '#f55' }}>
+                      [Exit Game]
+                    </NavButton>
+                  )}
+
+                  {user && (
+                    <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: 'auto' }}>
+                      <div style={{ color: '#0f0', fontSize: '0.9rem', marginBottom: '5px' }}>User: {user.displayName}</div>
+                      <NavButton onClick={onLogout}>[Logout]</NavButton>
+                    </div>
+                  )}
+                </SlideMenu>
               </>
             )}
 
@@ -610,7 +675,7 @@ const Layout: React.FC<LayoutProps> = ({
             <ScreenContent>
               {children}
             </ScreenContent>
-            
+
           </Screen>
         </MonitorBezel>
       </MainContainer>

@@ -416,9 +416,11 @@ interface CaseReviewProps {
   onStart: () => void;
   onCancel: () => void;
   userId?: string;
+  onRegisterSave?: (saveFn: () => Promise<void>) => void;
+  onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId }) => {
+const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId, onRegisterSave, onHasUnsavedChanges }) => {
   const [selectedSuspectId, setSelectedSuspectId] = useState<string | null>(draftCase.suspects?.[0]?.id || 'officer');
   const [loadingState, setLoadingState] = useState<{ visible: boolean, message: string, step?: string, stepDetail?: string }>({ visible: false, message: '' });
   const [showCamera, setShowCamera] = useState(false);
@@ -436,8 +438,15 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
-    setHasUnsavedChanges(JSON.stringify(draftCase) !== JSON.stringify(initialDraftCase.current));
+    const changed = JSON.stringify(draftCase) !== JSON.stringify(initialDraftCase.current);
+    setHasUnsavedChanges(changed);
+    onHasUnsavedChanges?.(changed);
   }, [draftCase]);
+
+  // Expose save function to parent
+  useEffect(() => {
+    onRegisterSave?.(() => handleSave());
+  });
 
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
@@ -814,31 +823,25 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
   const handleSave = async () => {
     setLoadingState({ visible: true, message: "Saving case..." });
-    const { updateCase, publishCase } = await import('../services/persistence');
+    const { updateCase, saveLocalDraft } = await import('../services/persistence');
 
-    // 1. Update local/existing DB entry
+    // Save locally only — publishing is a separate explicit action
     const success = await updateCase(draftCase.id, draftCase);
+    
+    if (!success) {
+      // Fallback to local storage
+      saveLocalDraft(draftCase);
+    }
 
-    // 2. If not already published, publish it now
-    if (success && !draftCase.isUploaded) {
-      setLoadingState({ visible: true, message: "Publishing to Network..." });
-      const published = await publishCase({ ...draftCase, isUploaded: true }, userId || undefined);
-      if (published) {
-        const saved = { ...draftCase, isUploaded: true };
-        onUpdateDraft(saved);
-        initialDraftCase.current = saved;
-        baselineRef.current = JSON.parse(JSON.stringify(saved));
-        alert("Case saved and published to the Network!");
-      } else {
-        alert("Case saved locally, but failed to publish to Network.");
-      }
-    } else if (success) {
+    if (success) {
       // Update refs so "unsaved changes" detection resets
       initialDraftCase.current = draftCase;
       baselineRef.current = JSON.parse(JSON.stringify(draftCase));
-      alert("Case updated successfully!");
+      alert("Case saved successfully!");
     } else {
-      alert("Failed to save case.");
+      alert("Saved locally as a fallback.");
+      initialDraftCase.current = draftCase;
+      baselineRef.current = JSON.parse(JSON.stringify(draftCase));
     }
     setLoadingState({ visible: false, message: '' });
   };
@@ -1009,6 +1012,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         accept="image/*"
         onChange={handleImageUpload}
       />
+
+
 
       {/* Mobile Tab Bar */}
       <MobileTabBar>
@@ -1258,7 +1263,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
             <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CANCEL</SaveButton>
           </div>
-          <StartButton onClick={onStart}>START INVESTIGATION</StartButton>
+          <StartButton onClick={onStart}>TEST INVESTIGATION</StartButton>
         </div>
       </Panel>
 
@@ -1640,6 +1645,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
               <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CANCEL</SaveButton>
             </div>
+            <StartButton onClick={onStart}>TEST INVESTIGATION</StartButton>
 
           </div>
         )}

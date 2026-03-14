@@ -90,7 +90,9 @@ const ExitCaseDialog: React.FC<ExitCaseDialogProps> = ({ onConfirm, onCancel, ha
           </UnsavedWarning>
         )}
         <Text>
-          All case progress will be lost. Evidence gathered, interrogation history, and timeline entries will not be saved.
+          {hasUnsavedChanges
+            ? 'Any unsaved edits to suspects, evidence, timelines, and case details will be permanently lost.'
+            : 'All case progress will be lost. Evidence gathered, interrogation history, and timeline entries will not be saved.'}
         </Text>
         <Buttons>
           <Button onClick={onCancel}>Cancel</Button>
