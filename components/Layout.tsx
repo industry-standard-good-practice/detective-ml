@@ -501,7 +501,7 @@ const Layout: React.FC<LayoutProps> = ({
                     <NavButton onClick={onToggleMute} style={{ color: isMuted ? '#777' : '#0f0' }}>
                       {isMuted ? '[SOUND: OFF]' : '[SOUND: ON]'}
                     </NavButton>
-                    {isGameplay && (
+                    {screenState === ScreenState.CASE_HUB && (
                       <NavButton onClick={() => startTour()} title="Restart Tutorial" style={{ color: '#0f0' }}>
                         [?]
                       </NavButton>
@@ -559,7 +559,7 @@ const Layout: React.FC<LayoutProps> = ({
                         {isMuted ? '[SOUND: OFF]' : '[SOUND: ON]'}
                     </NavButton>
 
-                    {isGameplay && (
+                    {screenState === ScreenState.CASE_HUB && (
                       <NavButton onClick={() => handleMobileNav(startTour)} style={{ color: '#0f0' }}>
                         [Tutorial]
                       </NavButton>

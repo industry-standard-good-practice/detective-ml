@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { motion, LayoutGroup } from 'framer-motion';
 import { Suspect, Emotion } from '../types';
@@ -7,7 +7,7 @@ import SuspectCard from './SuspectCard';
 
 /* ─── Styled Components ─── */
 
-const DockWrapper = styled.div`
+const ActiveCardOverlay = styled.div`
   position: absolute;
   top: 0;
   left: 0;
@@ -21,18 +21,42 @@ const DockWrapper = styled.div`
   }
 `;
 
-const DockRow = styled.div`
+/* Visual layer: renders cards, captures NO events */
+const DockRowVisual = styled.div`
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 140px;
+  height: 50px;
   display: flex;
   align-items: flex-end;
   overflow: visible;
+  pointer-events: none;
+  z-index: 20;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+/* Hit-test layer: captures events only within its clipped area */
+const DockRowHitArea = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
   pointer-events: auto;
-  z-index: 15;
+  z-index: 21;
   cursor: grab;
+  opacity: 0;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const DockRowInner = styled.div`
@@ -48,19 +72,13 @@ const DockRowInner = styled.div`
   & > :last-child { margin-right: auto; }
 `;
 
-const DockSlot = styled.div`
+const DockSlot = styled.div<{ $hovered?: boolean }>`
   flex: 0 0 200px;
-  transform: translateY(85%) scale(0.9);
+  transform: ${p => p.$hovered ? 'translateY(60%) scale(0.95)' : 'translateY(85%) scale(0.9)'};
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  pointer-events: auto;
-  z-index: 10;
+  z-index: ${p => p.$hovered ? 15 : 10};
   display: flex;
   justify-content: center;
-
-  &:hover {
-    transform: translateY(60%) scale(0.95);
-    z-index: 15;
-  }
 `;
 
 const ActiveCardWrapper = styled(motion.div) <{ $left: number; $top: number }>`
@@ -91,8 +109,9 @@ interface SuspectCardDockProps {
 /* ─── Transform-based drag scroll hook ─── */
 
 function useDragTranslate() {
-  const outerRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLDivElement>(null);
+  const hitRef = useRef<HTMLDivElement>(null);
+  const visualInnerRef = useRef<HTMLDivElement>(null);
+  const hitInnerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const hasDragged = useRef(false);
   const startX = useRef(0);
@@ -100,27 +119,26 @@ function useDragTranslate() {
   const dragStartOffset = useRef(0);
 
   const clampOffset = useCallback(() => {
-    const outer = outerRef.current;
-    const inner = innerRef.current;
-    if (!outer || !inner) return;
+    const hit = hitRef.current;
+    const inner = hitInnerRef.current;
+    if (!hit || !inner) return;
 
-    const outerW = outer.clientWidth;
+    const outerW = hit.clientWidth;
     const innerW = inner.scrollWidth;
     const maxDrag = Math.max(0, innerW - outerW);
 
-    // Clamp: offset is negative (dragging left moves content left)
     currentOffset.current = Math.max(-maxDrag, Math.min(0, currentOffset.current));
   }, []);
 
   const applyTransform = useCallback(() => {
-    if (innerRef.current) {
-      innerRef.current.style.transform = `translateX(${currentOffset.current}px)`;
-    }
+    const offset = `translateX(${currentOffset.current}px)`;
+    if (hitInnerRef.current) hitInnerRef.current.style.transform = offset;
+    if (visualInnerRef.current) visualInnerRef.current.style.transform = offset;
   }, []);
 
   useEffect(() => {
-    const outer = outerRef.current;
-    if (!outer) return;
+    const hit = hitRef.current;
+    if (!hit) return;
 
     const preventClick = (e: Event) => {
       e.stopPropagation();
@@ -136,7 +154,7 @@ function useDragTranslate() {
       hasDragged.current = false;
       startX.current = e.pageX;
       dragStartOffset.current = currentOffset.current;
-      outer.style.cursor = 'grabbing';
+      hit.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
     };
 
@@ -153,35 +171,35 @@ function useDragTranslate() {
     const onMouseUp = () => {
       if (!isDragging.current) return;
       isDragging.current = false;
-      outer.style.cursor = 'grab';
+      hit.style.cursor = 'grab';
       document.body.style.userSelect = '';
       if (hasDragged.current) {
-        outer.addEventListener('click', preventClick, { capture: true, once: true });
+        hit.addEventListener('click', preventClick, { capture: true, once: true });
       }
     };
 
     const onMouseLeave = () => {
       if (!isDragging.current) return;
       isDragging.current = false;
-      outer.style.cursor = 'grab';
+      hit.style.cursor = 'grab';
       document.body.style.userSelect = '';
     };
 
-    outer.addEventListener('mousedown', onMouseDown);
-    outer.addEventListener('mousemove', onMouseMove);
-    outer.addEventListener('mouseup', onMouseUp);
-    outer.addEventListener('mouseleave', onMouseLeave);
+    hit.addEventListener('mousedown', onMouseDown);
+    hit.addEventListener('mousemove', onMouseMove);
+    hit.addEventListener('mouseup', onMouseUp);
+    hit.addEventListener('mouseleave', onMouseLeave);
 
     return () => {
-      outer.removeEventListener('mousedown', onMouseDown);
-      outer.removeEventListener('mousemove', onMouseMove);
-      outer.removeEventListener('mouseup', onMouseUp);
-      outer.removeEventListener('mouseleave', onMouseLeave);
+      hit.removeEventListener('mousedown', onMouseDown);
+      hit.removeEventListener('mousemove', onMouseMove);
+      hit.removeEventListener('mouseup', onMouseUp);
+      hit.removeEventListener('mouseleave', onMouseLeave);
       document.body.style.userSelect = '';
     };
   }, [clampOffset, applyTransform]);
 
-  return { outerRef, innerRef };
+  return { hitRef, visualInnerRef, hitInnerRef };
 }
 
 /* ─── Component ─── */
@@ -200,7 +218,8 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
   onFlipCard,
   inactiveActionLabel = 'SWITCH',
 }) => {
-  const { outerRef, innerRef } = useDragTranslate();
+  const { hitRef, visualInnerRef, hitInnerRef } = useDragTranslate();
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const activeSuspect = activeSuspectId
     ? suspects.find(s => s.id === activeSuspectId)
@@ -214,8 +233,8 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
 
   return (
     <LayoutGroup>
-      <DockWrapper>
-        {/* Active card (animated to target position) */}
+      {/* Full-screen overlay for active card only */}
+      <ActiveCardOverlay>
         {activeSuspect && activePosition && (
           <ActiveCardWrapper
             key={activeSuspect.id}
@@ -239,31 +258,57 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
             />
           </ActiveCardWrapper>
         )}
+      </ActiveCardOverlay>
 
-        {/* Bottom dock row */}
-        <DockRow ref={outerRef}>
-          <DockRowInner ref={innerRef}>
-            {inactiveSuspects.map(s => (
-              <DockSlot key={s.id}>
-                <motion.div
-                  layoutId={`suspect-dock-${s.id}`}
-                  transition={springTransition}
-                >
-                  <SuspectCard
-                    suspect={s}
-                    variant="peek"
-                    width="200px"
-                    height="300px"
-                    onAction={() => onSelectSuspect(s.id)}
-                    actionLabel={inactiveActionLabel}
-                    onFlip={onFlipCard}
-                  />
-                </motion.div>
-              </DockSlot>
-            ))}
-          </DockRowInner>
-        </DockRow>
-      </DockWrapper>
+      {/* VISUAL layer: renders cards with overflow visible, pointer-events: none.
+          Hover state is driven by JS from the hit-test layer */}
+      <DockRowVisual>
+        <DockRowInner ref={visualInnerRef}>
+          {inactiveSuspects.map(s => (
+            <DockSlot key={`visual-${s.id}`} $hovered={hoveredId === s.id}>
+              <motion.div
+                layoutId={`suspect-dock-${s.id}`}
+                transition={springTransition}
+              >
+                <SuspectCard
+                  suspect={s}
+                  variant="peek"
+                  width="200px"
+                  height="300px"
+                  onAction={() => onSelectSuspect(s.id)}
+                  actionLabel={inactiveActionLabel}
+                  onFlip={onFlipCard}
+                />
+              </motion.div>
+            </DockSlot>
+          ))}
+        </DockRowInner>
+      </DockRowVisual>
+
+      {/* HIT-TEST layer: overflow:hidden clips events to 50px strip.
+          Hover/click events here sync to the visual layer */}
+      <DockRowHitArea ref={hitRef} id="suspect-cards-container">
+        <DockRowInner ref={hitInnerRef}>
+          {inactiveSuspects.map(s => (
+            <DockSlot
+              key={`hit-${s.id}`}
+              $hovered={hoveredId === s.id}
+              onMouseEnter={() => setHoveredId(s.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <SuspectCard
+                suspect={s}
+                variant="peek"
+                width="200px"
+                height="300px"
+                onAction={() => onSelectSuspect(s.id)}
+                actionLabel={inactiveActionLabel}
+                onFlip={onFlipCard}
+              />
+            </DockSlot>
+          ))}
+        </DockRowInner>
+      </DockRowHitArea>
     </LayoutGroup>
   );
 };
