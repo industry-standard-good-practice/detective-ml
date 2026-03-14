@@ -344,6 +344,45 @@ export const enforceRelationships = (caseData: any) => {
     return caseData;
 };
 
+// Helper to fix timeline entries where time+activity are mashed together in the time field
+export const enforceTimelines = (caseData: any) => {
+    const fixTimeline = (timeline: any[]) => {
+        if (!timeline || !Array.isArray(timeline)) return;
+        timeline.forEach((entry: any) => {
+            if (!entry.time) return;
+            
+            // If activity is missing/empty but time contains a description after a colon or dash
+            const timeStr = entry.time.trim();
+            if (!entry.activity || entry.activity.trim().length === 0) {
+                // Match patterns like "8:00 PM: Did something" or "20:00 GTS: Did something" or "8:00 PM - Did something"
+                // Time portion: digits, colons, optional AM/PM/GTS/etc, then separator
+                const match = timeStr.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM|GTS|EST|PST|UTC|[A-Z]{2,4})?)\s*[:\-–—]\s*(.+)$/i);
+                if (match) {
+                    entry.time = match[1].trim();
+                    entry.activity = match[2].trim();
+                }
+            }
+            
+            // Also fix if activity is just a duplicate of the time
+            if (entry.activity && entry.activity.trim() === entry.time.trim()) {
+                entry.activity = '';
+            }
+        });
+    };
+
+    // Fix suspect timelines
+    if (caseData.suspects && Array.isArray(caseData.suspects)) {
+        caseData.suspects.forEach((s: any) => {
+            fixTimeline(s.timeline);
+        });
+    }
+
+    // Fix initial timeline
+    fixTimeline(caseData.initialTimeline);
+
+    return caseData;
+};
+
 // --- SCHEMAS ---
 
 const CASE_SCHEMA = {
@@ -563,7 +602,15 @@ ${userChangeLog}
        - The 'description' MUST NOT simply repeat the 'type' label (e.g. if type is "Acquaintance", description cannot just say "Acquaintance").
        - Descriptions should reveal character personality and hint at dynamics relevant to the mystery.
        
-    5. **OUTPUT FORMAT:**
+    5. **TIMELINE FORMAT (CRITICAL):**
+       - Every timeline entry has TWO separate fields: 'time' and 'activity'.
+       - The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "20:00 GTS"). Do NOT put the activity description in the time field.
+       - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
+       - WRONG: { time: "8:00 PM: Arrived at the lab", activity: "" }
+       - CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift" }
+       - This applies to BOTH suspect timelines AND the case-level initialTimeline.
+       
+    6. **OUTPUT FORMAT:**
        - You must return a JSON object with two fields:
          - 'updatedCase': The complete, repaired CaseData object.
          - 'report': A structured object containing 'issuesFound', 'changesMade' (array of {description, evidenceId}), and 'conclusion'.
@@ -639,7 +686,7 @@ ${userChangeLog}
         }
     });
 
-    const finalData = enforceRelationships(hydratedCase);
+    const finalData = enforceTimelines(enforceRelationships(hydratedCase));
     
     // --- SAFETY NET: Re-apply user's field-level edits ---
     // The AI was instructed to respect these, but we enforce them as a fallback
@@ -897,7 +944,7 @@ ${userChangeLog}
             }
         });
 
-        const finalData = enforceRelationships(hydratedCase);
+        const finalData = enforceTimelines(enforceRelationships(hydratedCase));
 
         // --- SAFETY NET: Re-apply user's field-level edits ---
         if (baseline) {
@@ -1043,7 +1090,9 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
       *INSTRUCTION*: Descriptions must be detailed (2-3 sentences).
     - KNOWN FACTS: 2-3 specific facts they know about the crime.
     - MOTIVE: A clear reason they might be suspected.
-    - TIMELINE: A step-by-step list of their movements (at least 3 entries).
+    - TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has TWO fields:
+      * 'time': ONLY the timestamp (e.g. "8:00 PM"). Do NOT include the activity here.
+      * 'activity': The description of what happened (e.g. "Arrived at the restaurant for dinner").
     - PROFESSIONAL BACKGROUND: A valid job or skill set.
     - WITNESS OBSERVATIONS: Something specific they saw or heard.
     
@@ -1180,6 +1229,6 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
   });
   
   // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
-  const finalData = enforceRelationships(data);
+  const finalData = enforceTimelines(enforceRelationships(data));
   return finalData as CaseData;
 };
