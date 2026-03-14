@@ -6,6 +6,7 @@ import CRTOverlay from './CRTOverlay';
 import { User } from 'firebase/auth';
 
 import { useOnboarding } from '../contexts/OnboardingContext';
+import ExitCaseDialog from './ExitCaseDialog';
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -458,6 +459,7 @@ const Layout: React.FC<LayoutProps> = ({
   onLogout
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
   const { startTour } = useOnboarding();
 
   // Logic to determine if we are in "Gameplay" mode
@@ -471,6 +473,11 @@ const Layout: React.FC<LayoutProps> = ({
   const handleMobileNav = (action: () => void) => {
     action();
     setMenuOpen(false);
+  };
+
+  const handleExitCase = () => {
+    setShowExitDialog(false);
+    onNavigate(ScreenState.CASE_SELECTION);
   };
 
   return (
@@ -497,7 +504,7 @@ const Layout: React.FC<LayoutProps> = ({
 
                   {/* DESKTOP LEFT */}
                   <NavGroup>
-                    {isGameplay && <NavButton onClick={() => onNavigate(ScreenState.CASE_SELECTION)}>[Exit Case]</NavButton>}
+                    {isGameplay && <NavButton onClick={() => setShowExitDialog(true)}>[Exit Case]</NavButton>}
                     <NavButton onClick={onToggleMute} style={{ color: isMuted ? '#777' : '#0f0' }}>
                       {isMuted ? '[SOUND: OFF]' : '[SOUND: ON]'}
                     </NavButton>
@@ -550,7 +557,7 @@ const Layout: React.FC<LayoutProps> = ({
                 {/* MOBILE MENU DROPDOWN */}
                 <MobileMenu $isOpen={menuOpen}>
                     {isGameplay && (
-                      <NavButton onClick={() => handleMobileNav(() => onNavigate(ScreenState.CASE_SELECTION))}>
+                      <NavButton onClick={() => handleMobileNav(() => setShowExitDialog(true))}>
                           [Exit Game]
                       </NavButton>
                     )}
@@ -591,6 +598,13 @@ const Layout: React.FC<LayoutProps> = ({
                     )}
                 </MobileMenu>
               </>
+            )}
+
+            {showExitDialog && (
+              <ExitCaseDialog
+                onConfirm={handleExitCase}
+                onCancel={() => setShowExitDialog(false)}
+              />
             )}
 
             <ScreenContent>
