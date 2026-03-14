@@ -557,7 +557,13 @@ ${userChangeLog}
        - Ensure motives are compelling and consistent with the character's bio and secret.
        - If a suspect has a secret, ensure there is a way for the player to discover it.
        
-    4. **OUTPUT FORMAT:**
+    4. **RELATIONSHIP QUALITY (CRITICAL):**
+       - Every suspect's 'relationships' array must have an entry for the victim and every other alive suspect.
+       - Each relationship 'description' field MUST be a rich, narrative description (2-3 sentences minimum) that describes how they feel about the person, their history, and any tension or closeness.
+       - The 'description' MUST NOT simply repeat the 'type' label (e.g. if type is "Acquaintance", description cannot just say "Acquaintance").
+       - Descriptions should reveal character personality and hint at dynamics relevant to the mystery.
+       
+    5. **OUTPUT FORMAT:**
        - You must return a JSON object with two fields:
          - 'updatedCase': The complete, repaired CaseData object.
          - 'report': A structured object containing 'issuesFound', 'changesMade' (array of {description, evidenceId}), and 'conclusion'.
@@ -758,6 +764,7 @@ ${userChangeLog}
          
       4. **BASIC CONSISTENCY:**
          - Make a reasonable effort to keep timelines, names, and relationships consistent with your changes.
+         - Every relationship 'description' MUST be a rich narrative (2-3 sentences), never just a copy of the 'type' label.
          - A separate, thorough consistency check will run after your edits, so focus on the transformation.
          
       5. **OUTPUT FORMAT:**
