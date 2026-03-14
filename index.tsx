@@ -64,12 +64,21 @@ const initPatch = () => {
     
     let nextCursorType: string | null = null;
     
-    // Walk up from the target to find data-cursor
+    // Walk up from the target to find data-cursor.
+    // Pointer on an ancestor overrides text on a descendant.
     let el = document.elementFromPoint(x, y) as HTMLElement | null;
     while (el && el !== document.body) {
       if (el.dataset?.cursor) {
-        nextCursorType = el.dataset.cursor;
-        break;
+        const cursorVal = el.dataset.cursor;
+        if (cursorVal === 'pointer') {
+          // Pointer always wins — stop searching
+          nextCursorType = 'pointer';
+          break;
+        }
+        // Only take the first non-pointer cursor found (e.g. text)
+        if (!nextCursorType) {
+          nextCursorType = cursorVal;
+        }
       }
       el = el.parentElement;
     }

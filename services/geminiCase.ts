@@ -34,6 +34,99 @@ export const calculateDifficulty = (caseData: Partial<CaseData>): "Easy" | "Medi
     return "Easy";
 };
 
+/**
+ * Computes a diff between a baseline case (last AI-generated version) and the current draft.
+ * Returns a structured object describing what the user manually changed.
+ */
+export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<string, any> => {
+    const diff: Record<string, any> = {};
+    
+    // Top-level case fields
+    const topFields = ['title', 'type', 'description'] as const;
+    topFields.forEach(f => {
+        if ((baseline as any)[f] !== (current as any)[f]) {
+            diff[f] = (current as any)[f];
+        }
+    });
+    
+    // Support characters
+    ['officer', 'partner'].forEach(key => {
+        const baseChar = (baseline as any)[key];
+        const currChar = (current as any)[key];
+        if (baseChar && currChar) {
+            const charDiff: Record<string, any> = {};
+            ['name', 'gender', 'role', 'personality'].forEach(f => {
+                if (baseChar[f] !== currChar[f]) charDiff[f] = currChar[f];
+            });
+            if (Object.keys(charDiff).length > 0) diff[`_${key}`] = charDiff;
+        }
+    });
+    
+    // Suspects — field-level diff for each suspect by ID
+    const suspectDiffs: Record<string, Record<string, any>> = {};
+    const suspectFields = [
+        'name', 'gender', 'age', 'role', 'bio', 'personality', 'secret', 'motive',
+        'physicalDescription', 'professionalBackground', 'witnessObservations',
+        'isGuilty', 'isDeceased', 'baseAggravation'
+    ];
+    current.suspects.forEach(s => {
+        const bs = baseline.suspects.find(b => b.id === s.id);
+        if (!bs) return; // Newly added suspect, no baseline to compare
+        const fieldDiff: Record<string, any> = {};
+        suspectFields.forEach(f => {
+            if (JSON.stringify((bs as any)[f]) !== JSON.stringify((s as any)[f])) {
+                fieldDiff[f] = (s as any)[f];
+            }
+        });
+        // Check alibi (deep compare)
+        if (JSON.stringify(bs.alibi) !== JSON.stringify(s.alibi)) {
+            fieldDiff.alibi = s.alibi;
+        }
+        if (Object.keys(fieldDiff).length > 0) {
+            suspectDiffs[s.id] = fieldDiff;
+        }
+    });
+    if (Object.keys(suspectDiffs).length > 0) diff._suspects = suspectDiffs;
+    
+    console.log('[DEBUG] computeUserDiff: User manually changed:', Object.keys(diff).length > 0 ? diff : 'nothing');
+    return diff;
+};
+
+/**
+ * Re-applies user's manual edits (from computeUserDiff) onto an AI-generated case.
+ */
+export const applyUserDiff = (aiCase: CaseData, userDiff: Record<string, any>): void => {
+    // Top-level fields
+    ['title', 'type', 'description'].forEach(f => {
+        if (userDiff[f] !== undefined) {
+            (aiCase as any)[f] = userDiff[f];
+        }
+    });
+    
+    // Support characters
+    ['officer', 'partner'].forEach(key => {
+        const charDiff = userDiff[`_${key}`];
+        if (charDiff && (aiCase as any)[key]) {
+            Object.entries(charDiff).forEach(([field, value]) => {
+                (aiCase as any)[key][field] = value;
+            });
+        }
+    });
+    
+    // Suspects
+    const suspectDiffs = userDiff._suspects as Record<string, Record<string, any>> | undefined;
+    if (suspectDiffs) {
+        Object.entries(suspectDiffs).forEach(([suspectId, fields]) => {
+            const suspect = aiCase.suspects.find(s => s.id === suspectId);
+            if (suspect) {
+                Object.entries(fields).forEach(([field, value]) => {
+                    (suspect as any)[field] = value;
+                });
+            }
+        });
+    }
+};
+
 export const stripImagesFromCase = (caseData: CaseData): { stripped: any, imageMap: Record<string, string> } => {
     const imageMap: Record<string, string> = {};
     const clone = JSON.parse(JSON.stringify(caseData));
@@ -324,7 +417,7 @@ const REPORT_SCHEMA = {
 
 // --- CORE FUNCTIONS ---
 
-export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void): Promise<{ updatedCase: CaseData, report: any }> => {
+export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
   console.log(`[DEBUG] checkCaseConsistency: Starting for case "${caseData.title}"`);
   
   if (onProgress) onProgress("Stripping visual assets for analysis...");
@@ -423,6 +516,13 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
     // --- HYDRATE IMAGES BACK INTO THE AI CASE ---
     const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
 
+    // CRITICAL: Preserve original case identity — AI generates a new ID but we must keep the original
+    hydratedCase.id = caseData.id;
+    hydratedCase.authorId = caseData.authorId;
+    hydratedCase.version = caseData.version;
+    hydratedCase.isUploaded = caseData.isUploaded;
+    if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
+
     // Ensure we don't lose non-narrative fields
     hydratedCase.suspects.forEach(s => {
         const origSuspect = caseData.suspects.find(os => os.id === s.id);
@@ -434,6 +534,16 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
     });
 
     const finalData = enforceRelationships(hydratedCase);
+    
+    // --- RE-APPLY USER'S MANUAL EDITS ---
+    // If a baseline was provided, compute what the user changed and re-apply it
+    if (baseline) {
+        const userDiff = computeUserDiff(baseline, caseData);
+        if (Object.keys(userDiff).length > 0) {
+            applyUserDiff(finalData, userDiff);
+            console.log('[DEBUG] checkCaseConsistency: Re-applied user edits on top of AI result');
+        }
+    }
 
     // Generate images for any NEW evidence added by the AI
     if (onProgress) onProgress("Generating images for new evidence...");
@@ -474,7 +584,7 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
  * Allows the user to request broad, AI-driven edits to an entire case.
  * Handles everything from theme changes to suspect management.
  */
-export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string, onProgress?: (msg: string) => void): Promise<{ updatedCase: CaseData, report: any }> => {
+export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
     console.log(`[DEBUG] editCaseWithPrompt: Starting with prompt "${userPrompt}"`);
     
     if (onProgress) onProgress("Stripping visual assets for transformation...");
@@ -566,6 +676,12 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
         // --- HYDRATE IMAGES ---
         const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
 
+        // CRITICAL: Preserve original case identity
+        hydratedCase.id = caseData.id;
+        hydratedCase.authorId = caseData.authorId;
+        hydratedCase.version = caseData.version;
+        hydratedCase.isUploaded = caseData.isUploaded;
+
         const themeChanged = hydratedCase.type !== caseData.type;
         if (themeChanged) {
             console.log(`[DEBUG] Theme changed from ${caseData.type} to ${hydratedCase.type}. Forcing full image regeneration.`);
@@ -646,6 +762,15 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
         });
 
         const finalData = enforceRelationships(hydratedCase);
+
+        // --- RE-APPLY USER'S MANUAL EDITS ---
+        if (baseline) {
+            const userDiff = computeUserDiff(baseline, caseData);
+            if (Object.keys(userDiff).length > 0) {
+                applyUserDiff(finalData, userDiff);
+                console.log('[DEBUG] editCaseWithPrompt: Re-applied user edits on top of AI result');
+            }
+        }
 
         // Generate images for NEW or CHANGED content
         if (onProgress) onProgress("Generating visual assets for updated content...");

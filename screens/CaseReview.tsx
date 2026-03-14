@@ -431,6 +431,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const initialDraftCase = useRef(draftCase);
+  const baselineRef = useRef<CaseData>(JSON.parse(JSON.stringify(draftCase)));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
@@ -822,12 +823,18 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         setLoadingState({ visible: true, message: "Publishing to Network..." });
         const published = await publishCase({ ...draftCase, isUploaded: true }, userId || undefined);
         if (published) {
-            onUpdateDraft({ ...draftCase, isUploaded: true });
+            const saved = { ...draftCase, isUploaded: true };
+            onUpdateDraft(saved);
+            initialDraftCase.current = saved;
+            baselineRef.current = JSON.parse(JSON.stringify(saved));
             alert("Case saved and published to the Network!");
         } else {
             alert("Case saved locally, but failed to publish to Network.");
         }
     } else if (success) {
+      // Update refs so "unsaved changes" detection resets
+      initialDraftCase.current = draftCase;
+      baselineRef.current = JSON.parse(JSON.stringify(draftCase));
       alert("Case updated successfully!");
     } else {
       alert("Failed to save case.");
@@ -841,7 +848,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       try {
         const { updatedCase, report } = await checkCaseConsistency(draftCase, (msg) => {
           setLoadingState({ visible: true, message: msg });
-        });
+        }, baselineRef.current);
         
         setConsistencyModal({ visible: true, report, updatedCase });
       } catch (e) {
@@ -859,7 +866,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     try {
       const { updatedCase, report } = await editCaseWithPrompt(draftCase, editPrompt, (msg) => {
         setLoadingState({ visible: true, message: msg });
-      });
+      }, baselineRef.current);
       
       setConsistencyModal({ visible: true, report, updatedCase });
       setEditPrompt(''); // Clear prompt after success
@@ -873,6 +880,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
   const applyConsistencyChanges = () => {
       if (consistencyModal.updatedCase) {
+          // Update the baseline to the new AI result so future diffs are correct
+          baselineRef.current = JSON.parse(JSON.stringify(consistencyModal.updatedCase));
           onUpdateDraft(consistencyModal.updatedCase);
       }
       setConsistencyModal({ visible: false, report: '', updatedCase: null });
