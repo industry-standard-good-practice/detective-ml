@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { CaseData, ScreenState, ChatMessage, Evidence, Emotion, TimelineStatement } from '../types';
 import { getPixelArtUrl } from '../services/gameHelpers';
 import SuspectCard from '../components/SuspectCard';
@@ -75,10 +76,10 @@ const EvidenceGrid = styled.div`
   align-content: flex-start; 
 `;
 
-const EvidenceItem = styled.div`
+const EvidenceItemBase = styled(motion.div)`
   background: #fff;
   color: #000;
-  padding: 12px 12px 24px 12px; /* Polaroid padding bottom */
+  padding: 12px 12px 24px 12px;
   width: 260px;
   box-shadow: 3px 3px 12px rgba(0,0,0,0.6);
   font-family: 'Caveat', cursive;
@@ -86,12 +87,11 @@ const EvidenceItem = styled.div`
   line-height: 1.1;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s;
   align-items: center;
+  cursor: pointer;
 
   @media (min-width: 769px) {
     &:hover {
-      transform: scale(1.05) rotate(0deg) !important;
       z-index: 50;
       box-shadow: 8px 8px 20px rgba(0,0,0,0.7);
     }
@@ -99,7 +99,86 @@ const EvidenceItem = styled.div`
   
   @media (max-width: 768px) {
     width: 100%;
-    transform: none !important; /* Force reset generic rotation if any */
+  }
+`;
+
+const LightboxOverlay = styled(motion.div)`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  cursor: pointer;
+  overflow-y: auto;
+  padding: 40px 20px;
+`;
+
+const LightboxCardWrapper = styled(motion.div)`
+  background: #fff;
+  color: #000;
+  padding: 20px 20px 36px 20px;
+  max-width: 500px;
+  width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  font-family: 'Caveat', cursive;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+  margin: auto 0;
+  flex-shrink: 0;
+`;
+
+const LightboxImage = styled.div<{ $src?: string }>`
+  width: 100%;
+  aspect-ratio: 1;
+  background-color: #333;
+  background-image: ${props => props.$src ? `url(${props.$src})` : 'none'};
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  border: 1px solid #ddd;
+  margin-bottom: 16px;
+`;
+
+const LightboxText = styled.div`
+  text-align: center;
+  width: 100%;
+  
+  strong {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  
+  span {
+    font-size: 1.4rem;
+    color: #333;
+    display: block;
+    padding: 0 10px;
+    line-height: 1.4;
+  }
+`;
+
+const LightboxClose = styled.button`
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 1.2rem;
+  font-family: 'VT323', monospace;
+  padding: 8px 16px;
+  cursor: pointer;
+  z-index: 10002;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: rgba(255,255,255,0.2);
   }
 `;
 
@@ -139,7 +218,7 @@ const PolaroidText = styled.div`
   }
 `;
 
-const NoteItem = styled(EvidenceItem)`
+const NoteItem = styled(EvidenceItemBase)`
   background: #fff9c4; /* Light yellow post-it */
   width: 260px;
   min-height: 180px;
@@ -576,6 +655,18 @@ const CaseHub: React.FC<CaseHubProps> = ({
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+  const [lightboxEvidence, setLightboxEvidence] = useState<{ title: string; description: string; imageUrl?: string; id?: string } | null>(null);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+
+  const openLightbox = (item: Evidence, evidenceKey: string) => {
+    setSelectedEvidenceId(evidenceKey);
+    setLightboxEvidence(item);
+  };
+
+  const closeLightbox = () => {
+    setSelectedEvidenceId(null);
+    setLightboxEvidence(null);
+  };
   const [inputVal, setInputVal] = useState('');
   const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'FILES' | 'HQ' | 'SUSPECTS'>('BOARD');
   const logRef = useRef<HTMLDivElement>(null);
@@ -607,6 +698,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
 
   return (
     <HubContainer>
+      <LayoutGroup>
       {/* MOBILE TABS */}
       <MobileTabBar id="mobile-tab-bar">
         <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
@@ -624,15 +716,15 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 </h2>
                 <EvidenceGrid>
                     {evidenceDiscovered.map((ev, i) => (
-                        <EvidenceItem key={ev.id || i}>
-                            <PolaroidImage $src={ev.imageUrl}>
-                                {!ev.imageUrl && 'No IMG'}
-                            </PolaroidImage>
-                            <PolaroidText>
-                                <strong>{ev.title}</strong>
-                                <span>{ev.description}</span>
-                            </PolaroidText>
-                        </EvidenceItem>
+                      <EvidenceItemBase key={ev.id || i}>
+                        <PolaroidImage $src={ev.imageUrl}>
+                            {!ev.imageUrl && 'No IMG'}
+                        </PolaroidImage>
+                        <PolaroidText>
+                            <strong>{ev.title}</strong>
+                            <span>{ev.description}</span>
+                        </PolaroidText>
+                      </EvidenceItemBase>
                     ))}
                     {Object.entries(notes).flatMap(([sId, noteList]) => 
                         (noteList as string[]).map((n, i) => (
@@ -726,17 +818,32 @@ const CaseHub: React.FC<CaseHubProps> = ({
             </h2>
 
             <EvidenceGrid>
-              {evidenceDiscovered.map((ev, i) => (
-                  <EvidenceItem key={ev.id || i} style={{ transform: `rotate(${Math.random() * 6 - 3}deg)` }}>
-                    <PolaroidImage $src={ev.imageUrl}>
-                        {!ev.imageUrl && 'No IMG'}
-                    </PolaroidImage>
-                    <PolaroidText>
-                        <strong>{ev.title}</strong>
-                        <span>{ev.description}</span>
-                    </PolaroidText>
-                  </EvidenceItem>
-              ))}
+              {evidenceDiscovered.map((ev, i) => {
+                  const eKey = `ev-desktop-${ev.id || i}`;
+                  const isSelected = selectedEvidenceId === eKey;
+                  return (
+                    <EvidenceItemBase
+                      key={eKey}
+                      layoutId={isSelected ? undefined : eKey}
+                      onClick={() => !isSelected && openLightbox(ev, eKey)}
+                      data-cursor="pointer"
+                      whileHover={!isSelected ? { scale: 1.05, rotate: 0 } : undefined}
+                      style={{
+                        rotate: isSelected ? 0 : Math.random() * 6 - 3,
+                        opacity: isSelected ? 0 : 1,
+                        pointerEvents: isSelected ? 'none' : 'auto'
+                      }}
+                    >
+                      <PolaroidImage $src={ev.imageUrl}>
+                          {!ev.imageUrl && 'No IMG'}
+                      </PolaroidImage>
+                      <PolaroidText>
+                          <strong>{ev.title}</strong>
+                          <span>{ev.description}</span>
+                      </PolaroidText>
+                    </EvidenceItemBase>
+                  );
+              })}
                {Object.entries(notes).flatMap(([sId, noteList]) => 
                   (noteList as string[]).map((n, i) => (
                     <NoteItem key={`note-${sId}-${i}`} style={{ transform: `rotate(${Math.random() * 6 - 3}deg)` }}>
@@ -843,6 +950,34 @@ const CaseHub: React.FC<CaseHubProps> = ({
           onClose={() => setIsTimelineOpen(false)} 
         />
       )}
+
+      {/* EVIDENCE LIGHTBOX */}
+      <AnimatePresence>
+        {selectedEvidenceId && lightboxEvidence && (
+          <LightboxOverlay
+            key="lightbox-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={closeLightbox}
+          >
+            <LightboxClose onClick={closeLightbox}>[CLOSE]</LightboxClose>
+            <LightboxCardWrapper
+              layoutId={selectedEvidenceId}
+              onClick={e => e.stopPropagation()}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
+              <LightboxImage $src={lightboxEvidence.imageUrl} />
+              <LightboxText>
+                <strong>{lightboxEvidence.title}</strong>
+                <span>{lightboxEvidence.description}</span>
+              </LightboxText>
+            </LightboxCardWrapper>
+          </LightboxOverlay>
+        )}
+      </AnimatePresence>
+      </LayoutGroup>
     </HubContainer>
   );
 };
