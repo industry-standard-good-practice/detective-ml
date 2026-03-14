@@ -564,6 +564,92 @@ export const enforceSuspectSchema = (caseData: any, originalCase?: any) => {
     return caseData;
 };
 
+// --- SHARED PROMPT RULES (Single source of truth for all AI prompts) ---
+
+const PROMPT_RULES = {
+    /** Rules for relationship quality — used in generation, consistency, and edit */
+    RELATIONSHIP_QUALITY: `**RELATIONSHIP QUALITY (CRITICAL):**
+- Every suspect's 'relationships' array must have an entry for the victim and every other alive suspect.
+- Each relationship 'description' field MUST be a rich, narrative description (2-3 sentences minimum) that describes how they feel about the person, their history, and any tension or closeness.
+- The 'description' MUST NOT simply repeat the 'type' label (e.g. if type is "Acquaintance", description cannot just say "Acquaintance").
+- Descriptions should reveal character personality and hint at dynamics relevant to the mystery.`,
+
+    /** Rules for timeline entry format — used in generation, consistency, and edit */
+    TIMELINE_FORMAT: `**TIMELINE FORMAT (CRITICAL):**
+- Every timeline entry has TWO separate fields: 'time' and 'activity'.
+- The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "20:00 GTS"). Do NOT put the activity description in the time field.
+- The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
+- WRONG: { time: "8:00 PM: Arrived at the lab", activity: "" }
+- CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift" }
+- This applies to BOTH suspect timelines AND the case-level initialTimeline.`,
+
+    /** Rules for keeping initial timeline spoiler-free — used in generation, consistency, and edit */
+    INITIAL_TIMELINE_SPOILER_PROTECTION: `**INITIAL TIMELINE — SPOILER PROTECTION (CRITICAL):**
+- The 'initialTimeline' represents facts documented by PATROL OFFICERS and FIRST RESPONDERS before the case is handed to a detective (the player).
+- It is the PLAYER'S STARTING POINT. It must NEVER reveal or strongly imply who is guilty.
+- **ABSOLUTELY FORBIDDEN in initialTimeline:**
+  * Naming any guilty suspect in connection with suspicious activity
+  * Describing incriminating actions by the guilty party (e.g. "John seen fleeing the scene")
+  * Revealing motive or opportunity specific to the guilty suspect
+  * Any entry that makes the solution obvious before investigation begins
+- **ALLOWED in initialTimeline:**
+  * When the crime was discovered ("Body found at 10:00 PM by security guard")
+  * When emergency services arrived ("Police arrived on scene at 10:15 PM")
+  * Estimated time of death or crime window ("Coroner estimates TOD between 8-9 PM")
+  * Neutral environmental observations ("Back door found unlocked", "Security cameras offline since 7 PM")
+  * General witness reports that don't name guilty suspects ("Neighbors report hearing an argument around 8:30 PM")
+- If the existing initialTimeline contains entries that reveal guilt, REWRITE them to be neutral.`,
+
+    /** Naming constraints — used in generation and edit (when changing themes) */
+    NAMING_RULES: `**NAMING RULES:**
+- **STRICT CONSTRAINT:** Do NOT use "cool", "edgy", or "YA Novel" names unless explicitly requested by the user prompt.
+- **BANNED NAMES:** Jarek, Zara, Vane, Kael, Rian, Elias, Silas, Elara, Lyra, Orion, Nova, Zephyr, Thorne, Nyx, Jax, Kai, Luna, Raven, Shadow, Talon, Blaze.
+- **PREFERRED STYLE:** Use grounded, realistic, mundane names suitable for a gritty police report. (e.g. Frank, Martha, David, Sarah, Robert, Chen, Rodriguez, Kowalski, Smith, Jones, Patel, Nguyen).
+- If the setting is historical or specific (e.g. 1920s), use period-accurate names.`,
+
+    /** Victim generation rule — used in generation and edit */
+    VICTIM_GENERATION: `**VICTIM GENERATION RULE:**
+If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERATE "THE VICTIM" AS A SUSPECT CARD.
+- Name: A realistic full name for the victim.
+- Role: "The Victim".
+- **isDeceased: true**.
+- hiddenEvidence: Must contain 2-3 physical clues found on the body (e.g. "Bruise on wrist", "Watch frozen at 9pm", "Pocket lint").
+- Alibi/Motive: Set to "N/A (Deceased)".
+- Bio: Description of the body's state and their life before death.`,
+
+    /** Suspect profile requirements — used in generation and consistency */
+    SUSPECT_PROFILES: `**SUSPECT PROFILE REQUIREMENTS:**
+- GENDER: Explicitly state Male, Female, or Non-binary.
+- BIO: **PUBLIC KNOWLEDGE ONLY**.
+- SECRET: The hidden truth they are trying to hide.
+- ALIBI: Where they were, who with, and is it true?
+- RELATIONSHIPS: **MANDATORY**:
+  1. If the suspect is alive, they MUST have an entry for "The Victim" and every other alive suspect.
+  2. If the suspect is the victim, they MUST have an entry for every alive suspect by name.
+  3. **CONTEXTUAL**: If the crime is Theft/Larceny, include a relationship to the "Owner" or "Target" if they are not a suspect.
+  *INSTRUCTION*: Descriptions must be detailed (2-3 sentences).
+- KNOWN FACTS: 2-3 specific facts they know about the crime.
+- MOTIVE: A clear reason they might be suspected.
+- TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has TWO fields:
+  * 'time': ONLY the timestamp (e.g. "8:00 PM"). Do NOT include the activity here.
+  * 'activity': The description of what happened (e.g. "Arrived at the restaurant for dinner").
+- PROFESSIONAL BACKGROUND: A valid job or skill set.
+- WITNESS OBSERVATIONS: Something specific they saw or heard.
+- hiddenEvidence: Items they have that prove guilt or secrets. The guilty party MUST have damning hidden evidence.`,
+
+    /** Data completeness requirement — used in all three */
+    DATA_COMPLETENESS: `**DATA COMPLETENESS (CRITICAL):**
+- You MUST populate 'alibi', 'motive', 'relationships', 'knownFacts', 'timeline', 'professionalBackground', and 'witnessObservations' for EVERY suspect.
+- Do NOT return null or empty strings for required fields.
+- Do NOT return empty arrays [] for timeline, relationships, or knownFacts — generate real content.`,
+
+    /** Output format for consistency/edit modes — NOT used in generation */
+    OUTPUT_FORMAT_WITH_REPORT: `**OUTPUT FORMAT:**
+- You must return a JSON object with two fields:
+  - 'updatedCase': The complete CaseData object.
+  - 'report': A structured object containing 'issuesFound', 'changesMade' (array of {description, evidenceId}), and 'conclusion'.`,
+} as const;
+
 // --- SCHEMAS ---
 
 const CASE_SCHEMA = {
@@ -777,24 +863,15 @@ ${userChangeLog}
        - Ensure motives are compelling and consistent with the character's bio and secret.
        - If a suspect has a secret, ensure there is a way for the player to discover it.
        
-    4. **RELATIONSHIP QUALITY (CRITICAL):**
-       - Every suspect's 'relationships' array must have an entry for the victim and every other alive suspect.
-       - Each relationship 'description' field MUST be a rich, narrative description (2-3 sentences minimum) that describes how they feel about the person, their history, and any tension or closeness.
-       - The 'description' MUST NOT simply repeat the 'type' label (e.g. if type is "Acquaintance", description cannot just say "Acquaintance").
-       - Descriptions should reveal character personality and hint at dynamics relevant to the mystery.
-       
-    5. **TIMELINE FORMAT (CRITICAL):**
-       - Every timeline entry has TWO separate fields: 'time' and 'activity'.
-       - The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "20:00 GTS"). Do NOT put the activity description in the time field.
-       - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
-       - WRONG: { time: "8:00 PM: Arrived at the lab", activity: "" }
-       - CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift" }
-       - This applies to BOTH suspect timelines AND the case-level initialTimeline.
-       
-    6. **OUTPUT FORMAT:**
-       - You must return a JSON object with two fields:
-         - 'updatedCase': The complete, repaired CaseData object.
-         - 'report': A structured object containing 'issuesFound', 'changesMade' (array of {description, evidenceId}), and 'conclusion'.
+    4. ${PROMPT_RULES.RELATIONSHIP_QUALITY}
+        
+    5. ${PROMPT_RULES.TIMELINE_FORMAT}
+        
+    6. ${PROMPT_RULES.INITIAL_TIMELINE_SPOILER_PROTECTION}
+        
+    7. ${PROMPT_RULES.DATA_COMPLETENESS}
+    
+    8. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
     
     CASE DATA:
     ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -993,13 +1070,19 @@ ${userChangeLog}
          
       4. **BASIC CONSISTENCY:**
          - Make a reasonable effort to keep timelines, names, and relationships consistent with your changes.
-         - Every relationship 'description' MUST be a rich narrative (2-3 sentences), never just a copy of the 'type' label.
          - A separate, thorough consistency check will run after your edits, so focus on the transformation.
          
-      5. **OUTPUT FORMAT:**
-         - You must return a JSON object with two fields:
-           - 'updatedCase': The complete, transformed CaseData object.
-           - 'report': A structured object containing 'issuesFound' (what was changed to fit the prompt), 'changesMade' (array of {description, evidenceId}), and 'conclusion'.
+      5. ${PROMPT_RULES.RELATIONSHIP_QUALITY}
+          
+      6. ${PROMPT_RULES.TIMELINE_FORMAT}
+          
+      7. ${PROMPT_RULES.INITIAL_TIMELINE_SPOILER_PROTECTION}
+      
+      8. ${PROMPT_RULES.NAMING_RULES}
+
+      9. ${PROMPT_RULES.DATA_COMPLETENESS}
+           
+      10. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
       
       CASE DATA:
       ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -1225,22 +1308,16 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     Difficulty: Calculated automatically based on complexity.
     Generation Seed: ${seed} (Use this to randomize names and scenarios).
     
-    CRITICAL INSTRUCTION - INITIAL TIMELINE:
-    You must generate an 'initialTimeline' array of events that are known at the start of the case.
-    - For a Murder: Include when the murder occurred (e.g. "Body discovered at 10:00 PM", "Estimated time of death 9:00 PM").
-    - For a Break-in: Include camera footage or witness reports of the entry (e.g. "Security cameras show figure at back door at 2:00 AM").
-    - These events should be general facts, not attributed to a specific suspect yet.
+    ${PROMPT_RULES.INITIAL_TIMELINE_SPOILER_PROTECTION}
+    
+    ${PROMPT_RULES.TIMELINE_FORMAT}
     
     CRITICAL INSTRUCTION - SUPPORT CHARACTERS:
     You must generate two support characters that fit the THEME:
     1. 'officer': The quest giver / boss. (e.g. For Fantasy: "Captain of the Guard"; For Sci-Fi: "Station Commander").
     2. 'partner': The player's sidekick. (e.g. For Fantasy: "Novice Mage"; For Sci-Fi: "Droid Unit").
     
-    CRITICAL INSTRUCTION - NAMES:
-    - **STRICT CONSTRAINT:** Do NOT use "cool", "edgy", or "YA Novel" names unless explicitly requested by the user prompt.
-    - **BANNED NAMES:** Jarek, Zara, Vane, Kael, Rian, Elias, Silas, Elara, Lyra, Orion, Nova, Zephyr, Thorne, Nyx, Jax, Kai, Luna, Raven, Shadow, Talon, Blaze.
-    - **PREFERRED STYLE:** Use grounded, realistic, mundane names suitable for a gritty police report. (e.g. Frank, Martha, David, Sarah, Robert, Chen, Rodriguez, Kowalski, Smith, Jones, Patel, Nguyen).
-    - If the setting is historical or specific (e.g. 1920s), use period-accurate names.
+    ${PROMPT_RULES.NAMING_RULES}
     
     CRITICAL INSTRUCTION - CRIME TYPE:
     - 'type' MUST be specific legal classification.
@@ -1249,41 +1326,15 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     If the user does not specify a number, default to 5 suspects.
     One or more suspects must be Guilty.
     
-    **VICTIM GENERATION RULE:**
-    If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERATE "THE VICTIM" AS A SUSPECT CARD.
-    - Name: A realistic full name for the victim.
-    - Role: "The Victim".
-    - **isDeceased: true**.
-    - hiddenEvidence: Must contain 2-3 physical clues found on the body (e.g. "Bruise on wrist", "Watch frozen at 9pm", "Pocket lint").
-    - Alibi/Motive: Set to "N/A (Deceased)".
-    - Bio: Description of the body's state and their life before death.
+    ${PROMPT_RULES.VICTIM_GENERATION}
     
-    Each suspect needs 'hiddenEvidence' (items they have that prove guilt or secrets).
-    Ensure the guilty party has damning hidden evidence.
+    ${PROMPT_RULES.SUSPECT_PROFILES}
     
-    Create detailed profiles:
-    - GENDER: Explicitly state Male, Female, or Non-binary.
-    - BIO: **PUBLIC KNOWLEDGE ONLY**.
-    - SECRET: The hidden truth they are trying to hide.
-    - ALIBI: Where they were, who with, and is it true?
-    - RELATIONSHIPS: **MANDATORY**:
-      1. If the suspect is alive, they MUST have an entry for "The Victim" and every other alive suspect.
-      2. If the suspect is the victim, they MUST have an entry for every alive suspect by name.
-      3. **CONTEXTUAL**: If the crime is Theft/Larceny, include a relationship to the "Owner" or "Target" if they are not a suspect.
-      *INSTRUCTION*: Descriptions must be detailed (2-3 sentences).
-    - KNOWN FACTS: 2-3 specific facts they know about the crime.
-    - MOTIVE: A clear reason they might be suspected.
-    - TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has TWO fields:
-      * 'time': ONLY the timestamp (e.g. "8:00 PM"). Do NOT include the activity here.
-      * 'activity': The description of what happened (e.g. "Arrived at the restaurant for dinner").
-    - PROFESSIONAL BACKGROUND: A valid job or skill set.
-    - WITNESS OBSERVATIONS: Something specific they saw or heard.
+    ${PROMPT_RULES.RELATIONSHIP_QUALITY}
+    
+    ${PROMPT_RULES.DATA_COMPLETENESS}
     
     Output JSON structure matching CaseData interface.
-
-    CRITICAL: 
-    - You MUST populate 'alibi', 'motive', 'relationships', 'knownFacts', 'timeline', 'professionalBackground', and 'witnessObservations' for EVERY suspect.
-    - Do NOT return null for array fields. Use empty arrays [] if no data.
   `;
   
   const res = await ai.models.generateContent({
