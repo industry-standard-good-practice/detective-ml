@@ -57,6 +57,22 @@ export const deleteCase = async (caseId: string): Promise<boolean> => {
   }
 };
 
+// Recursively strip undefined values (Firestore/RTDB rejects them)
+const stripUndefined = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) return obj.map(stripUndefined);
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = stripUndefined(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+};
+
 export const updateCase = async (caseId: string, updates: Partial<CaseData>): Promise<boolean> => {
   console.log(`[DEBUG] updateCase: Updating ${caseId}`, updates);
   try {
@@ -65,15 +81,23 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
     const isMajorUpdate = updates.suspects || updates.title || updates.description || updates.initialEvidence;
     
     let finalUpdates = { ...updates };
-    if (isMajorUpdate) {
-      const snapshot = await get(caseRef);
-      if (snapshot.exists()) {
+
+    const snapshot = await get(caseRef);
+    if (snapshot.exists()) {
+      // Existing case — increment version on major updates
+      if (isMajorUpdate) {
         const currentData = snapshot.val() as CaseData;
         finalUpdates.version = (currentData.version || 1) + 1;
       }
+      // Strip undefined and update
+      await update(caseRef, stripUndefined(finalUpdates));
+    } else {
+      // New case — use set() to create it, default version to 1
+      finalUpdates.version = finalUpdates.version || 1;
+      finalUpdates.createdAt = finalUpdates.createdAt || Date.now();
+      await set(caseRef, stripUndefined(finalUpdates));
     }
 
-    await update(caseRef, finalUpdates);
     return true;
   } catch (error) {
     console.error("[DEBUG] updateCase: Error", error);

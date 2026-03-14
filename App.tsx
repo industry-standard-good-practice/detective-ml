@@ -1128,7 +1128,9 @@ const App: React.FC = () => {
   };
 
   const currentCase = gameState.selectedCaseId 
-    ? communityCases.find(c => c.id === gameState.selectedCaseId)
+    ? (communityCases.find(c => c.id === gameState.selectedCaseId)
+      || (draftCase?.id === gameState.selectedCaseId ? draftCase : undefined)
+      || localDrafts.find(d => d.id === gameState.selectedCaseId))
     : undefined;
   
   const isGameplay = 

@@ -407,6 +407,9 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                   {isAdmin && onToggleFeatured && (
                     <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>[ {c.isFeatured ? 'UNFEATURE' : 'FEATURE'} ]</AdminButton>
                   )}
+                  {c.authorId === userId && onUnpublish && (
+                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>[ UNPUBLISH ]</AdminButton>
+                  )}
                   {isAdmin && onDeleteCase && (
                     <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>[ DELETE ]</AdminButton>
                   )}
@@ -436,6 +439,9 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                   )}
                   {isAdmin && onToggleFeatured && (
                     <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>[ {c.isFeatured ? 'UNFEATURE' : 'FEATURE'} ]</AdminButton>
+                  )}
+                  {c.authorId === userId && onUnpublish && (
+                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>[ UNPUBLISH ]</AdminButton>
                   )}
                   {isAdmin && onDeleteCase && (
                     <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>[ DELETE ]</AdminButton>
