@@ -78,8 +78,11 @@ const Carousel = styled.div`
   scrollbar-width: none;
 
   & > div {
-    flex: 0 0 450px;
+    flex: 0 0 min(450px, 40vh);
+    width: min(450px, 40vh);
     height: auto;
+    max-height: 80vh;
+    overflow-y: auto;
   }
 
   @media (max-width: 768px) {
@@ -135,6 +138,8 @@ const CaseCard = styled.div<{ $isCommunity?: boolean }>`
 const CaseImage = styled.div<{ $src?: string }>`
   width: 100%;
   aspect-ratio: 1 / 1;
+  max-height: calc(80vh - 200px);
+  max-width: calc(80vh - 200px);
   background-color: #080808;
   background-image: ${props => props.$src && props.$src !== 'PLACEHOLDER' ? `url(${props.$src})` : 'none'};
   background-size: cover;
@@ -142,7 +147,6 @@ const CaseImage = styled.div<{ $src?: string }>`
   border: 1px solid #333;
   margin-bottom: 15px;
   image-rendering: pixelated;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -210,9 +214,9 @@ interface CaseSelectionProps {
   onEditCase?: (caseId: string) => void;
 }
 
-const CaseSelection: React.FC<CaseSelectionProps> = ({ 
-  communityCases, 
-  onSelectCase, 
+const CaseSelection: React.FC<CaseSelectionProps> = ({
+  communityCases,
+  onSelectCase,
   onCreateNew,
   isLoadingCommunity,
   isAdmin,
@@ -231,23 +235,23 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       <Header>
         <h2 style={{ margin: 0 }}>OPEN CASES</h2>
         <TabBar>
-            <TabButton 
-                $active={activeTab === 'featured'} 
-                $color="#0f0"
-                onClick={() => setActiveTab('featured')}
-            >
-                [ FEATURED CASES ]
-            </TabButton>
-            <TabButton 
-                $active={activeTab === 'network'} 
-                $color="#0ff"
-                onClick={() => setActiveTab('network')}
-            >
-                [ THE NETWORK ]
-            </TabButton>
+          <TabButton
+            $active={activeTab === 'featured'}
+            $color="#0f0"
+            onClick={() => setActiveTab('featured')}
+          >
+            [ FEATURED CASES ]
+          </TabButton>
+          <TabButton
+            $active={activeTab === 'network'}
+            $color="#0ff"
+            onClick={() => setActiveTab('network')}
+          >
+            [ THE NETWORK ]
+          </TabButton>
         </TabBar>
       </Header>
-      
+
       {activeTab === 'featured' ? (
         <Carousel ref={carouselDragRef}>
           {featuredCases.length === 0 && !isLoadingCommunity && (
@@ -305,7 +309,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 </CaseImage>
                 <h3 style={{ color: '#0ff', fontSize: 'var(--type-h3)', margin: '0 0 5px 0' }}>{c.title || "[ NO TITLE ]"}</h3>
                 <div style={{ marginBottom: '10px' }}>
-                  <span style={{ background: '#044', color:'#0ff', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
+                  <span style={{ background: '#044', color: '#0ff', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
                   <span style={{ marginLeft: '10px', color: '#ccc', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
                   {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
                 </div>
