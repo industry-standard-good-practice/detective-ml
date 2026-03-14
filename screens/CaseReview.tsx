@@ -833,15 +833,17 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       saveLocalDraft(draftCase);
     }
 
+    // Update refs so "unsaved changes" detection resets
+    initialDraftCase.current = draftCase;
+    baselineRef.current = JSON.parse(JSON.stringify(draftCase));
+    // Explicitly clear unsaved state (useEffect won't re-run since draftCase didn't change)
+    setHasUnsavedChanges(false);
+    onHasUnsavedChanges?.(false);
+
     if (success) {
-      // Update refs so "unsaved changes" detection resets
-      initialDraftCase.current = draftCase;
-      baselineRef.current = JSON.parse(JSON.stringify(draftCase));
       alert("Case saved successfully!");
     } else {
       alert("Saved locally as a fallback.");
-      initialDraftCase.current = draftCase;
-      baselineRef.current = JSON.parse(JSON.stringify(draftCase));
     }
     setLoadingState({ visible: false, message: '' });
   };

@@ -286,13 +286,23 @@ const App: React.FC = () => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // --- HELPERS ---
+
+  // Resolves a case by ID from all sources (community, draft, local)
+  const findCaseById = (caseId: string | null | undefined): CaseData | undefined => {
+    if (!caseId) return undefined;
+    return communityCases.find(c => c.id === caseId)
+      || (draftCase?.id === caseId ? draftCase : undefined)
+      || localDrafts.find(d => d.id === caseId);
+  };
+
   // --- ACTIONS ---
 
   const selectCase = (caseInput: string | CaseData) => {
     console.log('[DEBUG] selectCase:', typeof caseInput === 'string' ? caseInput : caseInput.title);
     let selectedCase: CaseData | undefined;
     if (typeof caseInput === 'string') {
-        selectedCase = communityCases.find(c => c.id === caseInput);
+        selectedCase = findCaseById(caseInput);
     } else {
         selectedCase = caseInput;
     }
@@ -355,7 +365,7 @@ const App: React.FC = () => {
   const startInterrogation = (suspectId: string) => {
     // Check for "Kept Waiting" Penalty logic
     const { gameTime, lastInteractionTimes, aggravationLevels, chatHistory, selectedCaseId, suspectSuggestions } = gameState;
-    const currentCase = communityCases.find(c => c.id === selectedCaseId)!;
+    const currentCase = findCaseById(selectedCaseId)!;
     const suspect = currentCase.suspects.find(s => s.id === suspectId)!;
     
     let newAgg = aggravationLevels[suspectId] || 0;
@@ -413,7 +423,7 @@ const App: React.FC = () => {
       const { currentSuspectId, partnerCharges, aggravationLevels, selectedCaseId, evidenceDiscovered, chatHistory, gameTime } = gameState;
       if (!currentSuspectId || !selectedCaseId || partnerCharges <= 0) return;
 
-      const currentCase = communityCases.find(c => c.id === selectedCaseId)!;
+      const currentCase = findCaseById(selectedCaseId)!;
       const suspect = currentCase.suspects.find(s => s.id === currentSuspectId)!;
       const currentAgg = aggravationLevels[currentSuspectId] || 0;
       
@@ -574,7 +584,7 @@ const App: React.FC = () => {
     const { selectedCaseId, currentSuspectId, chatHistory, aggravationLevels, evidenceDiscovered, gameTime } = gameState;
     if (!selectedCaseId || !currentSuspectId) return;
 
-    const currentCase = communityCases.find(c => c.id === selectedCaseId);
+    const currentCase = findCaseById(selectedCaseId);
     if (!currentCase) return;
 
     const currentSuspect = currentCase.suspects.find(s => s.id === currentSuspectId)!;
@@ -735,7 +745,7 @@ const App: React.FC = () => {
     setIsThinking(true);
     
     try {
-      const currentCase = communityCases.find(c => c.id === gameState.selectedCaseId)!;
+      const currentCase = findCaseById(gameState.selectedCaseId)!;
       
       const responseText = await getOfficerChatResponse(
         currentCase, 
@@ -895,7 +905,7 @@ const App: React.FC = () => {
         history[msgIndex] = { ...history[msgIndex], isEvidenceCollected: true };
       }
       
-      const currentCase = communityCases.find(c => c.id === prev.selectedCaseId);
+      const currentCase = findCaseById(prev.selectedCaseId);
       if (!currentCase) return prev;
 
       // PARSE STRING: Support "Title: Description" format from AI
@@ -968,7 +978,7 @@ const App: React.FC = () => {
   };
 
   const makeAccusation = async (suspectIds: string[]) => {
-    const currentCase = communityCases.find(c => c.id === gameState.selectedCaseId)!;
+    const currentCase = findCaseById(gameState.selectedCaseId)!;
     
     const guiltySuspectIds = currentCase.suspects.filter(s => s.isGuilty).map(s => s.id);
     const accusedGuiltyIds = suspectIds.filter(id => guiltySuspectIds.includes(id));
@@ -1128,9 +1138,7 @@ const App: React.FC = () => {
   };
 
   const currentCase = gameState.selectedCaseId 
-    ? (communityCases.find(c => c.id === gameState.selectedCaseId)
-      || (draftCase?.id === gameState.selectedCaseId ? draftCase : undefined)
-      || localDrafts.find(d => d.id === gameState.selectedCaseId))
+    ? findCaseById(gameState.selectedCaseId)
     : undefined;
   
   const isGameplay = 
