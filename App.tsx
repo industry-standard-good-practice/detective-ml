@@ -4,7 +4,8 @@ import styled from 'styled-components';
 import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
 import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
 import { generateTTS } from './services/geminiTTS';
-import { fetchCommunityCases, publishCase, deleteCase, updateCase } from './services/persistence';
+import { fetchCommunityCases, publishCase, deleteCase, updateCase, fetchAllCaseStats, fetchCaseStats, fetchUserVote, submitVote, recordGameResult, saveLocalDraft, fetchLocalDrafts, deleteLocalDraft } from './services/persistence';
+import { CaseStats } from './types';
 import { auth, logout } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -90,6 +91,14 @@ const TIME_INCREMENT_MS = 5 * 60 * 1000; // 5 minutes per action
 const WAIT_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes before they get mad
 const INITIAL_TIME_MS = new Date('2030-09-12T09:00:00').getTime();
 
+/** Formats "Noah Semus" → "Noah S." */
+const formatAuthorName = (displayName: string | null | undefined): string => {
+  if (!displayName) return 'Anonymous';
+  const parts = displayName.trim().split(/\s+/);
+  if (parts.length <= 1) return parts[0] || 'Anonymous';
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+};
+
 const DEFAULT_SUGGESTIONS = [
   { label: "Where were you?", text: "Good evening. I'm the detective assigned to this case. Can you tell me where you were at the time of the crime?" },
   { label: "Connection to Victim", text: "I apologize for the intrusion during this difficult time, but I need to ask: how exactly did you know the victim?" },
@@ -110,6 +119,13 @@ const App: React.FC = () => {
   const [communityCases, setCommunityCases] = useState<CaseData[]>([]);
   const [loadingCommunity, setLoadingCommunity] = useState(false);
   
+  // Social features state
+  const [localDrafts, setLocalDrafts] = useState<CaseData[]>([]);
+  const [allCaseStats, setAllCaseStats] = useState<Record<string, CaseStats>>({});
+  const [currentCaseStats, setCurrentCaseStats] = useState<CaseStats | null>(null);
+  const [currentUserVote, setCurrentUserVote] = useState<'up' | 'down' | null>(null);
+  const [hasRecordedResult, setHasRecordedResult] = useState(false);
+
   const [gameState, setGameState] = useState<GameState>({
     currentScreen: ScreenState.CASE_SELECTION,
     selectedCaseId: null,
@@ -195,16 +211,20 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Community Cases on Mount
+  // Fetch Community Cases and Stats on Mount
   useEffect(() => {
     if (user) {
       loadCommunity();
+      loadDrafts();
     }
   }, [user]);
 
   const loadCommunity = async () => {
     setLoadingCommunity(true);
-    const remoteCases = await fetchCommunityCases();
+    const [remoteCases, stats] = await Promise.all([
+      fetchCommunityCases(),
+      fetchAllCaseStats()
+    ]);
     // Filter out corrupted cases (missing ID or title or empty strings)
     const validCases = remoteCases.filter(c => 
       c && 
@@ -212,7 +232,12 @@ const App: React.FC = () => {
       c.title && typeof c.title === 'string' && c.title.trim() !== ''
     );
     setCommunityCases(validCases);
+    setAllCaseStats(stats);
     setLoadingCommunity(false);
+  };
+
+  const loadDrafts = () => {
+    setLocalDrafts(fetchLocalDrafts());
   };
 
   useEffect(() => {
@@ -743,9 +768,15 @@ const App: React.FC = () => {
     try {
         const newCase = await generateCaseFromPrompt(prompt, isLucky);
         newCase.authorId = user?.uid || undefined;
+        newCase.authorDisplayName = formatAuthorName(user?.displayName);
+        newCase.createdAt = Date.now();
         setGenerationStatus("Generating suspect portraits and evidence... (0%)");
         await pregenerateCaseImages(newCase, (msg) => setGenerationStatus(msg), user?.uid);
         setGenerationStatus("");
+        
+        // Save as local draft
+        saveLocalDraft(newCase);
+        setLocalDrafts(fetchLocalDrafts());
         
         // Open edit screen first
         setDraftCase(newCase);
@@ -761,40 +792,38 @@ const App: React.FC = () => {
 
   const handleSaveAndStart = async () => {
     if (draftCase) {
-        if (draftCase.isUploaded) {
+        // Always stamp author info
+        const stamped = {
+          ...draftCase,
+          authorId: draftCase.authorId || user?.uid,
+          authorDisplayName: draftCase.authorDisplayName && draftCase.authorDisplayName !== 'Anonymous'
+            ? draftCase.authorDisplayName
+            : formatAuthorName(user?.displayName),
+          createdAt: draftCase.createdAt || Date.now()
+        };
+
+        if (stamped.isUploaded) {
             // Persist the edit to the server
-            const success = await updateCase(draftCase.id, draftCase);
+            const success = await updateCase(stamped.id, stamped);
             if (!success) {
                 alert("Failed to save changes to the server.");
                 return;
             }
             // Fetch updated case to get the new version number
-            const remoteCases = await fetchCommunityCases();
-            setCommunityCases(remoteCases);
-            const updatedCase = remoteCases.find(c => c.id === draftCase.id);
-            if (updatedCase) {
-                selectCase(updatedCase);
-            } else {
-                selectCase(draftCase);
-            }
+            await loadCommunity();
+            const updatedCase = communityCases.find(c => c.id === stamped.id) || stamped;
+            selectCase(updatedCase);
         } else {
+            // Save draft locally
+            saveLocalDraft(stamped);
+            setLocalDrafts(fetchLocalDrafts());
             setCommunityCases(prev => {
-                console.log("[DEBUG] Updating communityCases, draftCase:", draftCase);
-                // Ensure draft case is valid before adding
-                if (!draftCase || !draftCase.id || !draftCase.title) {
-                    console.log("[DEBUG] Invalid draftCase, not adding");
-                    return prev;
-                }
-                
-                const exists = prev.some(c => c.id === draftCase.id);
-                if (exists) {
-                    console.log("[DEBUG] Case exists, updating");
-                    return prev.map(c => c.id === draftCase.id ? draftCase : c);
-                }
-                console.log("[DEBUG] Case new, adding");
-                return [draftCase, ...prev];
+                if (!stamped.id || !stamped.title) return prev;
+                const exists = prev.some(c => c.id === stamped.id);
+                if (exists) return prev.map(c => c.id === stamped.id ? stamped : c);
+                return [stamped, ...prev];
             });
-            selectCase(draftCase);
+            selectCase(stamped);
         }
         setDraftCase(null);
     }
@@ -802,7 +831,7 @@ const App: React.FC = () => {
 
   const handleEditCase = (caseId?: string | any) => {
     const idToEdit = (typeof caseId === 'string') ? caseId : gameState.selectedCaseId;
-    const caseToEdit = communityCases.find(c => c.id === idToEdit);
+    const caseToEdit = communityCases.find(c => c.id === idToEdit) || localDrafts.find(d => d.id === idToEdit);
     if (!caseToEdit) return;
 
     setDraftCase(caseToEdit);
@@ -821,12 +850,18 @@ const App: React.FC = () => {
     if (!caseToPublish) return;
 
     setIsPublishing(true);
-    const success = await publishCase({ ...caseToPublish, isUploaded: true }, user?.uid);
+    const success = await publishCase(
+      { ...caseToPublish, isUploaded: true }, 
+      user?.uid, 
+      formatAuthorName(user?.displayName)
+    );
     
     if (success) {
+      // Remove from local drafts since it's now published
+      deleteLocalDraft(caseToPublish.id);
+      setLocalDrafts(fetchLocalDrafts());
       // Re-fetch to get the version and authorId
-      const remoteCases = await fetchCommunityCases();
-      setCommunityCases(remoteCases);
+      await loadCommunity();
     }
     setIsPublishing(false);
   };
@@ -910,7 +945,7 @@ const App: React.FC = () => {
     }));
   };
 
-  const makeAccusation = (suspectIds: string[]) => {
+  const makeAccusation = async (suspectIds: string[]) => {
     const currentCase = communityCases.find(c => c.id === gameState.selectedCaseId)!;
     
     const guiltySuspectIds = currentCase.suspects.filter(s => s.isGuilty).map(s => s.id);
@@ -926,12 +961,88 @@ const App: React.FC = () => {
         result = 'FAILURE';
     }
 
+    setHasRecordedResult(false);
+
     setGameState(prev => ({
       ...prev,
       gameResult: result,
       accusedSuspectIds: suspectIds,
       currentScreen: ScreenState.ENDGAME
     }));
+
+    // Record result & fetch stats for endgame display
+    const suspectsSpoken = Object.keys(gameState.chatHistory).filter(
+      sid => (gameState.chatHistory[sid] || []).some(m => m.sender === 'player')
+    ).length;
+    const evidenceFound = gameState.evidenceDiscovered.length;
+    const timelineFound = gameState.timelineStatementsDiscovered.length;
+
+    if (currentCase.isUploaded) {
+      await recordGameResult(currentCase.id, result, { evidenceFound, suspectsSpoken, timelineFound });
+      const [stats, vote] = await Promise.all([
+        fetchCaseStats(currentCase.id),
+        user ? fetchUserVote(currentCase.id, user.uid) : Promise.resolve(null)
+      ]);
+      setCurrentCaseStats(stats);
+      setCurrentUserVote(vote);
+      // Refresh global stats too
+      const allStats = await fetchAllCaseStats();
+      setAllCaseStats(allStats);
+    }
+    setHasRecordedResult(true);
+  };
+
+  const handleVote = async (vote: 'up' | 'down') => {
+    if (!user || !gameState.selectedCaseId) return;
+    await submitVote(gameState.selectedCaseId, user.uid, vote);
+    setCurrentUserVote(vote);
+    const stats = await fetchCaseStats(gameState.selectedCaseId);
+    setCurrentCaseStats(stats);
+    setAllCaseStats(prev => ({ ...prev, [gameState.selectedCaseId!]: stats }));
+  };
+
+  const handlePublishDraft = async (caseId: string) => {
+    // Check both local drafts and community cases
+    const draft = localDrafts.find(d => d.id === caseId) || communityCases.find(c => c.id === caseId);
+    if (!draft) return;
+    setIsPublishing(true);
+    const success = await publishCase(
+      { ...draft, isUploaded: true },
+      user?.uid,
+      formatAuthorName(user?.displayName)
+    );
+    if (success) {
+      deleteLocalDraft(caseId);
+      setLocalDrafts(fetchLocalDrafts());
+      await loadCommunity();
+    }
+    setIsPublishing(false);
+  };
+
+  const handleUnpublishCase = async (caseId: string) => {
+    const caseToUnpublish = communityCases.find(c => c.id === caseId);
+    if (!caseToUnpublish) return;
+    // Save to local drafts first, then remove from server
+    saveLocalDraft({ ...caseToUnpublish, isUploaded: false });
+    setLocalDrafts(fetchLocalDrafts());
+    const success = await deleteCase(caseId);
+    if (success) {
+      await loadCommunity();
+    }
+  };
+
+  const handleDeleteDraft = (caseId: string) => {
+    deleteLocalDraft(caseId);
+    setLocalDrafts(fetchLocalDrafts());
+  };
+
+  const handlePlayDraft = (caseData: CaseData) => {
+    // Add draft to communityCases temporarily so selectCase can find it
+    setCommunityCases(prev => {
+      const exists = prev.some(c => c.id === caseData.id);
+      return exists ? prev : [caseData, ...prev];
+    });
+    selectCase(caseData);
   };
 
   const resetGame = () => {
@@ -952,10 +1063,29 @@ const App: React.FC = () => {
   };
 
   const [caseToDelete, setCaseToDelete] = useState<string | null>(null);
+  const [myCaseToDelete, setMyCaseToDelete] = useState<string | null>(null);
 
   const handleDeleteCase = async (caseId: string) => {
     if (!isAdmin) return;
     setCaseToDelete(caseId);
+  };
+
+  const handleDeleteMyCase = (caseId: string) => {
+    setMyCaseToDelete(caseId);
+  };
+
+  const confirmDeleteMyCase = async () => {
+    if (!myCaseToDelete) return;
+    // Delete from Firebase if published
+    const isPublished = communityCases.some(c => c.id === myCaseToDelete && c.isUploaded);
+    if (isPublished) {
+      await deleteCase(myCaseToDelete);
+    }
+    // Delete from local drafts
+    deleteLocalDraft(myCaseToDelete);
+    setLocalDrafts(fetchLocalDrafts());
+    setCommunityCases(prev => prev.filter(c => c.id !== myCaseToDelete));
+    setMyCaseToDelete(null);
   };
 
   const confirmDeleteCase = async () => {
@@ -1040,6 +1170,8 @@ const App: React.FC = () => {
             <CaseSelection 
                 key="screen-selection"
                 communityCases={communityCases}
+                localDrafts={localDrafts}
+                caseStats={allCaseStats}
                 isLoadingCommunity={loadingCommunity}
                 onSelectCase={selectCase} 
                 onCreateNew={() => setGameState(prev => ({ ...prev, currentScreen: ScreenState.CREATE_CASE }))}
@@ -1048,6 +1180,11 @@ const App: React.FC = () => {
                 onDeleteCase={handleDeleteCase}
                 onToggleFeatured={handleToggleFeatured}
                 onEditCase={handleEditCase}
+                onPublishDraft={handlePublishDraft}
+                onDeleteDraft={handleDeleteDraft}
+                onPlayDraft={handlePlayDraft}
+                onUnpublish={handleUnpublishCase}
+                onDeleteMyCase={handleDeleteMyCase}
             />
           )}
 
@@ -1139,6 +1276,13 @@ const App: React.FC = () => {
               accusedIds={gameState.accusedSuspectIds}
               evidenceDiscovered={gameState.evidenceDiscovered}
               onReset={resetGame}
+              caseStats={currentCaseStats}
+              userVote={currentUserVote}
+              onVote={handleVote}
+              suspectsSpoken={Object.keys(gameState.chatHistory).filter(
+                sid => (gameState.chatHistory[sid] || []).some(m => m.sender === 'player')
+              ).length}
+              timelineFound={gameState.timelineStatementsDiscovered.length}
             />
           )}
         </>
@@ -1176,6 +1320,25 @@ const App: React.FC = () => {
               </ModalButton>
               <ModalButton $variant="confirm" onClick={confirmDeleteCase}>
                 [ DELETE ]
+              </ModalButton>
+            </ButtonRow>
+          </ConfirmBox>
+        </Overlay>
+      )}
+
+      {myCaseToDelete && (
+        <Overlay>
+          <ConfirmBox>
+            <WarningTitle>⚠ DELETE CASE ⚠</WarningTitle>
+            <WarningText>
+              Are you sure you want to permanently delete this case? If it's published, it will also be removed from the Network. <strong>This cannot be undone.</strong>
+            </WarningText>
+            <ButtonRow>
+              <ModalButton $variant="cancel" onClick={() => setMyCaseToDelete(null)}>
+                [ Cancel ]
+              </ModalButton>
+              <ModalButton $variant="confirm" onClick={confirmDeleteMyCase}>
+                [ DELETE PERMANENTLY ]
               </ModalButton>
             </ButtonRow>
           </ConfirmBox>

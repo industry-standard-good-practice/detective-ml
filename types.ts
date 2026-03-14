@@ -108,6 +108,24 @@ export interface CaseData {
   heroImageUrl?: string; // New: Image for the case card
   version?: number; // New: Tracks the version of the case
   authorId?: string; // New: Tracks the UID of the user who created the case
+  authorDisplayName?: string; // Display name from Google Auth
+  createdAt?: number; // Epoch timestamp for sorting by recent
+}
+
+export interface CaseStats {
+  plays: number;
+  successes: number;
+  failures: number;
+  upvotes: number;
+  downvotes: number;
+  totalEvidenceFound: number;
+  totalSuspectsSpoken: number;
+  totalTimelineFound: number;
+}
+
+export interface UserVote {
+  caseId: string;
+  vote: 'up' | 'down';
 }
 
 export interface ChatMessage {

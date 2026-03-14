@@ -1,6 +1,6 @@
-import { CaseData } from '../types';
+import { CaseData, CaseStats } from '../types';
 import { database } from './firebase';
-import { ref, get, set, child, remove, update } from 'firebase/database';
+import { ref, get, set, child, remove, update, runTransaction } from 'firebase/database';
 
 export const fetchCommunityCases = async (): Promise<CaseData[]> => {
   console.log("[DEBUG] fetchCommunityCases: Fetching...");
@@ -23,7 +23,7 @@ export const fetchCommunityCases = async (): Promise<CaseData[]> => {
   }
 };
 
-export const publishCase = async (caseData: CaseData, authorId?: string): Promise<boolean> => {
+export const publishCase = async (caseData: CaseData, authorId?: string, authorDisplayName?: string): Promise<boolean> => {
   console.log(`[DEBUG] publishCase: Uploading "${caseData.title}" (${caseData.id})`);
   try {
     const caseRef = ref(database, `cases/${caseData.id}`);
@@ -31,7 +31,9 @@ export const publishCase = async (caseData: CaseData, authorId?: string): Promis
       ...caseData, 
       isUploaded: true,
       version: caseData.version || 1,
-      authorId: caseData.authorId || authorId
+      authorId: caseData.authorId || authorId,
+      authorDisplayName: caseData.authorDisplayName || authorDisplayName || 'Anonymous',
+      createdAt: caseData.createdAt || Date.now()
     };
     await set(caseRef, dataToPublish);
     console.log("[DEBUG] publishCase: Success");
@@ -60,9 +62,6 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
   try {
     const caseRef = ref(database, `cases/${caseId}`);
     
-    // If we're updating the whole case or significant parts, increment version
-    // But if it's just a feature toggle, maybe don't?
-    // Let's check if 'suspects' or 'title' or 'description' are in updates
     const isMajorUpdate = updates.suspects || updates.title || updates.description || updates.initialEvidence;
     
     let finalUpdates = { ...updates };
@@ -81,3 +80,133 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
     return false;
   }
 };
+
+// --- CASE STATS ---
+
+const EMPTY_STATS: CaseStats = {
+  plays: 0, successes: 0, failures: 0,
+  upvotes: 0, downvotes: 0,
+  totalEvidenceFound: 0, totalSuspectsSpoken: 0, totalTimelineFound: 0
+};
+
+export interface AttemptDetail {
+  evidenceFound: number;
+  suspectsSpoken: number;
+  timelineFound: number;
+}
+
+export const recordGameResult = async (
+  caseId: string,
+  result: 'SUCCESS' | 'PARTIAL' | 'FAILURE',
+  detail: AttemptDetail
+): Promise<void> => {
+  console.log(`[DEBUG] recordGameResult: ${caseId} -> ${result}`, detail);
+  try {
+    const statsRef = ref(database, `caseStats/${caseId}`);
+    await runTransaction(statsRef, (current) => {
+      const stats = current || { ...EMPTY_STATS };
+      stats.plays = (stats.plays || 0) + 1;
+      if (result === 'SUCCESS') stats.successes = (stats.successes || 0) + 1;
+      else stats.failures = (stats.failures || 0) + 1;
+      stats.totalEvidenceFound = (stats.totalEvidenceFound || 0) + detail.evidenceFound;
+      stats.totalSuspectsSpoken = (stats.totalSuspectsSpoken || 0) + detail.suspectsSpoken;
+      stats.totalTimelineFound = (stats.totalTimelineFound || 0) + detail.timelineFound;
+      return stats;
+    });
+  } catch (error) {
+    console.error("[DEBUG] recordGameResult: Error", error);
+  }
+};
+
+export const fetchCaseStats = async (caseId: string): Promise<CaseStats> => {
+  try {
+    const snapshot = await get(ref(database, `caseStats/${caseId}`));
+    if (snapshot.exists()) return snapshot.val() as CaseStats;
+    return { ...EMPTY_STATS };
+  } catch (error) {
+    console.error("[DEBUG] fetchCaseStats: Error", error);
+    return { ...EMPTY_STATS };
+  }
+};
+
+export const fetchAllCaseStats = async (): Promise<Record<string, CaseStats>> => {
+  try {
+    const snapshot = await get(ref(database, 'caseStats'));
+    if (snapshot.exists()) return snapshot.val() as Record<string, CaseStats>;
+    return {};
+  } catch (error) {
+    console.error("[DEBUG] fetchAllCaseStats: Error", error);
+    return {};
+  }
+};
+
+// --- VOTING ---
+
+export const submitVote = async (caseId: string, userId: string, vote: 'up' | 'down'): Promise<void> => {
+  try {
+    // Read existing vote first
+    const voteRef = ref(database, `caseVotes/${caseId}/${userId}`);
+    const existingSnapshot = await get(voteRef);
+    const existingVote = existingSnapshot.exists() ? existingSnapshot.val() as string : null;
+
+    // Update the vote record
+    await set(voteRef, vote);
+
+    // Update aggregate counts via transaction
+    const statsRef = ref(database, `caseStats/${caseId}`);
+    await runTransaction(statsRef, (current) => {
+      const stats = current || { ...EMPTY_STATS };
+      // Undo old vote
+      if (existingVote === 'up') stats.upvotes = Math.max(0, (stats.upvotes || 0) - 1);
+      if (existingVote === 'down') stats.downvotes = Math.max(0, (stats.downvotes || 0) - 1);
+      // Apply new vote
+      if (vote === 'up') stats.upvotes = (stats.upvotes || 0) + 1;
+      if (vote === 'down') stats.downvotes = (stats.downvotes || 0) + 1;
+      return stats;
+    });
+  } catch (error) {
+    console.error("[DEBUG] submitVote: Error", error);
+  }
+};
+
+export const fetchUserVote = async (caseId: string, userId: string): Promise<'up' | 'down' | null> => {
+  try {
+    const snapshot = await get(ref(database, `caseVotes/${caseId}/${userId}`));
+    if (snapshot.exists()) return snapshot.val() as 'up' | 'down';
+    return null;
+  } catch (error) {
+    console.error("[DEBUG] fetchUserVote: Error", error);
+    return null;
+  }
+};
+
+// --- LOCAL DRAFTS (localStorage) ---
+
+const DRAFTS_KEY = 'detectiveml_drafts';
+
+export const saveLocalDraft = (caseData: CaseData): void => {
+  const drafts = fetchLocalDrafts();
+  const existing = drafts.findIndex(d => d.id === caseData.id);
+  if (existing >= 0) {
+    drafts[existing] = caseData;
+  } else {
+    drafts.unshift(caseData);
+  }
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+};
+
+export const fetchLocalDrafts = (): CaseData[] => {
+  try {
+    const raw = localStorage.getItem(DRAFTS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as CaseData[];
+  } catch {
+    return [];
+  }
+};
+
+export const deleteLocalDraft = (caseId: string): void => {
+  const drafts = fetchLocalDrafts().filter(d => d.id !== caseId);
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+};
+
