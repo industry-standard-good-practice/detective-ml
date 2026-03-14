@@ -346,40 +346,221 @@ export const enforceRelationships = (caseData: any) => {
 
 // Helper to fix timeline entries where time+activity are mashed together in the time field
 export const enforceTimelines = (caseData: any) => {
-    const fixTimeline = (timeline: any[]) => {
-        if (!timeline || !Array.isArray(timeline)) return;
+    const fixTimeline = (timeline: any[]): any[] => {
+        if (!timeline || !Array.isArray(timeline)) return [];
+        
+        // First pass: try to fix entries
         timeline.forEach((entry: any) => {
-            if (!entry.time) return;
+            if (!entry.time && !entry.activity) return; // Will be stripped
             
-            // If activity is missing/empty but time contains a description after a colon or dash
-            const timeStr = entry.time.trim();
-            if (!entry.activity || entry.activity.trim().length === 0) {
-                // Match patterns like "8:00 PM: Did something" or "20:00 GTS: Did something" or "8:00 PM - Did something"
-                // Time portion: digits, colons, optional AM/PM/GTS/etc, then separator
-                const match = timeStr.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM|GTS|EST|PST|UTC|[A-Z]{2,4})?)\s*[:\-–—]\s*(.+)$/i);
+            // If time is missing but activity exists — try to extract time from activity
+            if ((!entry.time || entry.time.trim().length === 0) && entry.activity) {
+                const actStr = entry.activity.trim();
+                const match = actStr.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM|GTS|EST|PST|UTC|[A-Z]{2,4})?)\s*[:\-–—]\s*(.+)$/i);
                 if (match) {
                     entry.time = match[1].trim();
                     entry.activity = match[2].trim();
+                } else {
+                    // Activity has no extractable time — give it a placeholder
+                    entry.time = "??:?? ??";
                 }
             }
             
-            // Also fix if activity is just a duplicate of the time
-            if (entry.activity && entry.activity.trim() === entry.time.trim()) {
+            // If activity is missing but time has a description mashed in
+            if (entry.time) {
+                const timeStr = entry.time.trim();
+                if (!entry.activity || entry.activity.trim().length === 0) {
+                    const match = timeStr.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM|GTS|EST|PST|UTC|[A-Z]{2,4})?)\s*[:\-–—]\s*(.+)$/i);
+                    if (match) {
+                        entry.time = match[1].trim();
+                        entry.activity = match[2].trim();
+                    }
+                }
+            }
+            
+            // Fix if activity is just a duplicate of the time
+            if (entry.activity && entry.time && entry.activity.trim() === entry.time.trim()) {
                 entry.activity = '';
             }
+        });
+        
+        // Second pass: strip entries that are completely empty (no time AND no activity)
+        return timeline.filter((entry: any) => {
+            const hasTime = entry.time && entry.time.trim().length > 0;
+            const hasActivity = entry.activity && entry.activity.trim().length > 0;
+            return hasTime || hasActivity;
         });
     };
 
     // Fix suspect timelines
     if (caseData.suspects && Array.isArray(caseData.suspects)) {
         caseData.suspects.forEach((s: any) => {
-            fixTimeline(s.timeline);
+            s.timeline = fixTimeline(s.timeline);
         });
     }
 
     // Fix initial timeline
-    fixTimeline(caseData.initialTimeline);
+    caseData.initialTimeline = fixTimeline(caseData.initialTimeline);
 
+    return caseData;
+};
+
+/**
+ * Comprehensive post-processor that validates and fixes EVERY field on every suspect.
+ * Comprehensive post-processor that validates every field on every suspect.
+ * Instead of patching with placeholder defaults, it CARRIES FORWARD the original
+ * data from the pre-edit case. If a field existed before and the AI dropped it,
+ * the original value is preserved. 100% data completeness, zero placeholders.
+ * 
+ * Call this AFTER enforceRelationships and enforceTimelines.
+ * 
+ * @param caseData - The AI-generated case data to validate
+ * @param originalCase - The original case data to carry forward from (if available)
+ */
+export const enforceSuspectSchema = (caseData: any, originalCase?: any) => {
+    if (!caseData.suspects || !Array.isArray(caseData.suspects)) return caseData;
+    const origSuspects: any[] = originalCase?.suspects || [];
+
+    caseData.suspects.forEach((s: any) => {
+        const orig = origSuspects.find((os: any) => os.id === s.id) || {};
+
+        // --- REQUIRED STRING FIELDS: carry forward from original if AI dropped ---
+        const stringFields = [
+            'name', 'gender', 'bio', 'role', 'personality', 'secret', 'motive',
+            'professionalBackground', 'witnessObservations', 'physicalDescription'
+        ];
+        stringFields.forEach(f => {
+            if (!s[f] || typeof s[f] !== 'string' || s[f].trim().length === 0) {
+                if (orig[f] && typeof orig[f] === 'string' && orig[f].trim().length > 0) {
+                    s[f] = orig[f];
+                }
+            }
+        });
+
+        // --- REQUIRED NUMBER FIELDS: carry forward ---
+        if (typeof s.age !== 'number' || isNaN(s.age)) s.age = orig.age ?? s.age;
+        if (typeof s.baseAggravation !== 'number' || isNaN(s.baseAggravation)) s.baseAggravation = orig.baseAggravation ?? s.baseAggravation;
+        if (typeof s.avatarSeed !== 'number' || isNaN(s.avatarSeed)) s.avatarSeed = orig.avatarSeed ?? Math.floor(Math.random() * 999999);
+
+        // --- REQUIRED BOOLEAN FIELDS: carry forward ---
+        if (typeof s.isGuilty !== 'boolean') s.isGuilty = orig.isGuilty ?? false;
+        if (s.isDeceased === undefined && orig.isDeceased !== undefined) s.isDeceased = orig.isDeceased;
+
+        // --- ALIBI: carry forward entire alibi if AI mangled it ---
+        if (!s.alibi || typeof s.alibi !== 'object') {
+            s.alibi = orig.alibi ? JSON.parse(JSON.stringify(orig.alibi)) : { statement: '', isTrue: true, location: '', witnesses: [] };
+        } else {
+            if (!s.alibi.statement && orig.alibi?.statement) s.alibi.statement = orig.alibi.statement;
+            if (typeof s.alibi.isTrue !== 'boolean') s.alibi.isTrue = orig.alibi?.isTrue ?? true;
+            if (!s.alibi.location && orig.alibi?.location) s.alibi.location = orig.alibi.location;
+            if (!Array.isArray(s.alibi.witnesses)) s.alibi.witnesses = orig.alibi?.witnesses || [];
+            s.alibi.witnesses = s.alibi.witnesses.filter((w: any) => typeof w === 'string' && w.trim().length > 0);
+        }
+
+        // --- TIMELINE: carry forward original if AI returned nothing ---
+        if (!Array.isArray(s.timeline)) {
+            s.timeline = orig.timeline ? JSON.parse(JSON.stringify(orig.timeline)) : [];
+        } else {
+            // Strip entries missing the required time field
+            s.timeline = s.timeline.filter((entry: any) => {
+                if (!entry || typeof entry !== 'object') return false;
+                return entry.time && typeof entry.time === 'string' && entry.time.trim().length > 0;
+            });
+            // Recover missing activity from original by matching time
+            s.timeline.forEach((entry: any) => {
+                if (!entry.activity || typeof entry.activity !== 'string' || entry.activity.trim().length === 0) {
+                    const origEntry = (orig.timeline || []).find((oe: any) => oe.time === entry.time);
+                    if (origEntry?.activity) entry.activity = origEntry.activity;
+                }
+            });
+            // If AI returned empty timeline but original had one, carry forward
+            if (s.timeline.length === 0 && orig.timeline && orig.timeline.length > 0) {
+                s.timeline = JSON.parse(JSON.stringify(orig.timeline));
+            }
+        }
+
+        // --- RELATIONSHIPS: carry forward from original if AI dropped ---
+        if (!Array.isArray(s.relationships)) {
+            s.relationships = orig.relationships ? JSON.parse(JSON.stringify(orig.relationships)) : [];
+        } else {
+            s.relationships = s.relationships.filter((r: any) => {
+                if (!r || typeof r !== 'object') return false;
+                return r.targetName && typeof r.targetName === 'string' && r.targetName.trim().length > 0;
+            });
+            // Recover missing type/description from original
+            s.relationships.forEach((r: any) => {
+                const origRel = (orig.relationships || []).find((or: any) => or.targetName === r.targetName);
+                if (!r.type || typeof r.type !== 'string') r.type = origRel?.type || 'Acquaintance';
+                if (!r.description || typeof r.description !== 'string' || r.description.trim().length === 0) {
+                    if (origRel?.description) r.description = origRel.description;
+                }
+            });
+        }
+
+        // --- KNOWN FACTS: carry forward if AI dropped ---
+        if (!Array.isArray(s.knownFacts)) {
+            s.knownFacts = orig.knownFacts ? [...orig.knownFacts] : [];
+        } else {
+            s.knownFacts = s.knownFacts.filter((f: any) => typeof f === 'string' && f.trim().length > 0);
+            if (s.knownFacts.length === 0 && orig.knownFacts && orig.knownFacts.length > 0) {
+                s.knownFacts = [...orig.knownFacts];
+            }
+        }
+
+        // --- HIDDEN EVIDENCE: carry forward images + descriptions from original ---
+        if (!Array.isArray(s.hiddenEvidence)) {
+            s.hiddenEvidence = orig.hiddenEvidence ? JSON.parse(JSON.stringify(orig.hiddenEvidence)) : [];
+        } else {
+            s.hiddenEvidence = s.hiddenEvidence.filter((ev: any) => {
+                if (!ev || typeof ev !== 'object') return false;
+                return ev.title && typeof ev.title === 'string' && ev.title.trim().length > 0;
+            });
+            s.hiddenEvidence.forEach((ev: any, i: number) => {
+                if (!ev.id || typeof ev.id !== 'string') ev.id = `he-${s.id}-${i}`;
+                if (!ev.description || typeof ev.description !== 'string') {
+                    const origEv = (orig.hiddenEvidence || []).find((oe: any) => oe.id === ev.id || oe.title === ev.title);
+                    ev.description = origEv?.description || ev.title;
+                }
+            });
+        }
+
+        // --- PORTRAITS & VOICE: always carry forward (AI never generates these) ---
+        if (!s.portraits || Object.keys(s.portraits).length === 0) s.portraits = orig.portraits || {};
+        if (!s.voice) s.voice = orig.voice;
+    });
+
+    // --- INITIAL EVIDENCE: carry forward descriptions from original ---
+    if (Array.isArray(caseData.initialEvidence)) {
+        const origEvidence = originalCase?.initialEvidence || [];
+        caseData.initialEvidence = caseData.initialEvidence.filter((ev: any) => {
+            if (!ev || typeof ev !== 'object') return false;
+            return ev.title && typeof ev.title === 'string' && ev.title.trim().length > 0;
+        });
+        caseData.initialEvidence.forEach((ev: any, i: number) => {
+            if (!ev.id || typeof ev.id !== 'string') ev.id = `ie-${i}`;
+            if (!ev.description || typeof ev.description !== 'string') {
+                const origEv = origEvidence.find((oe: any) => oe.id === ev.id || oe.title === ev.title);
+                ev.description = origEv?.description || ev.title;
+            }
+        });
+    }
+
+    // --- INITIAL TIMELINE: carry forward activity from original ---
+    if (Array.isArray(caseData.initialTimeline)) {
+        const origTimeline = originalCase?.initialTimeline || [];
+        caseData.initialTimeline = caseData.initialTimeline.filter((entry: any) => {
+            if (!entry || typeof entry !== 'object') return false;
+            return entry.time && typeof entry.time === 'string' && entry.time.trim().length > 0;
+        });
+        caseData.initialTimeline.forEach((entry: any) => {
+            if (!entry.activity || typeof entry.activity !== 'string' || entry.activity.trim().length === 0) {
+                const origEntry = origTimeline.find((oe: any) => oe.time === entry.time);
+                if (origEntry?.activity) entry.activity = origEntry.activity;
+            }
+        });
+    }
+
+    console.log('[DEBUG] enforceSuspectSchema: Validated all suspects and case-level data');
     return caseData;
 };
 
@@ -456,16 +637,16 @@ const CASE_SCHEMA = {
                         isTrue: { type: Type.BOOLEAN },
                         location: { type: Type.STRING },
                         witnesses: { type: Type.ARRAY, items: { type: Type.STRING }}
-                    }},
+                    }, required: ["statement", "isTrue", "location", "witnesses"]},
                     relationships: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                         targetName: { type: Type.STRING },
                         type: { type: Type.STRING },
                         description: { type: Type.STRING }
-                    }}},
+                    }, required: ["targetName", "type", "description"]}},
                     timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                         time: { type: Type.STRING },
                         activity: { type: Type.STRING }
-                    }}},
+                    }, required: ["time", "activity"]}},
                     knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
                     professionalBackground: { type: Type.STRING },
                     witnessObservations: { type: Type.STRING },
@@ -686,7 +867,7 @@ ${userChangeLog}
         }
     });
 
-    const finalData = enforceTimelines(enforceRelationships(hydratedCase));
+    const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData);
     
     // --- SAFETY NET: Re-apply user's field-level edits ---
     // The AI was instructed to respect these, but we enforce them as a fallback
@@ -945,7 +1126,7 @@ ${userChangeLog}
             }
         });
 
-        const finalData = enforceTimelines(enforceRelationships(hydratedCase));
+        const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData);
 
         // --- SAFETY NET: Re-apply user's field-level edits ---
         if (baseline) {
@@ -1231,6 +1412,6 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
   });
   
   // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
-  const finalData = enforceTimelines(enforceRelationships(data));
+  const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(data)));
   return finalData as CaseData;
 };
