@@ -22,6 +22,13 @@ new AnimeCursor({
       pingpong: true,
       offset: [10, 4],
       pixel: true
+    },
+    text: {
+      tags: ['p', 'h1', 'h2', 'h3', 'h4', 'span', 'td', 'th', 'pre', 'code', 'textarea', 'input'],
+      size: [32, 32],
+      image: 'https://animecursor.js.org/i/cursor/cursor_text.png',
+      offset: [10, 16],
+      pixel: true
     }
   }
 });
