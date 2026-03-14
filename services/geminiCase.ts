@@ -524,6 +524,22 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
     if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
 
     // Ensure we don't lose non-narrative fields
+
+    // Merge support characters — AI only returns {id, name, role, gender}
+    ['officer', 'partner'].forEach(key => {
+        const aiChar = (hydratedCase as any)[key];
+        const origChar = (caseData as any)[key];
+        if (aiChar && origChar) {
+            const merged = { ...origChar };
+            if (aiChar.name) merged.name = aiChar.name;
+            if (aiChar.role) merged.role = aiChar.role;
+            if (aiChar.gender) merged.gender = aiChar.gender;
+            if (aiChar.personality) merged.personality = aiChar.personality;
+            (hydratedCase as any)[key] = merged;
+        }
+    });
+
+    // Merge suspects
     hydratedCase.suspects.forEach(s => {
         const origSuspect = caseData.suspects.find(os => os.id === s.id);
         if (origSuspect) {
@@ -691,20 +707,31 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
 
         // 1. Check Support Characters for changes
         ['officer', 'partner'].forEach(key => {
-            const char = (hydratedCase as any)[key];
+            const aiChar = (hydratedCase as any)[key];
             const origChar = (caseData as any)[key];
-            if (char && origChar) {
-                const roleChanged = char.role !== origChar.role;
-                const personalityChanged = char.personality !== origChar.personality;
-                const nameChanged = char.name !== origChar.name;
+            if (aiChar && origChar) {
+                // The AI schema only returns {id, name, role, gender} for support chars.
+                // We must merge the original's full data first, then overlay AI's narrative changes.
+                const merged = { ...origChar };
+                
+                // Overlay AI fields that are in the schema
+                if (aiChar.name) merged.name = aiChar.name;
+                if (aiChar.role) merged.role = aiChar.role;
+                if (aiChar.gender) merged.gender = aiChar.gender;
+                if (aiChar.personality) merged.personality = aiChar.personality;
+                
+                const roleChanged = merged.role !== origChar.role;
+                const personalityChanged = merged.personality !== origChar.personality;
+                const nameChanged = merged.name !== origChar.name;
+                
                 if (themeChanged || roleChanged || personalityChanged || nameChanged) {
-                    char.portraits = {};
-                    char.avatarSeed = Math.floor(Math.random() * 1000000);
-                } else {
-                    char.portraits = origChar.portraits;
-                    char.avatarSeed = origChar.avatarSeed;
+                    // Character meaningfully changed — clear portraits for regeneration
+                    merged.portraits = {};
+                    merged.avatarSeed = Math.floor(Math.random() * 1000000);
                 }
-                if (!char.voice) char.voice = origChar.voice || (char.gender === 'Female' ? 'Kore' : 'Zephyr');
+                // Otherwise merged already has origChar.portraits, avatarSeed, voice, etc.
+                
+                (hydratedCase as any)[key] = merged;
             }
         });
 
