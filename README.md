@@ -1,6 +1,6 @@
 # 🔍 DetectiveML
 
-**DetectiveML** is an AI-powered murder mystery game where you play as a detective solving procedurally generated cases. Interrogate suspects, gather evidence, uncover contradictions, and make your accusation — all powered by Google Gemini.
+**DetectiveML** is an AI-powered murder mystery game where you play as a detective solving procedurally generated cases. Interrogate suspects, gather evidence, uncover contradictions, and make your accusation.
 
 ## How It Works
 
@@ -13,7 +13,7 @@
 5. **Monitor Aggravation** — Be careful how hard you push. If a suspect's aggravation meter hits 100%, they'll call their lawyer and shut down.
 6. **Use Your Partner** — Your junior detective partner can run interference. Use "Good Cop" to calm suspects or "Bad Cop" to force evidence (at a cost).
 7. **Build a Timeline** — Track everyone's movements and spot contradictions between alibis.
-8. **Make Your Accusation** — When you're ready, accuse a suspect and present your evidence. The AI evaluates your case and delivers a verdict.
+8. **Make Your Accusation** — When you're ready, accuse a suspect and present your evidence.
 
 ### 🛠️ Case Creation
 
