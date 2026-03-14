@@ -474,6 +474,7 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
       title={variant === 'peek' ? `Switch to ${suspect.name}` : undefined}
       style={style}
       className={className}
+      data-cursor="pointer"
     >
       <Atropos 
         activeOffset={40} 

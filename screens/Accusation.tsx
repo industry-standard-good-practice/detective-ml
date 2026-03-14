@@ -141,6 +141,7 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
             <SuspectItem 
               key={s.id} 
               onClick={() => toggleSuspect(s.id)}
+              data-cursor="pointer"
               style={{ 
                 transform: selectedSuspectIds.includes(s.id) ? 'scale(1.1)' : 'scale(1)',
                 border: selectedSuspectIds.includes(s.id) ? '4px solid #f00' : 'none',

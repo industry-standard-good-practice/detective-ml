@@ -146,45 +146,45 @@ const MessageBubble = styled.div<{ $sender: 'player' | 'suspect' | 'officer' | '
   .sender-name {
     font-size: var(--type-small);
     color: ${props => {
-      if (props.$sender === 'player') return '#f55';
-      if (props.$sender === 'partner') return '#5f5';
-      if (props.$sender === 'system') return '#f00';
-      if (props.$customColor) return props.$customColor;
-      return '#5af';
-    }};
+    if (props.$sender === 'player') return '#f55';
+    if (props.$sender === 'partner') return '#5f5';
+    if (props.$sender === 'system') return '#f00';
+    if (props.$customColor) return props.$customColor;
+    return '#5af';
+  }};
     margin-bottom: 4px;
     display: block;
     align-self: ${props => {
-       if (props.$sender === 'system') return 'center';
-       return props.$sender === 'player' ? 'flex-end' : 'flex-start';
-    }};
+    if (props.$sender === 'system') return 'center';
+    return props.$sender === 'player' ? 'flex-end' : 'flex-start';
+  }};
     font-weight: bold;
     text-shadow: 0 0 2px rgba(0,0,0,0.5);
   }
 
   .text {
     color: ${props => {
-       if (props.$sender === 'partner') return '#afa';
-       if (props.$sender === 'system') return '#f55';
-       return '#eee';
-    }};
+    if (props.$sender === 'partner') return '#afa';
+    if (props.$sender === 'system') return '#f55';
+    return '#eee';
+  }};
     font-size: var(--type-body-lg);
     line-height: 1.4;
     font-style: ${props => props.$isAction ? 'italic' : 'normal'};
     background: ${props => {
-      if (props.$sender === 'player') return '#311';
-      if (props.$sender === 'partner') return '#131'; 
-      if (props.$sender === 'system') return 'rgba(50, 0, 0, 0.5)';
-      return 'transparent';
-    }};
+    if (props.$sender === 'player') return '#311';
+    if (props.$sender === 'partner') return '#131';
+    if (props.$sender === 'system') return 'rgba(50, 0, 0, 0.5)';
+    return 'transparent';
+  }};
     padding: ${props => (props.$sender === 'player' || props.$sender === 'partner' || props.$sender === 'system') ? '8px 12px' : '0'};
     border-radius: 8px;
     border: ${props => {
-      if (props.$isAction && props.$sender === 'player') return '1px dashed #f55';
-      if (props.$sender === 'partner') return '1px solid #252';
-      if (props.$sender === 'system') return '1px solid #f00';
-      return 'none';
-    }};
+    if (props.$isAction && props.$sender === 'player') return '1px dashed #f55';
+    if (props.$sender === 'partner') return '1px solid #252';
+    if (props.$sender === 'system') return '1px solid #f00';
+    return 'none';
+  }};
   }
 
   .attachment {
@@ -863,7 +863,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | TimelineStatement | null>(null);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
-  const [celebratingItem, setCelebratingItem] = useState<{index: number, name: string, suspectId: string} | null>(null);
+  const [celebratingItem, setCelebratingItem] = useState<{ index: number, name: string, suspectId: string } | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [listening, setListening] = useState(false);
   const [initialExamDone, setInitialExamDone] = useState(false);
@@ -874,7 +874,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const [leftPanelMiddle, setLeftPanelMiddle] = useState(400);
   const [leftPanelWidth, setLeftPanelWidth] = useState(300);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-  const lastPlayedRef = useRef<{timestamp: string | null, index: number, text: string}>({timestamp: null, index: -1, text: ''});
+  const lastPlayedRef = useRef<{ timestamp: string | null, index: number, text: string }>({ timestamp: null, index: -1, text: '' });
   const prevSoundEnabled = useRef(soundEnabled);
 
   useEffect(() => {
@@ -882,7 +882,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
       if (leftPanelRef.current && containerRef.current) {
         const rect = leftPanelRef.current.getBoundingClientRect();
         const containerRect = containerRef.current.getBoundingClientRect();
-        
+
         setLeftPanelCenter(rect.left - containerRect.left + rect.width / 2);
         setLeftPanelMiddle(rect.top - containerRect.top + rect.height / 2);
         setLeftPanelWidth(rect.width);
@@ -892,7 +892,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
     // Initial measure
     updateCenter();
-    
+
     // Backup for font loads or other layout shifts
     const timer = setTimeout(updateCenter, 500);
 
@@ -903,9 +903,9 @@ const Interrogation: React.FC<InterrogationProps> = ({
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
-    
+
     window.addEventListener('resize', updateCenter);
-    
+
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', updateCenter);
@@ -918,10 +918,14 @@ const Interrogation: React.FC<InterrogationProps> = ({
   // We want it to fill about 85% of the panel width, but also not overflow vertically
   const maxW = leftPanelWidth * 0.85;
   const maxH = (viewportHeight - 120) * 0.85; // 120px buffer for header/footer
-  
-  const activeCardWidth = Math.min(maxW, maxH / 1.6);
-  const activeCardHeight = activeCardWidth * 1.6;
-  
+  const MAX_CARD_HEIGHT = 700;
+
+  const rawCardWidth = Math.min(maxW, maxH / 1.6);
+  const rawCardHeight = rawCardWidth * 1.6;
+
+  const activeCardHeight = Math.min(rawCardHeight, MAX_CARD_HEIGHT);
+  const activeCardWidth = activeCardHeight / 1.6;
+
   const isCreator = userId === activeCase.authorId;
   const canDebug = isAdmin || isCreator;
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -932,28 +936,28 @@ const Interrogation: React.FC<InterrogationProps> = ({
     return lastMsg.sender === 'suspect' ? lastMsg.audioUrl || null : null;
   });
   const isMounted = useRef(true);
-  
+
   useEffect(() => {
     voiceRef.current = suspect.voice || 'Zephyr';
   }, [suspect.id]);
-  
+
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
   }, []);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const evidenceMenuRef = useRef<HTMLDivElement>(null);
 
   // Determine if initial exam is done based on chat history
   useEffect(() => {
-      // Simple heuristic: if the partner has spoken at least once in this chat history, assume they did the exam or are active
-      // For a more robust "Once Only", we'd track a flag in GameState, but local state works per session for now.
-      // Actually, let's scan history for the "Examination logged" comment we set in App.tsx
-      const hasExam = chatHistory.some(m => m.sender === 'partner' && m.type === 'action' && !m.text.includes("hint"));
-      setInitialExamDone(hasExam);
+    // Simple heuristic: if the partner has spoken at least once in this chat history, assume they did the exam or are active
+    // For a more robust "Once Only", we'd track a flag in GameState, but local state works per session for now.
+    // Actually, let's scan history for the "Examination logged" comment we set in App.tsx
+    const hasExam = chatHistory.some(m => m.sender === 'partner' && m.type === 'action' && !m.text.includes("hint"));
+    setInitialExamDone(hasExam);
   }, [chatHistory, suspect.id]);
 
   useEffect(() => {
@@ -965,18 +969,18 @@ const Interrogation: React.FC<InterrogationProps> = ({
   // TTS Playback Logic
   useEffect(() => {
     if (!soundEnabled || chatHistory.length === 0) return;
-    
+
     const lastMsg = chatHistory[chatHistory.length - 1];
-    
+
     if (lastMsg.sender === 'suspect' && lastMsg.audioUrl && lastMsg.audioUrl !== lastPlayedAudioUrl) {
       console.log("TTS Playing message from audioUrl", { text: lastMsg.text, audioUrl: lastMsg.audioUrl });
       setLastPlayedAudioUrl(lastMsg.audioUrl);
-      
+
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      
+
       const audio = new Audio(lastMsg.audioUrl);
       audioRef.current = audio;
       audio.play().catch(e => console.error("Audio playback failed", e));
@@ -985,11 +989,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   // Force Action type if Deceased, reset to Talk otherwise (when switching)
   useEffect(() => {
-      if (suspect.isDeceased) {
-          setInputType('action');
-      } else {
-          setInputType('talk');
-      }
+    if (suspect.isDeceased) {
+      setInputType('action');
+    } else {
+      setInputType('talk');
+    }
   }, [suspect.isDeceased, suspect.id]);
 
   useEffect(() => {
@@ -998,11 +1002,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
         setShowEvidencePicker(false);
       }
     }
-    
+
     if (showEvidencePicker) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -1010,7 +1014,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const handleSend = () => {
     if (inputVal.trim() && !isThinking) {
-      const evidenceTitle = selectedEvidence 
+      const evidenceTitle = selectedEvidence
         ? ('title' in selectedEvidence ? selectedEvidence.title : `Timeline: ${selectedEvidence.time} - ${selectedEvidence.statement}`)
         : undefined;
       onSendMessage(inputVal, inputType, evidenceTitle);
@@ -1027,7 +1031,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
       return;
     }
 
-    if (listening) return; 
+    if (listening) return;
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
@@ -1055,7 +1059,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const findEvidenceImage = (rawName: string) => {
     const cleanName = getShortEvidenceTitle(rawName).toLowerCase();
-    
+
     // Check current suspect hidden evidence first
     let match = suspect.hiddenEvidence.find(e => e.title.toLowerCase() === cleanName);
     if (match) return match.imageUrl;
@@ -1063,19 +1067,19 @@ const Interrogation: React.FC<InterrogationProps> = ({
     // Check case initial evidence
     match = activeCase.initialEvidence.find(e => e.title.toLowerCase() === cleanName);
     if (match) return match.imageUrl;
-    
+
     // Fallback: check all suspects
     for (const s of activeCase.suspects) {
-        match = s.hiddenEvidence.find(e => e.title.toLowerCase() === cleanName);
-        if (match) return match.imageUrl;
+      match = s.hiddenEvidence.find(e => e.title.toLowerCase() === cleanName);
+      if (match) return match.imageUrl;
     }
-    
+
     return undefined;
   };
 
   const handleEvidenceClick = (index: number, name: string, suspectId: string) => {
-     // Pass the full name string (including description if present) to celebration
-     setCelebratingItem({ index, name, suspectId });
+    // Pass the full name string (including description if present) to celebration
+    setCelebratingItem({ index, name, suspectId });
   };
 
   const handleCelebrationComplete = () => {
@@ -1088,7 +1092,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const getSuspectColor = (suspectId: string) => {
     let hash = 0;
     for (let i = 0; i < suspectId.length; i++) {
-        hash = suspectId.charCodeAt(i) + ((hash << 5) - hash);
+      hash = suspectId.charCodeAt(i) + ((hash << 5) - hash);
     }
     const h = Math.abs(hash % 360);
     return `hsl(${h}, 70%, 70%)`;
@@ -1104,7 +1108,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   };
 
   const isLocked = aggravationLevel >= 100 && !suspect.isDeceased;
-  
+
   // Disable suggestions for deceased suspects (Forensic mode should be explorative)
   const showSuggestions = !chatHistory.some(m => m.sender === 'player' || m.sender === 'partner') && !suspect.isDeceased;
 
@@ -1112,39 +1116,39 @@ const Interrogation: React.FC<InterrogationProps> = ({
   // We use the generic Suspect type to pass partner data to SuspectPortrait
   // We mock a 'suspect' object from the partner support character data
   const partnerAsSuspect: Suspect = {
-      id: 'partner',
-      name: activeCase.partner?.name || "Partner",
-      role: activeCase.partner?.role || "Junior Detective",
-      avatarSeed: activeCase.partner?.avatarSeed || 999,
-      portraits: activeCase.partner?.portraits || {},
-      // Dummy required fields
-      gender: activeCase.partner?.gender || "Unknown",
-      age: 25,
-      bio: "Your partner.",
-      personality: activeCase.partner?.personality || "Helpful",
-      baseAggravation: 0,
-      isGuilty: false,
-      secret: "",
-      alibi: { statement: "", isTrue: true, location: "", witnesses: [] },
-      motive: "",
-      relationships: [],
-      timeline: [],
-      knownFacts: [],
-      professionalBackground: "",
-      witnessObservations: "",
-      hiddenEvidence: []
+    id: 'partner',
+    name: activeCase.partner?.name || "Partner",
+    role: activeCase.partner?.role || "Junior Detective",
+    avatarSeed: activeCase.partner?.avatarSeed || 999,
+    portraits: activeCase.partner?.portraits || {},
+    // Dummy required fields
+    gender: activeCase.partner?.gender || "Unknown",
+    age: 25,
+    bio: "Your partner.",
+    personality: activeCase.partner?.personality || "Helpful",
+    baseAggravation: 0,
+    isGuilty: false,
+    secret: "",
+    alibi: { statement: "", isTrue: true, location: "", witnesses: [] },
+    motive: "",
+    relationships: [],
+    timeline: [],
+    knownFacts: [],
+    professionalBackground: "",
+    witnessObservations: "",
+    hiddenEvidence: []
   };
 
-  const formattedTime = gameTime 
-    ? new Date(gameTime).toLocaleString('en-US', { 
-        year: 'numeric', month: 'long', day: 'numeric', 
-        hour: 'numeric', minute: '2-digit' 
-      }) 
+  const formattedTime = gameTime
+    ? new Date(gameTime).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    })
     : "10:05am September 12, 2030";
 
   return (
     <Container ref={containerRef}>
-      
+
       <SuspectCardDock
         suspects={activeCase.suspects}
         activeSuspectId={suspect.id}
@@ -1167,44 +1171,44 @@ const Interrogation: React.FC<InterrogationProps> = ({
         <ChatPanel>
           {/* NEW MOBILE HEADER */}
           <MobileHeader>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
-                 <SuspectPortrait 
-                    suspect={suspect} 
-                    emotion={emotion}
-                    aggravation={aggravationLevel}
-                    size={60} 
-                    style={{ border: '1px solid #333', flexShrink: 0 }} 
-                 />
-                 <div style={{ minWidth: 0 }}>
-                     <div style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{suspect.name}</div>
-                     {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
-                 </div>
-             </div>
-             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                 <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)}>PROFILE</MobileProfileBtn>
-                 <div style={{ display: 'flex' }}>
-                    <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none' }}>&lt;</MobileNavBtn>
-                    <MobileNavBtn onClick={() => cycleSuspect('next')}>&gt;</MobileNavBtn>
-                 </div>
-             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
+              <SuspectPortrait
+                suspect={suspect}
+                emotion={emotion}
+                aggravation={aggravationLevel}
+                size={60}
+                style={{ border: '1px solid #333', flexShrink: 0 }}
+              />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{suspect.name}</div>
+                {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)}>PROFILE</MobileProfileBtn>
+              <div style={{ display: 'flex' }}>
+                <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none' }}>&lt;</MobileNavBtn>
+                <MobileNavBtn onClick={() => cycleSuspect('next')}>&gt;</MobileNavBtn>
+              </div>
+            </div>
           </MobileHeader>
 
           {celebratingItem && (
-            <AsciiCelebration 
-              evidenceName={getShortEvidenceTitle(celebratingItem.name)} 
+            <AsciiCelebration
+              evidenceName={getShortEvidenceTitle(celebratingItem.name)}
               evidenceImage={findEvidenceImage(celebratingItem.name)}
-              onComplete={handleCelebrationComplete} 
+              onComplete={handleCelebrationComplete}
             />
           )}
 
           {canDebug && <DebugToggle onClick={() => setDebugMode(!debugMode)}>[DEBUG]</DebugToggle>}
           {debugMode && (
             <DebugMenu>
-              <div style={{color: '#f00', borderBottom:'1px solid #500', marginBottom:'5px'}}>FORCE EVIDENCE</div>
+              <div style={{ color: '#f00', borderBottom: '1px solid #500', marginBottom: '5px' }}>FORCE EVIDENCE</div>
               {suspect.hiddenEvidence.map((ev) => (
                 <DebugItem key={ev.id} onClick={() => {
-                   onForceEvidence(suspect.id, ev.title);
-                   setDebugMode(false);
+                  onForceEvidence(suspect.id, ev.title);
+                  setDebugMode(false);
                 }}>
                   {ev.title}
                 </DebugItem>
@@ -1217,14 +1221,14 @@ const Interrogation: React.FC<InterrogationProps> = ({
           </div>
           <ChatLog ref={scrollRef}>
             {chatHistory.map((msg, idx) => (
-              <MessageBubble 
-                key={`${msg.sender}-${idx}-${msg.text.substring(0, 10)}`} 
-                $sender={msg.sender} 
+              <MessageBubble
+                key={`${msg.sender}-${idx}-${msg.text.substring(0, 10)}`}
+                $sender={msg.sender}
                 $isAction={msg.type === 'action'}
                 $customColor={msg.sender === 'suspect' ? getSuspectColor(suspect.id) : undefined}
               >
                 <span className="sender-name">
-                   {msg.sender === 'player' ? 'Detective' : msg.sender === 'partner' ? partnerName : msg.sender === 'system' ? 'SYSTEM' : suspect.name}
+                  {msg.sender === 'player' ? 'Detective' : msg.sender === 'partner' ? partnerName : msg.sender === 'system' ? 'SYSTEM' : suspect.name}
                 </span>
                 <span className="text">
                   {msg.type === 'action' && '* '}{msg.text}{msg.type === 'action' && ' *'}
@@ -1233,7 +1237,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   <div className="attachment">📎 Evidence Shown: {getShortEvidenceTitle(msg.attachment)}</div>
                 )}
                 {msg.evidence && (
-                  <EvidenceChip 
+                  <EvidenceChip
                     $collected={!!msg.isEvidenceCollected}
                     onClick={() => !msg.isEvidenceCollected && handleEvidenceClick(idx, msg.evidence!, suspect.id)}
                   >
@@ -1249,7 +1253,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               </div>
             )}
           </ChatLog>
-          
+
           <InputContainer>
             {!isLocked && showSuggestions && suggestions.length > 0 && (
               <SuggestionChips>
@@ -1271,8 +1275,8 @@ const Interrogation: React.FC<InterrogationProps> = ({
             )}
 
             <UnifiedInputBar $disabled={isLocked || isThinking} id="unified-input-bar">
-              <TypeSelect 
-                value={inputType} 
+              <TypeSelect
+                value={inputType}
                 onChange={(e) => setInputType(e.target.value as 'talk' | 'action')}
                 disabled={isLocked || suspect.isDeceased}
               >
@@ -1281,7 +1285,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               </TypeSelect>
 
               <PlusButtonWrapper ref={evidenceMenuRef}>
-                <PlusButton 
+                <PlusButton
                   onClick={() => setShowEvidencePicker(!showEvidencePicker)}
                   $active={!!selectedEvidence}
                   disabled={isLocked}
@@ -1294,13 +1298,13 @@ const Interrogation: React.FC<InterrogationProps> = ({
                     {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
                       <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
                     )}
-                    
+
                     {evidenceDiscovered.length > 0 && (
                       <>
                         <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
                         {evidenceDiscovered.map((ev) => (
-                          <EvidenceOption 
-                            key={ev.id} 
+                          <EvidenceOption
+                            key={ev.id}
                             onClick={() => {
                               setSelectedEvidence(ev);
                               setShowEvidencePicker(false);
@@ -1317,16 +1321,16 @@ const Interrogation: React.FC<InterrogationProps> = ({
                       <>
                         <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
                         {timelineStatementsDiscovered.map((ts) => (
-                          <TimelineEvidenceOption 
-                            key={ts.id} 
+                          <TimelineEvidenceOption
+                            key={ts.id}
                             onClick={() => {
                               setSelectedEvidence(ts);
                               setShowEvidencePicker(false);
                             }}
                           >
                             <div className="header">
-                                <span className="time">{ts.time}</span>
-                                <span className="suspect">BY {ts.suspectName}</span>
+                              <span className="time">{ts.time}</span>
+                              <span className="suspect">BY {ts.suspectName}</span>
                             </div>
                             <div className="statement">"{ts.statement}"</div>
                           </TimelineEvidenceOption>
@@ -1337,21 +1341,21 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 )}
               </PlusButtonWrapper>
 
-              <GhostInput 
+              <GhostInput
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={isLocked 
-                  ? "Suspect has requested a lawyer." 
-                  : suspect.isDeceased 
-                    ? "Perform action..." 
+                placeholder={isLocked
+                  ? "Suspect has requested a lawyer."
+                  : suspect.isDeceased
+                    ? "Perform action..."
                     : inputType === 'talk' ? "Ask question..." : "Action..."
                 }
                 disabled={isLocked || isThinking}
               />
-              
-              <SendActionBtn 
-                onClick={handleSend} 
+
+              <SendActionBtn
+                onClick={handleSend}
                 disabled={isLocked || isThinking}
               >
                 SEND
@@ -1378,72 +1382,72 @@ const Interrogation: React.FC<InterrogationProps> = ({
           <AggravationMeter id="aggravation-meter">
             <h3>{suspect.isDeceased ? "Status" : "Aggravation"}</h3>
             {!suspect.isDeceased && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span>{`${aggravationLevel}%`}</span>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                <span>{`${aggravationLevel}%`}</span>
+              </div>
             )}
             {!suspect.isDeceased && <ProgressBar $level={aggravationLevel} />}
             {isLocked && <div style={{ color: 'red', marginTop: '5px', fontSize: '0.9rem' }}>LAWYER REQUESTED</div>}
             {suspect.isDeceased && <DeceasedBadge>DECEASED</DeceasedBadge>}
           </AggravationMeter>
-          
+
           <SidekickContainer id="partner-support">
             <h3>Partner Support</h3>
             <SidekickHeader>
-                <div style={{ width: '60px', height: '60px', border: '2px solid #555', background: '#222' }}>
-                  <SuspectPortrait 
-                    suspect={partnerAsSuspect} 
-                    size={60} 
-                    emotion={partnerEmotion}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-                <div className="info">
-                    <h3>{partnerName}</h3>
-                    <span>CHARGES: {partnerCharges}/3</span>
-                </div>
+              <div style={{ width: '60px', height: '60px', border: '2px solid #555', background: '#222' }}>
+                <SuspectPortrait
+                  suspect={partnerAsSuspect}
+                  size={60}
+                  emotion={partnerEmotion}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div className="info">
+                <h3>{partnerName}</h3>
+                <span>CHARGES: {partnerCharges}/3</span>
+              </div>
             </SidekickHeader>
-            
+
             <BubbleScrollArea>
-                <WhisperBubble>
-                    <p key={sidekickComment}>
-                        {sidekickComment ? `(Whispering) "${sidekickComment}"` : `(${partnerName} is watching carefully...)`}
-                    </p>
-                </WhisperBubble>
+              <WhisperBubble>
+                <p key={sidekickComment}>
+                  {sidekickComment ? `(Whispering) "${sidekickComment}"` : `(${partnerName} is watching carefully...)`}
+                </p>
+              </WhisperBubble>
             </BubbleScrollArea>
-            
+
             <SidekickActions>
-                {suspect.isDeceased ? (
-                    <>
-                        <ActionButton 
-                            $type="neutral" 
-                            onClick={() => onPartnerAction('examine')}
-                            disabled={partnerCharges <= 0 || initialExamDone}
-                            title="Perform Initial Examination (Once)"
-                        >
-                            {initialExamDone ? "Exam Done" : "Initial Exam"}
-                        </ActionButton>
-                    </>
-                ) : (
-                    <>
-                        <ActionButton 
-                            $type="good" 
-                            onClick={() => onPartnerAction('goodCop')}
-                            disabled={partnerCharges <= 0 || isLocked}
-                            title="Calm Suspect (-50% Aggravation)"
-                        >
-                            Good Cop
-                        </ActionButton>
-                        <ActionButton 
-                            $type="bad"
-                            onClick={() => onPartnerAction('badCop')}
-                            disabled={partnerCharges <= 0 || isLocked}
-                            title="Force Evidence (+Aggravation)"
-                        >
-                            Bad Cop
-                        </ActionButton>
-                    </>
-                )}
+              {suspect.isDeceased ? (
+                <>
+                  <ActionButton
+                    $type="neutral"
+                    onClick={() => onPartnerAction('examine')}
+                    disabled={partnerCharges <= 0 || initialExamDone}
+                    title="Perform Initial Examination (Once)"
+                  >
+                    {initialExamDone ? "Exam Done" : "Initial Exam"}
+                  </ActionButton>
+                </>
+              ) : (
+                <>
+                  <ActionButton
+                    $type="good"
+                    onClick={() => onPartnerAction('goodCop')}
+                    disabled={partnerCharges <= 0 || isLocked}
+                    title="Calm Suspect (-50% Aggravation)"
+                  >
+                    Good Cop
+                  </ActionButton>
+                  <ActionButton
+                    $type="bad"
+                    onClick={() => onPartnerAction('badCop')}
+                    disabled={partnerCharges <= 0 || isLocked}
+                    title="Force Evidence (+Aggravation)"
+                  >
+                    Bad Cop
+                  </ActionButton>
+                </>
+              )}
             </SidekickActions>
           </SidekickContainer>
 
@@ -1452,23 +1456,23 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
       {/* MOBILE PROFILE MODAL */}
       {showMobileProfile && (
-          <ModalOverlay id="mobile-profile-modal" onClick={() => setShowMobileProfile(false)}>
-              <div onClick={e => e.stopPropagation()}>
-                  <SuspectCard 
-                      suspect={suspect} 
-                      emotion={emotion} 
-                      aggravation={aggravationLevel}
-                      width="300px"
-                      height="450px"
-                      variant="default"
-                      onFlip={(flipped) => {
-                          if (flipped) {
-                              completeStep(OnboardingStep.FLIP_CARD, false);
-                          }
-                      }}
-                  />
-              </div>
-          </ModalOverlay>
+        <ModalOverlay id="mobile-profile-modal" onClick={() => setShowMobileProfile(false)}>
+          <div onClick={e => e.stopPropagation()}>
+            <SuspectCard
+              suspect={suspect}
+              emotion={emotion}
+              aggravation={aggravationLevel}
+              width="300px"
+              height="450px"
+              variant="default"
+              onFlip={(flipped) => {
+                if (flipped) {
+                  completeStep(OnboardingStep.FLIP_CARD, false);
+                }
+              }}
+            />
+          </div>
+        </ModalOverlay>
       )}
     </Container>
   );

@@ -398,7 +398,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
           {featuredCases.map((c) => {
             if (!c.id) return null;
             return (
-              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)}>
+              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer">
                 {renderCaseCardContent(c, false)}
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {(isAdmin || c.authorId === userId) && onEditCase && (
@@ -428,7 +428,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
           {sortedNetworkCases.map((c) => {
             if (!c.id) return null;
             return (
-              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity>
+              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer">
                 {renderCaseCardContent(c, true)}
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {(isAdmin || c.authorId === userId) && onEditCase && (
@@ -448,7 +448,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       ) : (
         /* MY CASES TAB */
         <NetworkGrid>
-          <CreateCard onClick={onCreateNew}>
+          <CreateCard onClick={onCreateNew} data-cursor="pointer">
             <h3 style={{ fontSize: 'var(--type-h3)', margin: 0 }}>+ CREATE A NEW CASE</h3>
           </CreateCard>
 
@@ -462,7 +462,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
             if (!c.id) return null;
             const isPublished = c.isUploaded;
             return (
-              <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)}>
+              <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer">
                 <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
                   {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
                 </CaseImage>
