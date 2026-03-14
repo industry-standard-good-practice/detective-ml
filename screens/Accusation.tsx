@@ -37,7 +37,6 @@ const SubTitle = styled.p`
 
 const ScrollContainer = styled.div`
   display: flex;
-  gap: 40px;
   overflow-x: auto;
   padding: 40px;
   width: 100%;
@@ -59,6 +58,13 @@ const ScrollContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: #f00; 
   }
+`;
+
+const ScrollInner = styled.div`
+  display: flex;
+  gap: 40px;
+  margin: 0 auto;
+  align-items: center;
 `;
 
 const SuspectItem = styled.div`
@@ -130,30 +136,32 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
       <SubTitle>Select the perpetrator(s) to close the case. This action is final.</SubTitle>
       
       <ScrollContainer>
-        {accusableSuspects.map(s => (
-          <SuspectItem 
-            key={s.id} 
-            onClick={() => toggleSuspect(s.id)}
-            style={{ 
-              transform: selectedSuspectIds.includes(s.id) ? 'scale(1.1)' : 'scale(1)',
-              border: selectedSuspectIds.includes(s.id) ? '4px solid #f00' : 'none',
-              borderRadius: '8px'
-            }}
-          >
-            <SuspectPortrait 
-              suspect={s} 
-              size={250} 
+        <ScrollInner>
+          {accusableSuspects.map(s => (
+            <SuspectItem 
+              key={s.id} 
+              onClick={() => toggleSuspect(s.id)}
               style={{ 
-                border: '4px solid #fff', 
-                width: '250px', 
-                height: '250px', 
-                objectFit: 'cover', 
-                boxShadow: '0 0 30px rgba(0,0,0,0.8)' 
-              }} 
-            />
-            <h3>{s.name}</h3>
-          </SuspectItem>
-        ))}
+                transform: selectedSuspectIds.includes(s.id) ? 'scale(1.1)' : 'scale(1)',
+                border: selectedSuspectIds.includes(s.id) ? '4px solid #f00' : 'none',
+                borderRadius: '8px'
+              }}
+            >
+              <SuspectPortrait 
+                suspect={s} 
+                size={250} 
+                style={{ 
+                  border: '4px solid #fff', 
+                  width: '250px', 
+                  height: '250px', 
+                  objectFit: 'cover', 
+                  boxShadow: '0 0 30px rgba(0,0,0,0.8)' 
+                }} 
+              />
+              <h3>{s.name}</h3>
+            </SuspectItem>
+          ))}
+        </ScrollInner>
       </ScrollContainer>
       
       {selectedSuspectIds.length > 0 && (
