@@ -399,7 +399,7 @@ const EndGame: React.FC<EndGameProps> = ({
   const formatReport = (text: string) => {
     if (!text) return null;
     return text.split('\n').map((line, i) => {
-        const parts = line.split(/(\\{\\{FOUND:.*?\\}\\}|\\{\\{MISSED:.*?\\}\\}|\*\*.*?\*\*)/g);
+        const parts = line.split(/(\{\{FOUND:.*?\}\}|\{\{MISSED:.*?\}\}|\*\*.*?\*\*)/g);
         return (
             <div key={i} style={{ minHeight: '1.2em', marginBottom: '4px' }}>
                 {parts.map((part, j) => {
