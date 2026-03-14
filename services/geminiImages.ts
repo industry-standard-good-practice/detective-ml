@@ -172,10 +172,11 @@ const generateForensicVariants = async (
 
 export const generateEvidenceImage = async (
     evidence: Evidence, 
-    caseId: string = "temp", 
-    userId: string = "anonymous",
+    caseId: string, 
+    userId: string,
     refImage?: string
 ): Promise<string> => {
+  if (!userId) throw new Error('[CRITICAL] generateEvidenceImage: userId is required');
   const refs = STYLE_REF_URL ? [STYLE_REF_URL] : [];
   if (refImage) refs.push(refImage);
 
@@ -274,7 +275,8 @@ export const generateEmotionalVariantsFromBase = async (
     return uploadedPortraits;
 };
 
-export const generateSuspectFromUpload = async (suspect: Suspect, userImageBase64: string, caseId: string = "temp", userId: string = "anonymous"): Promise<Suspect> => {
+export const generateSuspectFromUpload = async (suspect: Suspect, userImageBase64: string, caseId: string, userId: string): Promise<Suspect> => {
+    if (!userId) throw new Error('[CRITICAL] generateSuspectFromUpload: userId is required');
     console.log(`[DEBUG] generateSuspectFromUpload: Starting for ${suspect.name}`);
     const colorDesc = getSuspectColorDescription(suspect.avatarSeed);
 
@@ -328,7 +330,8 @@ export const generateSuspectFromUpload = async (suspect: Suspect, userImageBase6
     return { ...suspect, portraits: uploadedPortraits };
 };
 
-export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacter, caseId: string = "temp", userId: string = "anonymous", theme: string = "Noir"): Promise<Suspect | SupportCharacter> => {
+export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacter, caseId: string, userId: string, theme: string = "Noir"): Promise<Suspect | SupportCharacter> => {
+    if (!userId) throw new Error('[CRITICAL] regenerateSingleSuspect: userId is required');
     console.log(`[DEBUG] regenerateSingleSuspect: Starting for ${suspect.name} (Theme: ${theme})`);
     const colorDesc = getSuspectColorDescription(suspect.avatarSeed);
     const isSuspect = (suspect as any).isGuilty !== undefined;
@@ -400,7 +403,8 @@ export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacte
     return { ...suspect, portraits: uploadedPortraits };
 };
 
-export const pregenerateCaseImages = async (caseData: CaseData, onStatus: (msg: string) => void, userId: string = "anonymous") => {
+export const pregenerateCaseImages = async (caseData: CaseData, onStatus: (msg: string) => void, userId: string) => {
+    if (!userId) throw new Error('[CRITICAL] pregenerateCaseImages: userId is required');
     const styleRefs = STYLE_REF_URL ? [STYLE_REF_URL] : [];
     
     // Phase 1: Neutrals for All Suspects & Partner & Officer

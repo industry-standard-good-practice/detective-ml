@@ -342,7 +342,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
         <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
         {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
       </div>
-      <AuthorLine>by {c.authorDisplayName || 'Anonymous'}</AuthorLine>
+      <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
       <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
       {caseStats[c.id] && caseStats[c.id].plays > 0 && (
         <StatsLine>

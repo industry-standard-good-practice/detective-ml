@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
 import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
 import { generateTTS } from './services/geminiTTS';
-import { fetchCommunityCases, publishCase, deleteCase, updateCase, fetchAllCaseStats, fetchCaseStats, fetchUserVote, submitVote, recordGameResult, saveLocalDraft, fetchLocalDrafts, deleteLocalDraft } from './services/persistence';
+import { fetchCommunityCases, fetchUserCases, publishCase, deleteCase, updateCase, fetchAllCaseStats, fetchCaseStats, fetchUserVote, submitVote, recordGameResult, saveLocalDraft, fetchLocalDrafts, deleteLocalDraft } from './services/persistence';
 import { CaseStats } from './types';
 import { auth, logout } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -93,9 +93,9 @@ const INITIAL_TIME_MS = new Date('2030-09-12T09:00:00').getTime();
 
 /** Formats "Noah Semus" → "Noah S." */
 const formatAuthorName = (displayName: string | null | undefined): string => {
-  if (!displayName) return 'Anonymous';
+  if (!displayName) return 'Unknown Author';
   const parts = displayName.trim().split(/\s+/);
-  if (parts.length <= 1) return parts[0] || 'Anonymous';
+  if (parts.length <= 1) return parts[0] || 'Unknown Author';
   return `${parts[0]} ${parts[parts.length - 1][0]}.`;
 };
 
@@ -223,12 +223,21 @@ const App: React.FC = () => {
 
   const loadCommunity = async () => {
     setLoadingCommunity(true);
-    const [remoteCases, stats] = await Promise.all([
+    // Fetch published community cases AND the current user's own cases (published+unpublished)
+    const fetches: [Promise<CaseData[]>, Promise<CaseData[]>, Promise<Record<string, CaseStats>>] = [
       fetchCommunityCases(),
+      user?.uid ? fetchUserCases(user.uid) : Promise.resolve([]),
       fetchAllCaseStats()
-    ]);
+    ];
+    const [publishedCases, userCases, stats] = await Promise.all(fetches);
+    
+    // Merge: user's own cases take precedence (they may have unpublished edits)
+    const caseMap = new Map<string, CaseData>();
+    publishedCases.forEach(c => caseMap.set(c.id, c));
+    userCases.forEach(c => caseMap.set(c.id, c)); // User's version overwrites community version
+    
     // Filter out corrupted cases (missing ID or title or empty strings)
-    const validCases = remoteCases.filter(c => 
+    const validCases = Array.from(caseMap.values()).filter(c => 
       c && 
       c.id && typeof c.id === 'string' && c.id.trim() !== '' &&
       c.title && typeof c.title === 'string' && c.title.trim() !== ''
@@ -775,15 +784,23 @@ const App: React.FC = () => {
   };
 
   const handleGenerateCase = async (prompt: string, isLucky: boolean) => {
+    // CRITICAL: User must be logged in to create a case (enforced by login gate)
+    if (!user?.uid) {
+        console.error('[CRITICAL] handleGenerateCase: No user logged in!');
+        alert('You must be logged in to create a case.');
+        return;
+    }
+    
     setIsGenerating(true);
     setGenerationStatus("Creating criminal profiles...");
     try {
         const newCase = await generateCaseFromPrompt(prompt, isLucky);
-        newCase.authorId = user?.uid || undefined;
-        newCase.authorDisplayName = formatAuthorName(user?.displayName);
+        // CRITICAL: Always stamp creator identity — never optional
+        newCase.authorId = user.uid;
+        newCase.authorDisplayName = formatAuthorName(user.displayName);
         newCase.createdAt = Date.now();
         setGenerationStatus("Generating suspect portraits and evidence... (0%)");
-        await pregenerateCaseImages(newCase, (msg) => setGenerationStatus(msg), user?.uid);
+        await pregenerateCaseImages(newCase, (msg) => setGenerationStatus(msg), user.uid);
         setGenerationStatus("");
         
         // Save as local draft
@@ -803,42 +820,51 @@ const App: React.FC = () => {
   };
 
   const handleSaveAndStart = async () => {
-    if (draftCase) {
-        // Always stamp author info
-        const stamped = {
-          ...draftCase,
-          authorId: draftCase.authorId || user?.uid,
-          authorDisplayName: draftCase.authorDisplayName && draftCase.authorDisplayName !== 'Anonymous'
-            ? draftCase.authorDisplayName
-            : formatAuthorName(user?.displayName),
-          createdAt: draftCase.createdAt || Date.now()
-        };
-
-        if (stamped.isUploaded) {
-            // Persist the edit to the server
-            const success = await updateCase(stamped.id, stamped);
-            if (!success) {
-                alert("Failed to save changes to the server.");
-                return;
-            }
-            // Fetch updated case to get the new version number
-            await loadCommunity();
-            const updatedCase = communityCases.find(c => c.id === stamped.id) || stamped;
-            selectCase(updatedCase);
-        } else {
-            // Save draft locally
-            saveLocalDraft(stamped);
-            setLocalDrafts(fetchLocalDrafts());
-            setCommunityCases(prev => {
-                if (!stamped.id || !stamped.title) return prev;
-                const exists = prev.some(c => c.id === stamped.id);
-                if (exists) return prev.map(c => c.id === stamped.id ? stamped : c);
-                return [stamped, ...prev];
-            });
-            selectCase(stamped);
-        }
-        setDraftCase(null);
+    if (!draftCase) return;
+    
+    // CRITICAL: Enforce author identity on every save
+    if (!user?.uid) {
+        console.error('[CRITICAL] handleSaveAndStart: No user logged in!');
+        alert('You must be logged in to save a case.');
+        return;
     }
+    
+    // Always stamp author info from the CURRENT user — never trust what's on the draft alone
+    const stamped: CaseData = {
+      ...draftCase,
+      authorId: user.uid,
+      authorDisplayName: draftCase.authorDisplayName && draftCase.authorDisplayName !== 'Anonymous' && draftCase.authorDisplayName !== 'Unknown Author'
+        ? draftCase.authorDisplayName
+        : formatAuthorName(user.displayName),
+      createdAt: draftCase.createdAt || Date.now()
+    };
+
+    if (stamped.isUploaded) {
+        // Persist the edit to the server (case is already published)
+        const success = await updateCase(stamped.id, stamped);
+        if (!success) {
+            alert("Failed to save changes to the server.");
+            return;
+        }
+        // Fetch updated case to get the new version number
+        await loadCommunity();
+        const updatedCase = communityCases.find(c => c.id === stamped.id) || stamped;
+        selectCase(updatedCase);
+    } else {
+        // Save to Firebase (private, not published) AND locally
+        saveLocalDraft(stamped);
+        setLocalDrafts(fetchLocalDrafts());
+        // Also persist to Firebase so it's not lost if localStorage clears
+        await updateCase(stamped.id, stamped);
+        setCommunityCases(prev => {
+            if (!stamped.id || !stamped.title) return prev;
+            const exists = prev.some(c => c.id === stamped.id);
+            if (exists) return prev.map(c => c.id === stamped.id ? stamped : c);
+            return [stamped, ...prev];
+        });
+        selectCase(stamped);
+    }
+    setDraftCase(null);
   };
 
   // Test Investigation: starts the case without saving
@@ -852,11 +878,28 @@ const App: React.FC = () => {
   // App-level save for when CaseReview is unmounted (e.g., during gameplay testing)
   const handleSaveDraftFromHeader = async () => {
     if (!draftCase) return;
-    const { updateCase, saveLocalDraft } = await import('./services/persistence');
-    const success = await updateCase(draftCase.id, draftCase);
-    if (!success) {
-      saveLocalDraft(draftCase);
+    
+    // CRITICAL: Always stamp authorId before any save
+    if (!user?.uid) {
+      console.error('[CRITICAL] handleSaveDraftFromHeader: No user logged in!');
+      alert('You must be logged in to save.');
+      return;
     }
+    
+    const stamped: CaseData = {
+      ...draftCase,
+      authorId: user.uid,
+      authorDisplayName: draftCase.authorDisplayName && draftCase.authorDisplayName !== 'Anonymous' && draftCase.authorDisplayName !== 'Unknown Author'
+        ? draftCase.authorDisplayName
+        : formatAuthorName(user.displayName),
+    };
+    
+    const { updateCase: doUpdate, saveLocalDraft: doSaveLocal } = await import('./services/persistence');
+    // Always save locally as a safety net
+    doSaveLocal(stamped);
+    // Also persist to Firebase
+    const success = await doUpdate(stamped.id, stamped);
+    setDraftCase(stamped); // Keep stamped version in state
     setHasUnsavedDraftChanges(false);
     alert(success ? 'Case saved successfully!' : 'Saved locally as a fallback.');
   };
@@ -877,15 +920,15 @@ const App: React.FC = () => {
 
   const executePublish = async () => {
     setShowPublishConfirm(false); 
-    if (!gameState.selectedCaseId) return;
+    if (!gameState.selectedCaseId || !user?.uid) return;
     const caseToPublish = communityCases.find(c => c.id === gameState.selectedCaseId);
     if (!caseToPublish) return;
 
     setIsPublishing(true);
     const success = await publishCase(
-      { ...caseToPublish, isUploaded: true }, 
-      user?.uid, 
-      formatAuthorName(user?.displayName)
+      { ...caseToPublish, isUploaded: true, authorId: user.uid }, 
+      user.uid, 
+      formatAuthorName(user.displayName)
     );
     
     if (success) {
@@ -1034,14 +1077,18 @@ const App: React.FC = () => {
   };
 
   const handlePublishDraft = async (caseId: string) => {
+    if (!user?.uid) {
+      alert('You must be logged in to publish.');
+      return;
+    }
     // Check both local drafts and community cases
     const draft = localDrafts.find(d => d.id === caseId) || communityCases.find(c => c.id === caseId);
     if (!draft) return;
     setIsPublishing(true);
     const success = await publishCase(
-      { ...draft, isUploaded: true },
-      user?.uid,
-      formatAuthorName(user?.displayName)
+      { ...draft, isUploaded: true, authorId: user.uid },
+      user.uid,
+      formatAuthorName(user.displayName)
     );
     if (success) {
       deleteLocalDraft(caseId);

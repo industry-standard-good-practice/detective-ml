@@ -700,7 +700,8 @@ ${userChangeLog}
 
     // Generate images for any NEW evidence added by the AI
     if (onProgress) onProgress("Generating images for new evidence...");
-    const userId = caseData.authorId || "anonymous";
+    const userId = caseData.authorId;
+    if (!userId) throw new Error('[CRITICAL] checkCaseConsistency: caseData.authorId is required');
     const newEvidenceTasks: Promise<void>[] = [];
 
     const allEvidence = [
@@ -957,7 +958,8 @@ ${userChangeLog}
 
         // Generate images for NEW or CHANGED content
         if (onProgress) onProgress("Generating visual assets for updated content...");
-        const userId = caseData.authorId || "anonymous";
+        const userId = caseData.authorId;
+        if (!userId) throw new Error('[CRITICAL] editCaseWithPrompt: caseData.authorId is required');
         const generationTasks: Promise<void>[] = [];
 
         // 1. Support Character Portraits

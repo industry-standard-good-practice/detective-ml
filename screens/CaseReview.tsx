@@ -604,7 +604,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       }
     };
     updateImage(undefined);
-    const newUrl = await generateEvidenceImage(ev, draftCase.id, userId);
+    const newUrl = await generateEvidenceImage(ev, draftCase.id, userId!);
     if (newUrl) {
       updateImage(newUrl);
     }
@@ -622,7 +622,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       }
     });
     try {
-      await pregenerateCaseImages(clone, (msg) => setLoadingState({ visible: true, message: msg }), userId);
+      await pregenerateCaseImages(clone, (msg) => setLoadingState({ visible: true, message: msg }), userId!);
       onUpdateDraft(clone);
     } catch (e) {
       console.error("Retry failed", e);
@@ -634,7 +634,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const handleSaveEditedSuspect = async (newImageUrl: string, onProgress?: (current: number, total: number) => void) => {
     if (!activeSuspect) return;
     try {
-      const updatedPortraits = await generateEmotionalVariantsFromBase(newImageUrl, activeSuspect as any, draftCase.id, userId || 'anonymous', onProgress);
+      const updatedPortraits = await generateEmotionalVariantsFromBase(newImageUrl, activeSuspect as any, draftCase.id, userId!, onProgress);
       handleSuspectChange(activeSuspect.id, 'portraits', updatedPortraits);
       setShowSuspectEditor(false);
     } catch (err) {
@@ -647,7 +647,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     setLoadingState({ visible: true, message: "Uploading Hero Image..." });
     try {
       const { uploadImage } = await import('../services/firebase');
-      const uploadedUrl = await uploadImage(newImageUrl, `images/${userId || 'anonymous'}/cases/${draftCase.id}/hero.png`);
+      const uploadedUrl = await uploadImage(newImageUrl, `images/${userId!}/cases/${draftCase.id}/hero.png`);
       handleCaseChange('heroImageUrl', uploadedUrl);
       setShowHeroEditor(false);
     } catch (err) {
@@ -666,7 +666,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     setLoadingState({ visible: true, message: "Generating new identity..." });
     try {
       const { regenerateSingleSuspect } = await import('../services/geminiImages');
-      const updatedChar = await regenerateSingleSuspect(activeSuspect as any, draftCase.id, userId || 'anonymous', draftCase.type);
+      const updatedChar = await regenerateSingleSuspect(activeSuspect as any, draftCase.id, userId!, draftCase.type);
 
       if (selectedSuspectId === 'officer') {
         onUpdateDraft({ ...draftCase, officer: updatedChar as any });
@@ -691,7 +691,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     try {
       setLoadingState({ visible: true, message: "Converting to pixel art & generating emotions..." });
       const { generateSuspectFromUpload } = await import('../services/geminiImages');
-      const updatedChar = await generateSuspectFromUpload(activeSuspect as any, base64, draftCase.id, userId || 'anonymous');
+      const updatedChar = await generateSuspectFromUpload(activeSuspect as any, base64, draftCase.id, userId!);
 
       if (selectedSuspectId === 'officer') {
         onUpdateDraft({ ...draftCase, officer: updatedChar as any });
@@ -822,20 +822,30 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const [consistencyModal, setConsistencyModal] = useState<{ visible: boolean, report: any, updatedCase: CaseData | null }>({ visible: false, report: null, updatedCase: null });
 
   const handleSave = async () => {
+    if (!userId) {
+      alert('Cannot save: No user ID. Please log in and try again.');
+      return;
+    }
     setLoadingState({ visible: true, message: "Saving case..." });
     const { updateCase, saveLocalDraft } = await import('../services/persistence');
 
-    // Save locally only — publishing is a separate explicit action
-    const success = await updateCase(draftCase.id, draftCase);
+    // CRITICAL: Always stamp authorId before any save
+    const stampedCase = { ...draftCase, authorId: userId };
+
+    // Save to Firebase (private unless already published)
+    const success = await updateCase(stampedCase.id, stampedCase);
     
     if (!success) {
       // Fallback to local storage
-      saveLocalDraft(draftCase);
+      saveLocalDraft(stampedCase);
     }
 
+    // Update the draft in parent state with stamped data
+    onUpdateDraft(stampedCase);
+
     // Update refs so "unsaved changes" detection resets
-    initialDraftCase.current = draftCase;
-    baselineRef.current = JSON.parse(JSON.stringify(draftCase));
+    initialDraftCase.current = stampedCase;
+    baselineRef.current = JSON.parse(JSON.stringify(stampedCase));
     // Explicitly clear unsaved state (useEffect won't re-run since draftCase didn't change)
     setHasUnsavedChanges(false);
     onHasUnsavedChanges?.(false);

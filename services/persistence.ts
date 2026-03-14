@@ -3,16 +3,19 @@ import { database } from './firebase';
 import { ref, get, set, child, remove, update, runTransaction } from 'firebase/database';
 
 export const fetchCommunityCases = async (): Promise<CaseData[]> => {
-  console.log("[DEBUG] fetchCommunityCases: Fetching...");
+  console.log("[DEBUG] fetchCommunityCases: Fetching published cases only...");
   try {
     const dbRef = ref(database);
     const snapshot = await get(child(dbRef, 'cases'));
     
     if (snapshot.exists()) {
       const data = snapshot.val();
-      const cases = Object.values(data) as CaseData[];
-      console.log(`[DEBUG] fetchCommunityCases: Retrieved ${cases.length} cases`);
-      return cases;
+      const allCases = Object.values(data) as CaseData[];
+      // CRITICAL: Only return cases that have been explicitly published.
+      // Unpublished cases saved to Firebase are private to the author.
+      const publishedCases = allCases.filter(c => c.isUploaded === true);
+      console.log(`[DEBUG] fetchCommunityCases: Retrieved ${allCases.length} total, ${publishedCases.length} published`);
+      return publishedCases;
     } else {
       console.log("[DEBUG] fetchCommunityCases: No data found");
       return [];
@@ -23,16 +26,57 @@ export const fetchCommunityCases = async (): Promise<CaseData[]> => {
   }
 };
 
+/**
+ * Fetches all cases owned by a specific user (both published and unpublished).
+ * This is the ONLY way unpublished Firebase-saved cases are loaded.
+ */
+export const fetchUserCases = async (userId: string): Promise<CaseData[]> => {
+  console.log(`[DEBUG] fetchUserCases: Fetching cases for user ${userId}...`);
+  if (!userId) {
+    console.error('[CRITICAL] fetchUserCases called without userId');
+    return [];
+  }
+  try {
+    const dbRef = ref(database);
+    const snapshot = await get(child(dbRef, 'cases'));
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      const allCases = Object.values(data) as CaseData[];
+      const userCases = allCases.filter(c => c.authorId === userId);
+      console.log(`[DEBUG] fetchUserCases: Found ${userCases.length} cases for user ${userId}`);
+      return userCases;
+    }
+    return [];
+  } catch (error) {
+    console.warn("[DEBUG] fetchUserCases: Failed:", error);
+    return [];
+  }
+};
+
 export const publishCase = async (caseData: CaseData, authorId?: string, authorDisplayName?: string): Promise<boolean> => {
-  console.log(`[DEBUG] publishCase: Uploading "${caseData.title}" (${caseData.id})`);
+  // CRITICAL: Determine the final authorId — NEVER publish without one
+  const finalAuthorId = caseData.authorId || authorId;
+  if (!finalAuthorId) {
+    console.error('[CRITICAL] publishCase: REFUSED — no authorId available. Case would be orphaned.');
+    alert('Cannot publish: No creator ID found. Please log in and try again.');
+    return false;
+  }
+
+  const finalDisplayName = caseData.authorDisplayName || authorDisplayName;
+  if (!finalDisplayName) {
+    console.warn('[WARN] publishCase: No display name available, but authorId is set. Proceeding.');
+  }
+
+  console.log(`[DEBUG] publishCase: Publishing "${caseData.title}" (${caseData.id}) by ${finalAuthorId}`);
   try {
     const caseRef = ref(database, `cases/${caseData.id}`);
     const dataToPublish = { 
       ...caseData, 
       isUploaded: true,
       version: caseData.version || 1,
-      authorId: caseData.authorId || authorId,
-      authorDisplayName: caseData.authorDisplayName || authorDisplayName || 'Anonymous',
+      authorId: finalAuthorId,
+      authorDisplayName: finalDisplayName || 'Unknown Author',
       createdAt: caseData.createdAt || Date.now()
     };
     await set(caseRef, dataToPublish);
@@ -74,7 +118,14 @@ const stripUndefined = (obj: any): any => {
 };
 
 export const updateCase = async (caseId: string, updates: Partial<CaseData>): Promise<boolean> => {
-  console.log(`[DEBUG] updateCase: Updating ${caseId}`, updates);
+  // CRITICAL: Never save a case without an authorId.
+  // The authorId links the case to its creator. Without it, the case is orphaned.
+  if (!updates.authorId) {
+    console.error(`[CRITICAL] updateCase: REFUSED save for case ${caseId} — no authorId in updates. This would orphan the case.`);
+    return false;
+  }
+
+  console.log(`[DEBUG] updateCase: Updating ${caseId} (author: ${updates.authorId})`);
   try {
     const caseRef = ref(database, `cases/${caseId}`);
     
@@ -84,17 +135,28 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
 
     const snapshot = await get(caseRef);
     if (snapshot.exists()) {
+      const currentData = snapshot.val() as CaseData;
+      
+      // CRITICAL: Preserve isUploaded from the existing record.
+      // Only publishCase should set isUploaded to true.
+      if (finalUpdates.isUploaded === undefined) {
+        finalUpdates.isUploaded = currentData.isUploaded || false;
+      }
+      
       // Existing case — increment version on major updates
       if (isMajorUpdate) {
-        const currentData = snapshot.val() as CaseData;
         finalUpdates.version = (currentData.version || 1) + 1;
       }
       // Strip undefined and update
       await update(caseRef, stripUndefined(finalUpdates));
     } else {
-      // New case — use set() to create it, default version to 1
+      // New case — use set() to create it
+      // CRITICAL: New cases are NEVER published by default
       finalUpdates.version = finalUpdates.version || 1;
       finalUpdates.createdAt = finalUpdates.createdAt || Date.now();
+      if (finalUpdates.isUploaded === undefined) {
+        finalUpdates.isUploaded = false;
+      }
       await set(caseRef, stripUndefined(finalUpdates));
     }
 
