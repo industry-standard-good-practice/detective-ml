@@ -229,7 +229,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   return (
     <Container>
       <Header>
-        <h2 style={{ margin: 0 }}>MISSION SELECT</h2>
+        <h2 style={{ margin: 0 }}>OPEN CASES</h2>
         <TabBar>
             <TabButton 
                 $active={activeTab === 'featured'} 
@@ -264,6 +264,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 <div style={{ marginBottom: '10px' }}>
                   <span style={{ background: '#333', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
                   <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+                  {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
                 </div>
                 <p style={{ color: '#aaa', margin: 0, fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
                 <AdminControls onClick={(e) => e.stopPropagation()}>
@@ -306,6 +307,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 <div style={{ marginBottom: '10px' }}>
                   <span style={{ background: '#044', color:'#0ff', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
                   <span style={{ marginLeft: '10px', color: '#ccc', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+                  {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
                 </div>
                 <p style={{ color: '#aaa', margin: 0, fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
                 <AdminControls onClick={(e) => e.stopPropagation()}>
