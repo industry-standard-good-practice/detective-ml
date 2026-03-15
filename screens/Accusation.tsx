@@ -125,15 +125,13 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
   };
 
   const handleAccuse = () => {
-    if (selectedSuspectIds.length > 0) {
-      onAccuse(selectedSuspectIds);
-    }
+    onAccuse(selectedSuspectIds);
   };
 
   return (
     <Container>
       <Title>MAKE YOUR ACCUSATION</Title>
-      <SubTitle>Select the perpetrator(s) to close the case. This action is final.</SubTitle>
+      <SubTitle>Select the perpetrator(s) to close the case, or accuse nobody. This action is final.</SubTitle>
       
       <ScrollContainer>
         <ScrollInner>
@@ -165,11 +163,12 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
         </ScrollInner>
       </ScrollContainer>
       
-      {selectedSuspectIds.length > 0 && (
-        <CancelButton onClick={handleAccuse} style={{ background: '#800', color: '#fff', borderColor: '#f00' }}>
-          [ ACCUSE {selectedSuspectIds.length} SUSPECT(S) ]
-        </CancelButton>
-      )}
+      <CancelButton onClick={handleAccuse} style={{ background: '#800', color: '#fff', borderColor: '#f00' }}>
+        {selectedSuspectIds.length > 0 
+          ? `[ ACCUSE ${selectedSuspectIds.length} SUSPECT(S) ]`
+          : '[ ACCUSE NOBODY ]'
+        }
+      </CancelButton>
       
       <CancelButton onClick={onBack}>
         [ CANCEL ]
