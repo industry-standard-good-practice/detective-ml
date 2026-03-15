@@ -639,6 +639,7 @@ interface CaseHubProps {
   onStartInterrogation: (suspectId: string) => void;
   onNavigate: (screen: ScreenState) => void;
   onSendOfficerMessage: (text: string) => void;
+  unreadSuspectIds?: Set<string>;
 }
 
 const CaseHub: React.FC<CaseHubProps> = ({ 
@@ -651,7 +652,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
   isThinking,
   onStartInterrogation, 
   onNavigate,
-  onSendOfficerMessage
+  onSendOfficerMessage,
+  unreadSuspectIds = new Set()
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -905,6 +907,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
           onStartInterrogation(id);
         }}
         inactiveActionLabel="TALK"
+        unreadSuspectIds={unreadSuspectIds}
         onFlipCard={(flipped) => {
           if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
         }}

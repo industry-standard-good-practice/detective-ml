@@ -831,6 +831,7 @@ interface InterrogationProps {
   soundEnabled?: boolean;
   isAdmin: boolean;
   userId?: string;
+  unreadSuspectIds?: Set<string>;
 }
 
 const Interrogation: React.FC<InterrogationProps> = ({
@@ -856,7 +857,8 @@ const Interrogation: React.FC<InterrogationProps> = ({
   mobileIntelOpen = false,
   soundEnabled = true,
   isAdmin,
-  userId
+  userId,
+  unreadSuspectIds = new Set()
 }) => {
   const [inputVal, setInputVal] = useState('');
   const { completeStep } = useOnboarding();
@@ -930,12 +932,10 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const canDebug = isAdmin || isCreator;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRef = useRef<string | null>(null);
-  const [lastPlayedAudioUrl, setLastPlayedAudioUrl] = useState<string | null>(() => {
-    if (chatHistory.length === 0) return null;
-    const lastMsg = chatHistory[chatHistory.length - 1];
-    return lastMsg.sender === 'suspect' ? lastMsg.audioUrl || null : null;
-  });
+  const [lastPlayedAudioUrl, setLastPlayedAudioUrl] = useState<string | null>(null);
   const isMounted = useRef(true);
+  const prevChatLengthRef = useRef(chatHistory.length);
+  const prevSuspectIdRef = useRef(suspect.id);
 
   useEffect(() => {
     voiceRef.current = suspect.voice || null;
@@ -966,9 +966,40 @@ const Interrogation: React.FC<InterrogationProps> = ({
     }
   }, [chatHistory, isThinking]);
 
-  // TTS Playback Logic
+  // TTS Playback Logic — only play on genuinely NEW messages
   useEffect(() => {
-    if (!soundEnabled || chatHistory.length === 0) return;
+    const suspectChanged = suspect.id !== prevSuspectIdRef.current;
+    const chatGrew = chatHistory.length > prevChatLengthRef.current;
+
+    // Always update refs
+    prevSuspectIdRef.current = suspect.id;
+    prevChatLengthRef.current = chatHistory.length;
+
+    if (suspectChanged) {
+      const lastMsg = chatHistory[chatHistory.length - 1];
+
+      // If switching to a suspect with an unread notification, play their TTS
+      if (lastMsg?.sender === 'suspect' && lastMsg?.audioUrl && soundEnabled && unreadSuspectIds.has(suspect.id)) {
+        console.log("TTS Playing unread notification message", { text: lastMsg.text, audioUrl: lastMsg.audioUrl });
+        setLastPlayedAudioUrl(lastMsg.audioUrl);
+
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+
+        const audio = new Audio(lastMsg.audioUrl);
+        audioRef.current = audio;
+        audio.play().catch(e => console.error("Audio playback failed", e));
+      } else {
+        // Just sync the URL so we don't replay old messages
+        setLastPlayedAudioUrl(lastMsg?.audioUrl || null);
+      }
+      return;
+    }
+
+    // Only play if the chat actually grew (new message received)
+    if (!chatGrew || !soundEnabled || chatHistory.length === 0) return;
 
     const lastMsg = chatHistory[chatHistory.length - 1];
 
@@ -985,7 +1016,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
       audioRef.current = audio;
       audio.play().catch(e => console.error("Audio playback failed", e));
     }
-  }, [chatHistory, soundEnabled, lastPlayedAudioUrl]);
+  }, [chatHistory, soundEnabled, suspect.id, lastPlayedAudioUrl, unreadSuspectIds]);
 
   // Force Action type if Deceased, reset to Talk otherwise (when switching)
   useEffect(() => {
@@ -1160,6 +1191,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         activeTurnId={suspectTurnIds[suspect.id]}
         onSelectSuspect={onSwitchSuspect}
         inactiveActionLabel="SWITCH"
+        unreadSuspectIds={unreadSuspectIds}
         onFlipCard={(flipped) => {
           if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
         }}

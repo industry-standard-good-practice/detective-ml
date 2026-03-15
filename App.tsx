@@ -155,13 +155,14 @@ const App: React.FC = () => {
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
-  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingSuspectId, setThinkingSuspectId] = useState<string | null>(null);
   const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
   const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
   
   const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
+  const [unreadSuspects, setUnreadSuspects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     localStorage.setItem('isMuted', String(isMuted));
@@ -369,6 +370,13 @@ const App: React.FC = () => {
         setCurrentSuggestions(DEFAULT_SUGGESTIONS);
     }
 
+    // Clear unread notification for this suspect
+    setUnreadSuspects(prev => {
+      const next = new Set(prev);
+      next.delete(suspectId);
+      return next;
+    });
+
     setGameState(prev => ({
       ...prev,
       currentScreen: ScreenState.INTERROGATION,
@@ -392,7 +400,7 @@ const App: React.FC = () => {
       // ADVANCE TIME
       const newGameTime = gameTime + TIME_INCREMENT_MS;
       
-      setIsThinking(true);
+      setThinkingSuspectId(currentSuspectId);
 
       // Reaction Logic
       let newPartnerEmotion = Emotion.NEUTRAL;
@@ -450,7 +458,7 @@ const App: React.FC = () => {
 
         // IF Deceased, we don't need a response from the suspect for these actions, the partner just talks.
         if (suspect.isDeceased) {
-             setIsThinking(false);
+             setThinkingSuspectId(null);
              return; 
         }
 
@@ -515,8 +523,11 @@ const App: React.FC = () => {
             };
         });
 
-        // Play Audio
-        if (audioUrl) {
+        // Mark suspect as having unread message (badge appears when user switches away)
+        setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
+
+        // Play Audio only if user is still viewing this suspect
+        if (audioUrl && gameState.currentScreen === ScreenState.INTERROGATION && gameState.currentSuspectId === currentSuspectId) {
             const audio = new Audio(audioUrl);
             audio.play().catch(e => console.error("Audio playback failed", e));
         }
@@ -535,7 +546,7 @@ const App: React.FC = () => {
           }
         }));
       } finally {
-        setIsThinking(false);
+        setThinkingSuspectId(null);
       }
   };
 
@@ -591,7 +602,7 @@ const App: React.FC = () => {
       chatHistory: { ...prev.chatHistory, [currentSuspectId]: [...(chatHistory[currentSuspectId] || []), userMsg] },
     }));
     
-    setIsThinking(true);
+    setThinkingSuspectId(currentSuspectId);
 
     try {
       const response = await getSuspectResponse(
@@ -662,8 +673,11 @@ const App: React.FC = () => {
         };
       });
 
-      // Play Audio
-      if (audioUrl) {
+      // Mark suspect as having unread message (badge appears when user switches away)
+      setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
+
+      // Play Audio only if user is still viewing this suspect
+      if (audioUrl && gameState.currentScreen === ScreenState.INTERROGATION && gameState.currentSuspectId === currentSuspectId) {
           const audio = new Audio(audioUrl);
           audio.play().catch(e => console.error("Audio playback failed", e));
       }
@@ -682,7 +696,7 @@ const App: React.FC = () => {
         }
       }));
     } finally {
-      setIsThinking(false);
+      setThinkingSuspectId(null);
     }
   };
 
@@ -700,7 +714,7 @@ const App: React.FC = () => {
       officerHintsRemaining: prev.officerHintsRemaining - 1
     }));
 
-    setIsThinking(true);
+    setThinkingSuspectId('__officer__');
     
     try {
       const currentCase = findCaseById(gameState.selectedCaseId)!;
@@ -728,7 +742,7 @@ const App: React.FC = () => {
         officerHistory: [...prev.officerHistory, { sender: 'system', text: "[SECURE LINE DISCONNECTED]", timestamp: new Date(newGameTime).toLocaleTimeString() }]
       }));
     } finally {
-      setIsThinking(false);
+      setThinkingSuspectId(null);
     }
   };
 
@@ -1262,10 +1276,11 @@ const App: React.FC = () => {
               notes={gameState.notes}
               officerHintsRemaining={gameState.officerHintsRemaining}
               officerHistory={gameState.officerHistory}
-              isThinking={isThinking}
+              isThinking={thinkingSuspectId === '__officer__'}
               onStartInterrogation={startInterrogation}
               onNavigate={navigateTo}
               onSendOfficerMessage={handleSendOfficerMessage}
+              unreadSuspectIds={unreadSuspects}
             />
           )}
 
@@ -1282,7 +1297,7 @@ const App: React.FC = () => {
               evidenceDiscovered={gameState.evidenceDiscovered}
               timelineStatementsDiscovered={gameState.timelineStatementsDiscovered}
               suggestions={currentSuggestions}
-              isThinking={isThinking}
+              isThinking={thinkingSuspectId === gameState.currentSuspectId}
               sidekickComment={gameState.sidekickComment}
               partnerCharges={gameState.partnerCharges}
               gameTime={gameState.gameTime}
@@ -1295,6 +1310,7 @@ const App: React.FC = () => {
               mobileIntelOpen={mobileIntelOpen}
               isAdmin={isAdmin}
               userId={user?.uid}
+              unreadSuspectIds={unreadSuspects}
             />
           )}
 

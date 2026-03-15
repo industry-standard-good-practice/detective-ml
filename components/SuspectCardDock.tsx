@@ -79,6 +79,27 @@ const DockSlot = styled.div<{ $hovered?: boolean }>`
   z-index: ${p => p.$hovered ? 15 : 10};
   display: flex;
   justify-content: center;
+  position: relative;
+`;
+
+const NotificationBadge = styled.div`
+  position: absolute;
+  top: 8%;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  background: #0f0;
+  border-radius: 50%;
+  border: 2px solid #000;
+  z-index: 30;
+  box-shadow: 0 0 8px #0f0, 0 0 16px rgba(0, 255, 0, 0.4);
+  animation: notif-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+
+  @keyframes notif-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+  }
 `;
 
 const ActiveCardWrapper = styled(motion.div) <{ $left: number; $top: number }>`
@@ -104,6 +125,7 @@ interface SuspectCardDockProps {
   onSelectSuspect: (id: string) => void;
   onFlipCard?: (flipped: boolean) => void;
   inactiveActionLabel?: string;
+  unreadSuspectIds?: Set<string>;
 }
 
 /* ─── Transform-based drag scroll hook ─── */
@@ -217,6 +239,7 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
   onSelectSuspect,
   onFlipCard,
   inactiveActionLabel = 'SWITCH',
+  unreadSuspectIds = new Set(),
 }) => {
   const { hitRef, visualInnerRef, hitInnerRef } = useDragTranslate();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -267,6 +290,7 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
         <DockRowInner ref={visualInnerRef}>
           {inactiveSuspects.map(s => (
             <DockSlot key={`visual-${s.id}`} $hovered={hoveredId === s.id}>
+              {unreadSuspectIds.has(s.id) && <NotificationBadge />}
               <motion.div
                 layoutId={`suspect-dock-${s.id}`}
                 transition={springTransition}
