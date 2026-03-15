@@ -953,16 +953,23 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const handlePreviewVoice = async () => {
     if (!activeSuspect || !activeSuspect.voice || activeSuspect.voice === 'None' || isPreviewingVoice) return;
 
-    // Always pull the latest suspect data from the draftCase to be 100% sure
-    const currentSuspect = draftCase.suspects?.find(s => s.id === selectedSuspectId);
-    if (!currentSuspect) return;
+    // Look up the current character from the draft — check suspects, officer, and partner
+    let currentChar: { name: string; role: string; voice: string } | undefined;
+    if (selectedSuspectId === 'officer') {
+      currentChar = draftCase.officer as any;
+    } else if (selectedSuspectId === 'partner') {
+      currentChar = draftCase.partner as any;
+    } else {
+      currentChar = draftCase.suspects?.find(s => s.id === selectedSuspectId) as any;
+    }
+    if (!currentChar || !currentChar.voice) return;
 
     setIsPreviewingVoice(true);
     try {
-      const previewText = `My name is ${currentSuspect.name}. My role is ${currentSuspect.role}.`;
-      console.log(`[TTS Preview] Generating for: "${previewText}" using voice: ${currentSuspect.voice}`);
+      const previewText = `My name is ${currentChar.name}. My role is ${currentChar.role}.`;
+      console.log(`[TTS Preview] Generating for: "${previewText}" using voice: ${currentChar.voice}`);
 
-      const audioUrl = await generateTTS(previewText, currentSuspect.voice);
+      const audioUrl = await generateTTS(previewText, currentChar.voice);
       if (audioUrl) {
         // Cleanup old URL
         if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
@@ -1412,7 +1419,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     <label>Name</label>
                     <input
                       value={activeSuspect.name}
-                      onChange={(e) => handleSuspectChange(activeSuspect.id, 'name', e.target.value)}
+                      onChange={(e) => handleSuspectChange(selectedSuspectId!, 'name', e.target.value)}
                     />
                   </InputGroup>
                   {!isSupportChar && (
@@ -1421,7 +1428,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                       <input
                         type="number"
                         value={(activeSuspect as Suspect).age}
-                        onChange={(e) => handleSuspectChange(activeSuspect.id, 'age', parseInt(e.target.value))}
+                        onChange={(e) => handleSuspectChange(selectedSuspectId!, 'age', parseInt(e.target.value))}
                       />
                     </InputGroup>
                   )}
@@ -1430,21 +1437,21 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   <label>Role</label>
                   <input
                     value={activeSuspect.role}
-                    onChange={(e) => handleSuspectChange(activeSuspect.id, 'role', e.target.value)}
+                    onChange={(e) => handleSuspectChange(selectedSuspectId!, 'role', e.target.value)}
                   />
                 </InputGroup>
                 <InputGroup>
                   <label>Gender</label>
                   <input
                     value={activeSuspect.gender}
-                    onChange={(e) => handleSuspectChange(activeSuspect.id, 'gender', e.target.value)}
+                    onChange={(e) => handleSuspectChange(selectedSuspectId!, 'gender', e.target.value)}
                   />
                 </InputGroup>
                 <InputGroup>
                   <label>Personality</label>
                   <input
                     value={activeSuspect.personality}
-                    onChange={(e) => handleSuspectChange(activeSuspect.id, 'personality', e.target.value)}
+                    onChange={(e) => handleSuspectChange(selectedSuspectId!, 'personality', e.target.value)}
                   />
                 </InputGroup>
                 <InputGroup>
@@ -1452,7 +1459,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select
                       value={activeSuspect.voice || ''}
-                      onChange={(e) => handleSuspectChange(activeSuspect.id, 'voice', e.target.value)}
+                      onChange={(e) => handleSuspectChange(selectedSuspectId!, 'voice', e.target.value)}
                       style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', flex: 1 }}
                     >
                       {TTS_VOICES.map(v => (
