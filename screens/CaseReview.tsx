@@ -71,6 +71,41 @@ const Panel = styled.div<{ $mobileHidden?: boolean }>`
   }
 `;
 
+const LeftColumn = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+
+  @media (max-width: 1080px) {
+    flex: 1;
+  }
+`;
+
+const DesktopOnly = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+
+  @media (max-width: 1080px) {
+    display: none;
+  }
+`;
+
+const MobileOnly = styled.div`
+  display: none;
+
+  @media (max-width: 1080px) {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 10px;
+  }
+`;
+
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -1128,6 +1163,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       </MobileTabBar>
 
       {/* LEFT: Case Details */}
+      <LeftColumn>
       <Panel $mobileHidden={mobileTab !== 'case'}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, color: '#fff' }}>Case Details</h2>
@@ -1348,15 +1384,24 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
           </ModuleContainer>
         </Fieldset>
 
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
+        <MobileOnly>
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
             <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
             <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
             <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
           </div>
           <StartButton onClick={onStart}>CASE HUB</StartButton>
-        </div>
+        </MobileOnly>
       </Panel>
+      <DesktopOnly>
+        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+          <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
+          <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
+          <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
+        </div>
+        <StartButton onClick={onStart}>CASE HUB</StartButton>
+      </DesktopOnly>
+      </LeftColumn>
 
       {/* RIGHT: Suspect Editor */}
       <Panel $mobileHidden={mobileTab !== 'suspects'}>
@@ -1732,12 +1777,14 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               </>
             )}
 
-            <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '10px' }}>
-              <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
-              <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-              <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
-            </div>
-            <StartButton onClick={onStart}>CASE HUB</StartButton>
+            <MobileOnly>
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
+                <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
+                <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
+              </div>
+              <StartButton onClick={onStart}>CASE HUB</StartButton>
+            </MobileOnly>
 
           </div>
         )}
