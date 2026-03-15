@@ -11,9 +11,9 @@ export const fetchCommunityCases = async (): Promise<CaseData[]> => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       const allCases = Object.values(data) as CaseData[];
-      // CRITICAL: Only return cases that have been explicitly published.
-      // Unpublished cases saved to Firebase are private to the author.
-      const publishedCases = allCases.filter(c => c.isUploaded === true);
+      // CRITICAL: Only return cases that have been explicitly published AND have a valid author.
+      // Unpublished cases or orphaned cases without an authorId are excluded.
+      const publishedCases = allCases.filter(c => c.isUploaded === true && c.authorId);
       console.log(`[DEBUG] fetchCommunityCases: Retrieved ${allCases.length} total, ${publishedCases.length} published`);
       return publishedCases;
     } else {
@@ -64,11 +64,14 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
   }
 
   const finalDisplayName = caseData.authorDisplayName || authorDisplayName;
-  if (!finalDisplayName) {
-    console.warn('[WARN] publishCase: No display name available, but authorId is set. Proceeding.');
+  const PLACEHOLDER_NAMES = ['unknown author', 'anonymous', ''];
+  if (!finalDisplayName || PLACEHOLDER_NAMES.includes(finalDisplayName.trim().toLowerCase())) {
+    console.error('[CRITICAL] publishCase: REFUSED — no valid authorDisplayName. Got:', finalDisplayName);
+    alert('Cannot publish: Author display name is missing. Please log in with a valid account.');
+    return false;
   }
 
-  console.log(`[DEBUG] publishCase: Publishing "${caseData.title}" (${caseData.id}) by ${finalAuthorId}`);
+  console.log(`[DEBUG] publishCase: Publishing "${caseData.title}" (${caseData.id}) by ${finalAuthorId} (${finalDisplayName})`);
   try {
     const caseRef = ref(database, `cases/${caseData.id}`);
     const dataToPublish = { 
@@ -76,7 +79,7 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
       isUploaded: true,
       version: caseData.version || 1,
       authorId: finalAuthorId,
-      authorDisplayName: finalDisplayName || 'Unknown Author',
+      authorDisplayName: finalDisplayName,
       createdAt: caseData.createdAt || Date.now()
     };
     await set(caseRef, dataToPublish);
