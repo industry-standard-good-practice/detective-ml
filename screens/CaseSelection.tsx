@@ -339,7 +339,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       <h3 style={{ color: isCommunity ? '#0ff' : '#fff', fontSize: 'var(--type-h3)', margin: '0 0 5px 0' }}>{c.title || "[ NO TITLE ]"}</h3>
       <div style={{ marginBottom: '10px' }}>
         <span style={{ background: isCommunity ? '#044' : '#333', color: isCommunity ? '#0ff' : undefined, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-        <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+        <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
         {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
       </div>
       <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
@@ -481,7 +481,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 </div>
                 <div style={{ marginBottom: '10px' }}>
                   <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-                  <span style={{ marginLeft: '10px', color: '#ccc', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+                  <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
                   {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
                 </div>
                 <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
