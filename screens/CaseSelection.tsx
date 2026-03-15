@@ -305,18 +305,19 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
   const carouselDragRef = useDragScroll<HTMLDivElement>();
 
-  const featuredCases = communityCases.filter(c => c.isFeatured);
+  const featuredCases = communityCases.filter(c => c.isFeatured && c.isUploaded === true);
 
   const sortedNetworkCases = useMemo(() => {
-    const cases = [...communityCases];
+    // CRITICAL: Only show explicitly published cases on the network tab
+    const cases = communityCases.filter(c => c.isUploaded === true);
     if (sortMode === 'popular') {
-      return cases.sort((a, b) => {
+      return [...cases].sort((a, b) => {
         const aPlays = caseStats[a.id]?.plays || 0;
         const bPlays = caseStats[b.id]?.plays || 0;
         return bPlays - aPlays;
       });
     } else {
-      return cases.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return [...cases].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
   }, [communityCases, caseStats, sortMode]);
 

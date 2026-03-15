@@ -1361,6 +1361,7 @@ const App: React.FC = () => {
                     setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_SELECTION }));
                 }}
                 userId={user?.uid}
+                userDisplayName={formatAuthorName(user?.displayName)}
                 onRegisterSave={(fn) => { draftSaveFnRef.current = fn; }}
                 onRegisterCheckConsistency={(fn) => { draftCheckConsistencyFnRef.current = fn; }}
                 onRegisterClose={(fn) => { draftCloseFnRef.current = fn; }}

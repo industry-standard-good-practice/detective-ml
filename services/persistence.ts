@@ -147,11 +147,20 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
     if (snapshot.exists()) {
       const currentData = snapshot.val() as CaseData;
       
+      // CRITICAL: Preserve the ORIGINAL author identity from the database.
+      // The person editing may not be the original author.
+      if (currentData.authorId) {
+        finalUpdates.authorId = currentData.authorId;
+      }
+      if (currentData.authorDisplayName) {
+        finalUpdates.authorDisplayName = currentData.authorDisplayName;
+      }
+
       // Preserve the existing publish state from the database
       finalUpdates.isUploaded = currentData.isUploaded || false;
 
       // GUARD: If somehow published without a valid authorDisplayName, force unpublish
-      if (finalUpdates.isUploaded === true && !currentData.authorDisplayName) {
+      if (finalUpdates.isUploaded === true && !finalUpdates.authorDisplayName) {
         console.warn(`[WARN] updateCase: Case ${caseId} is published but has no authorDisplayName. Forcing isUploaded=false.`);
         finalUpdates.isUploaded = false;
       }
@@ -168,6 +177,13 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
       finalUpdates.version = finalUpdates.version || 1;
       finalUpdates.createdAt = finalUpdates.createdAt || Date.now();
       finalUpdates.isUploaded = false;
+      
+      // GUARD: Require authorDisplayName for new cases
+      if (!finalUpdates.authorDisplayName) {
+        console.error(`[CRITICAL] updateCase: REFUSED create for case ${caseId} — no authorDisplayName.`);
+        return false;
+      }
+      
       await set(caseRef, stripUndefined(finalUpdates));
     }
 

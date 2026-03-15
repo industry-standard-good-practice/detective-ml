@@ -417,13 +417,14 @@ interface CaseReviewProps {
   onStart: () => void;
   onCancel: () => void;
   userId?: string;
+  userDisplayName?: string;
   onRegisterSave?: (saveFn: () => Promise<void>) => void;
   onRegisterCheckConsistency?: (fn: () => void) => void;
   onRegisterClose?: (fn: () => void) => void;
   onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId, onRegisterSave, onRegisterCheckConsistency, onRegisterClose, onHasUnsavedChanges }) => {
+const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId, userDisplayName, onRegisterSave, onRegisterCheckConsistency, onRegisterClose, onHasUnsavedChanges }) => {
   const [selectedSuspectId, setSelectedSuspectId] = useState<string | null>(draftCase.suspects?.[0]?.id || 'officer');
   const [loadingState, setLoadingState] = useState<{ visible: boolean, message: string, step?: string, stepDetail?: string }>({ visible: false, message: '' });
   const [showCamera, setShowCamera] = useState(false);
@@ -851,8 +852,13 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     try {
       const { updateCase, saveLocalDraft } = await import('../services/persistence');
 
-      // CRITICAL: Always stamp authorId before any save
-      const stampedCase = { ...draftCase, authorId: userId };
+      // CRITICAL: Always stamp author identity before any save
+      // Preserve existing author info if present; fall back to current user
+      const stampedCase = { 
+        ...draftCase, 
+        authorId: draftCase.authorId || userId,
+        authorDisplayName: draftCase.authorDisplayName || userDisplayName || 'Unknown Author'
+      };
 
       // ALWAYS save locally first as a safety net (prevents data loss)
       saveLocalDraft(stampedCase);
