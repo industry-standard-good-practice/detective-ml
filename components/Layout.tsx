@@ -621,7 +621,7 @@ const Layout: React.FC<LayoutProps> = ({
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
                         UNSAVED CHANGES
                       </div>
-                      {onSaveCase && (
+                      {onSaveCase && !isCaseReview && (
                         <NavButton onClick={() => handleMenuNav(onSaveCase)} style={{ color: '#0f0', fontWeight: 'bold' }}>[Save Case]</NavButton>
                       )}
                     </>
