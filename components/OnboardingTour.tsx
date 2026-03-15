@@ -25,7 +25,7 @@ const Highlight = styled(motion.div)`
   z-index: 10001;
 `;
 
-const Tooltip = styled(motion.div)<{ $position: 'top' | 'bottom' | 'left' | 'right' }>`
+const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right' }>`
   position: absolute;
   background: #111;
   border: 1px solid #0f0;
@@ -169,7 +169,7 @@ const STEPS: Record<number, StepConfig> = {
   },
   [OnboardingStep.FLIP_CARD]: {
     title: "Deep Dive",
-    description: "Every suspect has a public profile and a hidden side. Click the [Flip Card] button to see their background, role, and known facts.",
+    description: "Every suspect has information on the back. Click the [Flip Card] button to see their background and role.",
     targetId: "flip-card-button",
     completedTargetId: "active-suspect-card",
     position: "right",
@@ -220,11 +220,11 @@ export const OnboardingTour: React.FC = () => {
 
     const updatePosition = () => {
       const isMobile = window.innerWidth <= 768;
-      
+
       // Auto-switch tabs on mobile if needed
       if (isMobile && step.mobileTab) {
         let tabBar = document.getElementById('mobile-tab-bar');
-        
+
         // If we're on a Hub step but tabBar isn't found, we might be in Interrogation.
         // Try to navigate back to Hub.
         if (!tabBar) {
@@ -269,58 +269,58 @@ export const OnboardingTour: React.FC = () => {
       }
 
       // 3. Handle Mobile Profile (Interrogation)
-    if (isMobile && step.requiresProfile) {
-      const profileModal = document.getElementById('mobile-profile-modal');
-      if (!profileModal) {
-        const profileBtn = document.getElementById('mobile-profile-button');
-        if (profileBtn) {
-          console.log("[DEBUG] Opening mobile profile modal");
-          profileBtn.click();
-          return;
-        }
-      }
-    } else if (isMobile && !step.requiresProfile) {
-      // Close profile if open but not required
-      const profileModal = document.getElementById('mobile-profile-modal');
-      if (profileModal) {
-        console.log("[DEBUG] Closing mobile profile modal");
-        (profileModal as HTMLElement).click();
-      }
-    }
-
-    // 4. Handle Mobile Intel (Interrogation)
-    if (isMobile && step.requiresIntel) {
-      const intelPanel = document.getElementById('right-panel');
-      if (intelPanel) {
-        const rect = intelPanel.getBoundingClientRect();
-        const isVisible = rect.left < window.innerWidth;
-        if (!isVisible) {
-          const intelBtn = document.getElementById('mobile-action-button');
-          if (intelBtn) {
-            console.log("[DEBUG] Opening mobile intel panel");
-            intelBtn.click();
+      if (isMobile && step.requiresProfile) {
+        const profileModal = document.getElementById('mobile-profile-modal');
+        if (!profileModal) {
+          const profileBtn = document.getElementById('mobile-profile-button');
+          if (profileBtn) {
+            console.log("[DEBUG] Opening mobile profile modal");
+            profileBtn.click();
             return;
           }
         }
+      } else if (isMobile && !step.requiresProfile) {
+        // Close profile if open but not required
+        const profileModal = document.getElementById('mobile-profile-modal');
+        if (profileModal) {
+          console.log("[DEBUG] Closing mobile profile modal");
+          (profileModal as HTMLElement).click();
+        }
       }
-    } else if (isMobile && !step.requiresIntel && !step.requiresProfile && !step.mobileTab) {
-      // Close intel if open but not required
-      const intelPanel = document.getElementById('right-panel');
-      if (intelPanel) {
-        const rect = intelPanel.getBoundingClientRect();
-        const isVisible = rect.left < window.innerWidth;
-        if (isVisible) {
-          const intelBtn = document.getElementById('mobile-action-button');
-          if (intelBtn) {
-            console.log("[DEBUG] Closing mobile intel panel");
-            intelBtn.click();
+
+      // 4. Handle Mobile Intel (Interrogation)
+      if (isMobile && step.requiresIntel) {
+        const intelPanel = document.getElementById('right-panel');
+        if (intelPanel) {
+          const rect = intelPanel.getBoundingClientRect();
+          const isVisible = rect.left < window.innerWidth;
+          if (!isVisible) {
+            const intelBtn = document.getElementById('mobile-action-button');
+            if (intelBtn) {
+              console.log("[DEBUG] Opening mobile intel panel");
+              intelBtn.click();
+              return;
+            }
+          }
+        }
+      } else if (isMobile && !step.requiresIntel && !step.requiresProfile && !step.mobileTab) {
+        // Close intel if open but not required
+        const intelPanel = document.getElementById('right-panel');
+        if (intelPanel) {
+          const rect = intelPanel.getBoundingClientRect();
+          const isVisible = rect.left < window.innerWidth;
+          if (isVisible) {
+            const intelBtn = document.getElementById('mobile-action-button');
+            if (intelBtn) {
+              console.log("[DEBUG] Closing mobile intel panel");
+              intelBtn.click();
+            }
           }
         }
       }
-    }
 
-    const targetId = (step.completedTargetId && isActionCompleted) ? step.completedTargetId : step.targetId;
-    const elements = document.querySelectorAll(`[id="${targetId}"], [id="${targetId}-mobile"]`);
+      const targetId = (step.completedTargetId && isActionCompleted) ? step.completedTargetId : step.targetId;
+      const elements = document.querySelectorAll(`[id="${targetId}"], [id="${targetId}-mobile"]`);
       const el = Array.from(elements).find(e => {
         const style = window.getComputedStyle(e);
         return style.display !== 'none' && style.visibility !== 'hidden' && (e as HTMLElement).offsetParent !== null;
@@ -328,7 +328,7 @@ export const OnboardingTour: React.FC = () => {
 
       if (el) {
         const r = el.getBoundingClientRect();
-        
+
         // Account for the fact that the overlay might be inside a transformed parent (like the CRT screen)
         const overlayEl = document.getElementById('onboarding-overlay');
         let offsetTop = 0;
@@ -360,13 +360,13 @@ export const OnboardingTour: React.FC = () => {
         let tLeft = 0;
         const padding = isMobile ? 20 : 25;
         const tooltipWidth = isMobile ? Math.min(280, vWidth - 20) : 300;
-        
+
         // Use actual height if available, otherwise fallback to a safer estimate
         const actualHeight = tooltipRef.current?.offsetHeight || (isMobile ? 250 : 320);
-        const estimatedHeight = actualHeight; 
+        const estimatedHeight = actualHeight;
 
         let finalPos = step.position;
-        
+
         // Mobile specific position overrides
         if (isMobile) {
           if (step.mobilePosition) {
@@ -392,7 +392,7 @@ export const OnboardingTour: React.FC = () => {
           if (finalPos === 'left' && adjustedRect.left < tooltipWidth + padding) finalPos = 'right';
           if (finalPos === 'right' && adjustedRect.right + tooltipWidth + padding > vWidth) finalPos = 'left';
         }
-        
+
         setRenderedPosition(finalPos);
 
         switch (finalPos) {
@@ -456,14 +456,14 @@ export const OnboardingTour: React.FC = () => {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           />
         )}
-        
+
         <Tooltip
           ref={tooltipRef}
           $position={renderedPosition}
           initial={{ opacity: 0, scale: 0.9, y: 10 }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1, 
+          animate={{
+            opacity: 1,
+            scale: 1,
             y: 0,
             top: tooltipPos.top,
             left: tooltipPos.left
@@ -472,7 +472,7 @@ export const OnboardingTour: React.FC = () => {
         >
           <Title>{step.title}</Title>
           <Description>{step.description}</Description>
-          
+
           <ButtonGroup>
             <NavButton onClick={skipTour}>Skip Tour</NavButton>
             {(!step.requiresAction || isActionCompleted) && (
@@ -486,7 +486,7 @@ export const OnboardingTour: React.FC = () => {
               </div>
             )}
           </ButtonGroup>
-          
+
           <StepIndicator>Step {currentStep} of 10</StepIndicator>
         </Tooltip>
       </Overlay>

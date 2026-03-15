@@ -457,17 +457,22 @@ const SendActionBtn = styled.button`
   }
 `;
 
+const AttachmentChipsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 5px;
+`;
+
 const AttachmentChip = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: #1a1a1a;
   border: 1px dashed #555;
   color: #fff;
-  padding: 5px 10px;
-  align-self: flex-start;
+  padding: 4px 10px;
   font-size: var(--type-small);
-  margin-bottom: 5px;
 
   button {
     background: transparent;
@@ -476,6 +481,8 @@ const AttachmentChip = styled.div`
     font-weight: bold;
     cursor: pointer;
     font-size: var(--type-body);
+    padding: 0;
+    line-height: 1;
   }
 `;
 
@@ -868,7 +875,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const [inputVal, setInputVal] = useState('');
   const { completeStep } = useOnboarding();
   const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
-  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | TimelineStatement | null>(null);
+  const [selectedEvidence, setSelectedEvidence] = useState<(Evidence | TimelineStatement)[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
   const [celebratingItem, setCelebratingItem] = useState<{ index: number, name: string, suspectId: string } | null>(null);
   const [debugMode, setDebugMode] = useState(false);
@@ -1079,14 +1086,39 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const handleSend = () => {
     if (inputVal.trim() && !isThinking) {
-      const evidenceTitle = selectedEvidence
-        ? ('title' in selectedEvidence ? selectedEvidence.title : `Timeline: ${selectedEvidence.time} - ${selectedEvidence.statement}`)
+      const evidenceTitle = selectedEvidence.length > 0
+        ? selectedEvidence.map(ev => 'title' in ev ? ev.title : `Timeline: ${ev.time} - ${ev.statement}`).join(' | ')
         : undefined;
       onSendMessage(inputVal, inputType, evidenceTitle);
       setInputVal('');
-      setSelectedEvidence(null);
+      setSelectedEvidence([]);
       if (inputType === 'action' && !suspect.isDeceased) setInputType('talk');
     }
+  };
+
+  const toggleEvidence = (item: Evidence | TimelineStatement) => {
+    setSelectedEvidence(prev => {
+      const itemId = 'id' in item ? item.id : `ts-${(item as TimelineStatement).time}`;
+      const exists = prev.some(ev => {
+        const evId = 'id' in ev ? ev.id : `ts-${(ev as TimelineStatement).time}`;
+        return evId === itemId;
+      });
+      if (exists) {
+        return prev.filter(ev => {
+          const evId = 'id' in ev ? ev.id : `ts-${(ev as TimelineStatement).time}`;
+          return evId !== itemId;
+        });
+      }
+      return [...prev, item];
+    });
+  };
+
+  const isEvidenceSelected = (item: Evidence | TimelineStatement) => {
+    const itemId = 'id' in item ? item.id : `ts-${(item as TimelineStatement).time}`;
+    return selectedEvidence.some(ev => {
+      const evId = 'id' in ev ? ev.id : `ts-${(ev as TimelineStatement).time}`;
+      return evId === itemId;
+    });
   };
 
   const startListening = () => {
@@ -1332,7 +1364,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   {msg.type === 'action' && '* '}{msg.text}{msg.type === 'action' && ' *'}
                 </span>
                 {msg.attachment && (
-                  <div className="attachment">📎 Evidence Shown: {getShortEvidenceTitle(msg.attachment)}</div>
+                  <div className="attachment">📎 Evidence Shown: {msg.attachment.split(' | ').map(a => getShortEvidenceTitle(a)).join(', ')}</div>
                 )}
                 {msg.evidence && (
                   <EvidenceChip
@@ -1365,11 +1397,18 @@ const Interrogation: React.FC<InterrogationProps> = ({
               </SuggestionChips>
             )}
 
-            {selectedEvidence && (
-              <AttachmentChip>
-                <span>📎 {'title' in selectedEvidence ? selectedEvidence.title : `Timeline: ${selectedEvidence.time}`}</span>
-                <button onClick={() => setSelectedEvidence(null)}>[x]</button>
-              </AttachmentChip>
+            {selectedEvidence.length > 0 && (
+              <AttachmentChipsRow>
+                {selectedEvidence.map((ev, i) => {
+                  const label = 'title' in ev ? ev.title : `Timeline: ${(ev as TimelineStatement).time}`;
+                  return (
+                    <AttachmentChip key={i}>
+                      <span>📎 {label}</span>
+                      <button onClick={() => toggleEvidence(ev)}>[x]</button>
+                    </AttachmentChip>
+                  );
+                })}
+              </AttachmentChipsRow>
             )}
 
             <UnifiedInputBar $disabled={isLocked || isThinking} id="unified-input-bar">
@@ -1385,7 +1424,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               <PlusButtonWrapper ref={evidenceMenuRef}>
                 <PlusButton
                   onClick={() => setShowEvidencePicker(!showEvidencePicker)}
-                  $active={!!selectedEvidence}
+                  $active={selectedEvidence.length > 0}
                   disabled={isLocked}
                   title="Present Evidence"
                 >
@@ -1400,39 +1439,44 @@ const Interrogation: React.FC<InterrogationProps> = ({
                     {evidenceDiscovered.length > 0 && (
                       <>
                         <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
-                        {evidenceDiscovered.map((ev) => (
-                          <EvidenceOption
-                            key={ev.id}
-                            onClick={() => {
-                              setSelectedEvidence(ev);
-                              setShowEvidencePicker(false);
-                            }}
-                          >
-                            <div style={{ fontWeight: 'bold', color: '#fff' }}>{ev.title}</div>
-                            <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
-                          </EvidenceOption>
-                        ))}
+                        {evidenceDiscovered.map((ev) => {
+                          const selected = isEvidenceSelected(ev);
+                          return (
+                            <EvidenceOption
+                              key={ev.id}
+                              onClick={() => toggleEvidence(ev)}
+                              style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
+                            >
+                              <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {selected && <span>✓</span>}{ev.title}
+                              </div>
+                              <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
+                            </EvidenceOption>
+                          );
+                        })}
                       </>
                     )}
 
                     {timelineStatementsDiscovered.length > 0 && (
                       <>
                         <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
-                        {timelineStatementsDiscovered.map((ts) => (
-                          <TimelineEvidenceOption
-                            key={ts.id}
-                            onClick={() => {
-                              setSelectedEvidence(ts);
-                              setShowEvidencePicker(false);
-                            }}
-                          >
-                            <div className="header">
-                              <span className="time">{ts.time}</span>
-                              <span className="suspect">BY {ts.suspectName}</span>
-                            </div>
-                            <div className="statement">"{ts.statement}"</div>
-                          </TimelineEvidenceOption>
-                        ))}
+                        {timelineStatementsDiscovered.map((ts) => {
+                          const selected = isEvidenceSelected(ts);
+                          return (
+                            <TimelineEvidenceOption
+                              key={ts.id}
+                              onClick={() => toggleEvidence(ts)}
+                              style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
+                            >
+                              <div className="header">
+                                {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
+                                <span className="time">{ts.time}</span>
+                                <span className="suspect">BY {ts.suspectName}</span>
+                              </div>
+                              <div className="statement">"{ts.statement}"</div>
+                            </TimelineEvidenceOption>
+                          );
+                        })}
                       </>
                     )}
                   </EvidenceMenu>
