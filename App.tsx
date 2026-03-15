@@ -106,6 +106,9 @@ const formatAuthorName = (displayName: string | null | undefined): string => {
  * This catches cases where the AI mentions a time but forgets to populate
  * the structured `revealedTimelineStatement` field.
  */
+// Check if text contains a numerical time reference (e.g. "10:35", "8:00")
+const textHasNumericalTime = (text: string): boolean => /\d{1,2}:\d{2}/.test(text);
+
 const extractTimelineFromText = (
   text: string,
   suspectTimeline: { time: string; activity: string }[]
@@ -113,23 +116,18 @@ const extractTimelineFromText = (
   if (!text || !suspectTimeline || suspectTimeline.length === 0) return null;
   
   // CRITICAL: Only extract timeline if the text actually contains a numerical time reference
-  // This prevents false positives from keyword matching alone
-  const hasNumericalTime = /\d{1,2}:\d{2}/.test(text);
-  if (!hasNumericalTime) return null;
+  if (!textHasNumericalTime(text)) return null;
   
   const lowerText = text.toLowerCase();
 
   for (const entry of suspectTimeline) {
-    // Normalize the time for matching (e.g. "10:35" or "8:00 PM")
     const timeStr = entry.time?.trim();
     if (!timeStr) continue;
 
-    // Check if the response text contains the time string
     if (lowerText.includes(timeStr.toLowerCase())) {
       return { time: timeStr, statement: entry.activity };
     }
 
-    // Also try matching just the numeric part (e.g. "10:35" from "10:35 AM")
     const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
     if (numericMatch && lowerText.includes(numericMatch[1])) {
       return { time: timeStr, statement: entry.activity };
@@ -606,6 +604,11 @@ const App: React.FC = () => {
             // Timeline extraction for partner action responses (was previously missing!)
             let newTimelineStatements = [...prev.timelineStatementsDiscovered];
             let timelineEntry = response.revealedTimelineStatement;
+            // CRITICAL: Only accept if the response text actually contains a numerical time
+            if (timelineEntry && !textHasNumericalTime(response.text)) {
+              console.log("[DEBUG] Rejecting AI timeline (partner) — no numerical time in text", timelineEntry);
+              timelineEntry = null;
+            }
             if (!timelineEntry && finalAgg < 100) {
               timelineEntry = extractTimelineFromText(response.text, suspect.timeline || []);
               if (timelineEntry) {
@@ -754,7 +757,12 @@ const App: React.FC = () => {
         let newTimelineStatements = [...prev.timelineStatementsDiscovered];
 
         // Use AI's explicit timeline statement, or fall back to client-side extraction
+        // CRITICAL: Only accept if the response text actually contains a numerical time
         let timelineEntry = response.revealedTimelineStatement;
+        if (timelineEntry && !textHasNumericalTime(response.text)) {
+          console.log("[DEBUG] Rejecting AI timeline — no numerical time in text", timelineEntry);
+          timelineEntry = null;
+        }
         if (!timelineEntry && newAgg < 100) {
           timelineEntry = extractTimelineFromText(response.text, currentSuspect.timeline || []);
           if (timelineEntry) {

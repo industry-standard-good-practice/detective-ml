@@ -937,11 +937,20 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const canDebug = isAdmin || isCreator;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRef = useRef<string | null>(null);
+  const volumeRef = useRef(volume);
   const [lastPlayedAudioUrl, setLastPlayedAudioUrl] = useState<string | null>(null);
   const isMounted = useRef(true);
   const prevChatLengthRef = useRef(chatHistory.length);
   const prevSuspectIdRef = useRef(suspect.id);
   const isFirstRenderRef = useRef(true);
+
+  // Keep volumeRef in sync and update any playing audio in real-time
+  useEffect(() => {
+    volumeRef.current = volume;
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   useEffect(() => {
     voiceRef.current = suspect.voice || null;
@@ -998,7 +1007,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         }
 
         const audio = new Audio(lastMsg.audioUrl);
-        audio.volume = volume;
+        audio.volume = volumeRef.current;
         audioRef.current = audio;
         audio.play().catch(e => console.error("Audio playback failed", e));
 
@@ -1037,11 +1046,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
       }
 
       const audio = new Audio(lastMsg.audioUrl);
-      audio.volume = volume;
+      audio.volume = volumeRef.current;
       audioRef.current = audio;
       audio.play().catch(e => console.error("Audio playback failed", e));
     }
-  }, [chatHistory, soundEnabled, volume, suspect.id, lastPlayedAudioUrl, unreadSuspectIds, onClearUnread]);
+  }, [chatHistory, soundEnabled, suspect.id, lastPlayedAudioUrl, unreadSuspectIds, onClearUnread]);
 
   // Force Action type if Deceased, reset to Talk otherwise (when switching)
   useEffect(() => {
