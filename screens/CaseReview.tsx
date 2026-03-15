@@ -335,6 +335,62 @@ const SmallButton = styled.button<{ $active?: boolean }>`
   &:hover { background: ${props => props.$active ? '#2563eb' : '#555'}; }
 `;
 
+const HeroImageModuleWrapper = styled.div`
+  container-type: inline-size;
+  margin-bottom: 10px;
+`;
+
+const HeroImageModuleInner = styled.div`
+  display: flex;
+  gap: 15px;
+  align-items: stretch;
+  background: rgba(255,255,255,0.03);
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+
+  @container (max-width: 450px) {
+    flex-direction: column;
+  }
+`;
+
+const HeroImagePreview = styled.div<{ $imageUrl?: string }>`
+  width: 50%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  border: 1px solid #333;
+  background-image: ${props => props.$imageUrl ? `url(${props.$imageUrl})` : 'none'};
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: 0.6rem;
+  overflow: hidden;
+
+  @container (max-width: 450px) {
+    width: 100%;
+    max-height: 280px;
+  }
+`;
+
+const HeroImageControls = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+
+  @container (max-width: 450px) {
+    width: 100%;
+  }
+`;
+
 // --- MODAL STYLES ---
 
 const Overlay = styled.div`
@@ -679,9 +735,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     try {
       const { regenerateSingleSuspect } = await import('../services/geminiImages');
       const updatedChar = await regenerateSingleSuspect(
-        activeSuspect as any, 
-        draftCase.id, 
-        userId!, 
+        activeSuspect as any,
+        draftCase.id,
+        userId!,
         draftCase.type,
         (progressMsg) => setLoadingState({ visible: true, message: progressMsg })
       );
@@ -854,8 +910,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
       // CRITICAL: Always stamp author identity before any save
       // Preserve existing author info if present; fall back to current user
-      const stampedCase = { 
-        ...draftCase, 
+      const stampedCase = {
+        ...draftCase,
         authorId: draftCase.authorId || userId,
         authorDisplayName: draftCase.authorDisplayName || userDisplayName || 'Unknown Author'
       };
@@ -1108,115 +1164,100 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
         <InputGroup>
           <label>Hero Image (Case Card)</label>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', marginBottom: '10px', background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{
-              width: '180px',
-              height: '120px',
-              background: '#000',
-              border: '1px solid #333',
-              backgroundImage: draftCase.heroImageUrl ? `url(${draftCase.heroImageUrl})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              imageRendering: 'pixelated',
-              flexShrink: 0,
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#333',
-              fontSize: '0.6rem',
-              overflow: 'hidden'
-            }}>
-              {!draftCase.heroImageUrl && "NO IMAGE"}
-            </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <SmallButton
-                  $active={heroMode === 'suspect'}
-                  onClick={() => setHeroMode('suspect')}
-                  style={{ background: heroMode === 'suspect' ? '#3b82f6' : '#222' }}
-                >
-                  USE SUSPECT
-                </SmallButton>
-                <SmallButton
-                  $active={heroMode === 'evidence'}
-                  onClick={() => setHeroMode('evidence')}
-                  style={{ background: heroMode === 'evidence' ? '#3b82f6' : '#222' }}
-                >
-                  USE EVIDENCE
-                </SmallButton>
-                <SmallButton
-                  $active={heroMode === 'custom'}
-                  onClick={() => setHeroMode('custom')}
-                  style={{ background: heroMode === 'custom' ? '#3b82f6' : '#222' }}
-                >
-                  USE CUSTOM
-                </SmallButton>
-              </div>
-
-              {heroMode === 'suspect' && (
-                <select
-                  style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
-                  onChange={(e) => {
-                    const s = draftCase.suspects?.find(x => x.id === e.target.value);
-                    if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
-                  }}
-                  value={draftCase.suspects?.find(s => s.portraits?.[Emotion.NEUTRAL] === draftCase.heroImageUrl)?.id || ''}
-                >
-                  <option value="">Select a suspect...</option>
-                  {(draftCase.suspects || []).map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
-                  ))}
-                </select>
-              )}
-
-              {heroMode === 'evidence' && (
-                <select
-                  style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
-                  onChange={(e) => {
-                    const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
-                    if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
-                  }}
-                  value={[...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(ev => ev.imageUrl === draftCase.heroImageUrl)?.id || ''}
-                >
-                  <option value="">Select evidence...</option>
-                  {[...(draftCase.initialEvidence || []), ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].map(ev => (
-                    <option key={ev.id} value={ev.id}>{ev.title}</option>
-                  ))}
-                </select>
-              )}
-
-              {heroMode === 'custom' && (
+          <HeroImageModuleWrapper>
+            <HeroImageModuleInner>
+              <HeroImagePreview $imageUrl={draftCase.heroImageUrl || undefined}>
+                {!draftCase.heroImageUrl && "NO IMAGE"}
+              </HeroImagePreview>
+              <HeroImageControls>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <SmallButton onClick={() => setShowHeroEditor(true)} style={{ flex: 1 }}>
-                    GENERATE CUSTOM
+                  <SmallButton
+                    $active={heroMode === 'suspect'}
+                    onClick={() => setHeroMode('suspect')}
+                    style={{ flex: 1, background: heroMode === 'suspect' ? '#3b82f6' : '#222' }}
+                  >
+                    USE SUSPECT
                   </SmallButton>
-                  <SmallButton onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e: any) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (ev) => handleCaseChange('heroImageUrl', ev.target?.result as string);
-                      reader.readAsDataURL(file);
-                    };
-                    input.click();
-                  }} style={{ flex: 1 }}>
-                    UPLOAD IMAGE
+                  <SmallButton
+                    $active={heroMode === 'evidence'}
+                    onClick={() => setHeroMode('evidence')}
+                    style={{ flex: 1, background: heroMode === 'evidence' ? '#3b82f6' : '#222' }}
+                  >
+                    USE EVIDENCE
+                  </SmallButton>
+                  <SmallButton
+                    $active={heroMode === 'custom'}
+                    onClick={() => setHeroMode('custom')}
+                    style={{ flex: 1, background: heroMode === 'custom' ? '#3b82f6' : '#222' }}
+                  >
+                    USE CUSTOM
                   </SmallButton>
                 </div>
-              )}
 
-              <input
-                placeholder="Or paste image URL here..."
-                value={draftCase.heroImageUrl || ''}
-                onChange={(e) => handleCaseChange('heroImageUrl', e.target.value)}
-                style={{ fontSize: '0.75rem', padding: '8px', background: '#111', border: '1px solid #333', borderRadius: '4px', color: '#888' }}
-              />
-            </div>
-          </div>
+                {heroMode === 'suspect' && (
+                  <select
+                    style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
+                    onChange={(e) => {
+                      const s = draftCase.suspects?.find(x => x.id === e.target.value);
+                      if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
+                    }}
+                    value={draftCase.suspects?.find(s => s.portraits?.[Emotion.NEUTRAL] === draftCase.heroImageUrl)?.id || ''}
+                  >
+                    <option value="">Select a suspect...</option>
+                    {(draftCase.suspects || []).map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                    ))}
+                  </select>
+                )}
+
+                {heroMode === 'evidence' && (
+                  <select
+                    style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
+                    onChange={(e) => {
+                      const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
+                      if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
+                    }}
+                    value={[...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(ev => ev.imageUrl === draftCase.heroImageUrl)?.id || ''}
+                  >
+                    <option value="">Select evidence...</option>
+                    {[...(draftCase.initialEvidence || []), ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].map(ev => (
+                      <option key={ev.id} value={ev.id}>{ev.title}</option>
+                    ))}
+                  </select>
+                )}
+
+                {heroMode === 'custom' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <SmallButton onClick={() => setShowHeroEditor(true)} style={{ flex: 1 }}>
+                      GENERATE CUSTOM
+                    </SmallButton>
+                    <SmallButton onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e: any) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => handleCaseChange('heroImageUrl', ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      };
+                      input.click();
+                    }} style={{ flex: 1 }}>
+                      UPLOAD IMAGE
+                    </SmallButton>
+                  </div>
+                )}
+
+                <input
+                  placeholder="Or paste image URL here..."
+                  value={draftCase.heroImageUrl || ''}
+                  onChange={(e) => handleCaseChange('heroImageUrl', e.target.value)}
+                  style={{ fontSize: '0.75rem', padding: '8px', background: '#111', border: '1px solid #333', borderRadius: '4px', color: '#888', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                />
+              </HeroImageControls>
+            </HeroImageModuleInner>
+          </HeroImageModuleWrapper>
         </InputGroup>
 
         <InputGroup>
