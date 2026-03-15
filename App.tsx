@@ -1334,6 +1334,7 @@ const App: React.FC = () => {
             <CreateCase 
                 key="screen-create"
                 onGenerate={handleGenerateCase}
+                onCancel={() => setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_SELECTION }))}
                 isLoading={isGenerating}
                 loadingStatus={generationStatus}
             />

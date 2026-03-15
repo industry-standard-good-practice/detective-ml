@@ -114,11 +114,12 @@ const ProgressBar = styled.div`
 
 interface CreateCaseProps {
   onGenerate: (prompt: string, isLucky: boolean) => void;
+  onCancel: () => void;
   isLoading: boolean;
   loadingStatus?: string;
 }
 
-const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, isLoading, loadingStatus }) => {
+const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, onCancel, isLoading, loadingStatus }) => {
   const [prompt, setPrompt] = useState('');
 
   return (
@@ -150,6 +151,10 @@ const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, isLoading, loadingS
               Generate & Review
             </ActionButton>
           </ButtonGroup>
+
+          <ActionButton onClick={onCancel} style={{ marginTop: '10px', fontSize: 'var(--type-body)', padding: '8px 20px' }}>
+            Cancel
+          </ActionButton>
         </>
       ) : (
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
