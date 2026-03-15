@@ -105,7 +105,6 @@ const EvidenceItemBase = styled(motion.div)`
 const LightboxOverlay = styled(motion.div)`
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
   z-index: 10000;
   display: flex;
   align-items: flex-start;
@@ -832,7 +831,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                       whileHover={!isSelected ? { scale: 1.05, rotate: 0 } : undefined}
                       style={{
                         rotate: isSelected ? 0 : Math.random() * 6 - 3,
-                        opacity: isSelected ? 0 : 1,
+                        visibility: isSelected ? 'hidden' : 'visible',
                         pointerEvents: isSelected ? 'none' : 'auto'
                       }}
                     >
@@ -959,9 +958,9 @@ const CaseHub: React.FC<CaseHubProps> = ({
         {selectedEvidenceId && lightboxEvidence && (
           <LightboxOverlay
             key="lightbox-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
+            animate={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+            exit={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
             transition={{ duration: 0.25 }}
             onClick={closeLightbox}
           >
