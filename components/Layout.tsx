@@ -507,6 +507,9 @@ interface LayoutProps {
   onLogout?: () => void;
   hasUnsavedChanges?: boolean;
   onSaveCase?: () => void;
+  onCloseCase?: () => void;
+  onCheckConsistency?: () => void;
+  onTestInvestigation?: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -527,7 +530,10 @@ const Layout: React.FC<LayoutProps> = ({
   user,
   onLogout,
   hasUnsavedChanges,
-  onSaveCase
+  onSaveCase,
+  onCloseCase,
+  onCheckConsistency,
+  onTestInvestigation
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -653,6 +659,34 @@ const Layout: React.FC<LayoutProps> = ({
                     <NavButton onClick={() => handleMenuNav(() => setShowExitDialog(true))} style={{ color: '#f55' }}>
                       [Exit Game]
                     </NavButton>
+                  )}
+
+                  {isCaseReview && (
+                    <>
+                      <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: '10px' }}>
+                        <div style={{ color: '#888', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Case Editor</div>
+                      </div>
+                      {onSaveCase && (
+                        <NavButton onClick={() => handleMenuNav(onSaveCase)} style={{ color: '#0f0' }}>
+                          [Save]
+                        </NavButton>
+                      )}
+                      {onCheckConsistency && (
+                        <NavButton onClick={() => handleMenuNav(onCheckConsistency)}>
+                          [Check Consistency]
+                        </NavButton>
+                      )}
+                      {onTestInvestigation && (
+                        <NavButton onClick={() => handleMenuNav(onTestInvestigation)} style={{ color: '#0ff' }}>
+                          [Case Hub]
+                        </NavButton>
+                      )}
+                      {onCloseCase && (
+                        <NavButton onClick={() => handleMenuNav(onCloseCase)} style={{ color: '#f55' }}>
+                          [Close]
+                        </NavButton>
+                      )}
+                    </>
                   )}
 
                   {user && (

@@ -417,10 +417,12 @@ interface CaseReviewProps {
   onCancel: () => void;
   userId?: string;
   onRegisterSave?: (saveFn: () => Promise<void>) => void;
+  onRegisterCheckConsistency?: (fn: () => void) => void;
+  onRegisterClose?: (fn: () => void) => void;
   onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId, onRegisterSave, onHasUnsavedChanges }) => {
+const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onStart, onCancel, userId, onRegisterSave, onRegisterCheckConsistency, onRegisterClose, onHasUnsavedChanges }) => {
   const [selectedSuspectId, setSelectedSuspectId] = useState<string | null>(draftCase.suspects?.[0]?.id || 'officer');
   const [loadingState, setLoadingState] = useState<{ visible: boolean, message: string, step?: string, stepDetail?: string }>({ visible: false, message: '' });
   const [showCamera, setShowCamera] = useState(false);
@@ -446,6 +448,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   // Expose save function to parent
   useEffect(() => {
     onRegisterSave?.(() => handleSave());
+  });
+
+  // Expose check consistency to parent
+  useEffect(() => {
+    onRegisterCheckConsistency?.(() => handleCheckConsistency());
+  });
+
+  // Expose close/cancel to parent (respects unsaved changes dialog)
+  useEffect(() => {
+    onRegisterClose?.(() => handleCancel());
   });
 
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -1273,9 +1285,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
             <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
             <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-            <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CANCEL</SaveButton>
+            <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
           </div>
-          <StartButton onClick={onStart}>TEST INVESTIGATION</StartButton>
+          <StartButton onClick={onStart}>CASE HUB</StartButton>
         </div>
       </Panel>
 
@@ -1655,9 +1667,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '10px' }}>
               <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
               <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-              <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CANCEL</SaveButton>
+              <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
             </div>
-            <StartButton onClick={onStart}>TEST INVESTIGATION</StartButton>
+            <StartButton onClick={onStart}>CASE HUB</StartButton>
 
           </div>
         )}

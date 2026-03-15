@@ -158,6 +158,8 @@ const App: React.FC = () => {
   const [thinkingSuspectId, setThinkingSuspectId] = useState<string | null>(null);
   const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
   const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
+  const draftCheckConsistencyFnRef = useRef<(() => void) | null>(null);
+  const draftCloseFnRef = useRef<(() => void) | null>(null);
   
   const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
@@ -1198,6 +1200,13 @@ const App: React.FC = () => {
           handleSaveDraftFromHeader();
         }
       }}
+      onCloseCase={gameState.currentScreen === ScreenState.CASE_REVIEW ? () => {
+        draftCloseFnRef.current?.();
+      } : undefined}
+      onCheckConsistency={gameState.currentScreen === ScreenState.CASE_REVIEW ? () => {
+        draftCheckConsistencyFnRef.current?.();
+      } : undefined}
+      onTestInvestigation={gameState.currentScreen === ScreenState.CASE_REVIEW ? handleTestInvestigation : undefined}
     >
       {!hasBooted ? (
         <BootSequence onComplete={handleBootComplete} />
@@ -1250,6 +1259,8 @@ const App: React.FC = () => {
                 }}
                 userId={user?.uid}
                 onRegisterSave={(fn) => { draftSaveFnRef.current = fn; }}
+                onRegisterCheckConsistency={(fn) => { draftCheckConsistencyFnRef.current = fn; }}
+                onRegisterClose={(fn) => { draftCloseFnRef.current = fn; }}
                 onHasUnsavedChanges={setHasUnsavedDraftChanges}
             />
           )}
