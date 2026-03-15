@@ -216,10 +216,11 @@ const App: React.FC = () => {
     localStorage.setItem('globalVolume', String(volume));
   }, [volume]);
 
-  // Sync draftCase changes back to communityCases for UI consistency
+  // Sync draftCase changes back to communityCases and localDrafts for UI consistency
   useEffect(() => {
     if (draftCase) {
       setCommunityCases(prev => prev.map(c => c.id === draftCase.id ? draftCase : c));
+      setLocalDrafts(prev => prev.map(d => d.id === draftCase.id ? draftCase : d));
     }
   }, [draftCase]);
 
