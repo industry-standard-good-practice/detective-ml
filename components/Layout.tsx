@@ -612,7 +612,7 @@ const Layout: React.FC<LayoutProps> = ({
                       </span>
                     )}
                     {isGameplay && screenState !== ScreenState.ENDGAME && (
-                      <NavButton id="hub-button" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
+                      <NavButton id="hub-button" className="hide-on-mobile" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
                     )}
                   </NavGroup>
                 </TopBar>
