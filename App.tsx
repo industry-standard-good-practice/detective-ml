@@ -370,12 +370,6 @@ const App: React.FC = () => {
         setCurrentSuggestions(DEFAULT_SUGGESTIONS);
     }
 
-    // Clear unread notification for this suspect
-    setUnreadSuspects(prev => {
-      const next = new Set(prev);
-      next.delete(suspectId);
-      return next;
-    });
 
     setGameState(prev => ({
       ...prev,
@@ -477,20 +471,23 @@ const App: React.FC = () => {
 
         let finalAgg = newAgg + response.aggravationDelta;
         finalAgg = Math.max(0, Math.min(100, finalAgg));
-        
+        // Generate TTS Audio
+        let audioUrl: string | null = null;
+        if (!isMuted && suspect.voice && suspect.voice !== 'None') {
+            audioUrl = await generateTTS(
+              finalAgg >= 100 ? "That's it! I want my lawyer!" : response.text,
+              suspect.voice
+            );
+        }
+
         const suspectMsg: ChatMessage = {
             sender: 'suspect',
             text: finalAgg >= 100 ? "That's it! I want my lawyer!" : response.text,
             timestamp: new Date(newGameTime).toLocaleTimeString(),
             evidence: response.revealedEvidence,
-            isEvidenceCollected: false
+            isEvidenceCollected: false,
+            audioUrl: audioUrl
         };
-
-        // Generate TTS Audio
-        let audioUrl: string | null = null;
-        if (!isMuted && suspect.voice && suspect.voice !== 'None') {
-            audioUrl = await generateTTS(suspectMsg.text, suspect.voice);
-        }
 
         let finalWhisper = whisperComment;
         if (action === 'badCop') {
@@ -525,12 +522,7 @@ const App: React.FC = () => {
 
         // Mark suspect as having unread message (badge appears when user switches away)
         setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
-
-        // Play Audio only if user is still viewing this suspect
-        if (audioUrl && gameState.currentScreen === ScreenState.INTERROGATION && gameState.currentSuspectId === currentSuspectId) {
-            const audio = new Audio(audioUrl);
-            audio.play().catch(e => console.error("Audio playback failed", e));
-        }
+        // TTS playback is handled by Interrogation.tsx
 
     } catch (e: any) {
         console.error("Partner Action Error:", e);
@@ -675,12 +667,7 @@ const App: React.FC = () => {
 
       // Mark suspect as having unread message (badge appears when user switches away)
       setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
-
-      // Play Audio only if user is still viewing this suspect
-      if (audioUrl && gameState.currentScreen === ScreenState.INTERROGATION && gameState.currentSuspectId === currentSuspectId) {
-          const audio = new Audio(audioUrl);
-          audio.play().catch(e => console.error("Audio playback failed", e));
-      }
+      // TTS playback is handled by Interrogation.tsx
 
       setCurrentSuggestions(response.hints);
     } catch (e: any) {
@@ -1311,6 +1298,13 @@ const App: React.FC = () => {
               isAdmin={isAdmin}
               userId={user?.uid}
               unreadSuspectIds={unreadSuspects}
+              onClearUnread={(suspectId) => {
+                setUnreadSuspects(prev => {
+                  const next = new Set(prev);
+                  next.delete(suspectId);
+                  return next;
+                });
+              }}
             />
           )}
 
