@@ -114,7 +114,14 @@ export const getSuspectResponse = async (
         Evidence Shown: ${evidenceAttachment || "None"}
 
         INSTRUCTIONS:
-        1. Reply in character (short, noir style).
+        1. **CONVERSATIONAL VARIETY (CRITICAL):** Reply in character. Your responses should feel like a REAL conversation, not a report.
+           - Sometimes be SHORT and curt ("I don't know nothing."). Sometimes be LONGER and ramble.
+           - Sometimes deflect, sometimes get emotional, sometimes be sarcastic.
+           - DON'T always volunteer information. Make the detective WORK for it.
+           - DON'T repeat yourself. If you already covered your alibi, don't keep restating times unprompted.
+           - Match your personality, mood, and the current aggravation level.
+           - Vary your sentence structure and tone from turn to turn.
+
         2. **NEGATIVE CONSTRAINT:** Do NOT invent new locations, people, time events, or facts. 
            - ONLY refer to your Alibi, Relationships, Timeline, and Known Facts. 
            - If asked about something not in your Knowledge Base, say you don't know or deflect.
@@ -156,13 +163,12 @@ export const getSuspectResponse = async (
            **GENERAL RULE:** If Current Aggravation > 80, the suspect is irrational. Calming is 50% less effective.
 
         5. Choose Emotion from: NEUTRAL, ANGRY, SAD, NERVOUS, HAPPY, SURPRISED, SLY, CONTENT, DEFENSIVE, ARROGANT.
-        6. **TIMELINE REVEAL (CRITICAL — NEVER SKIP):** Whenever your 'text' response mentions ANY specific time, activity, or location from your TIMELINE (Activities), you MUST ALWAYS set 'revealedTimelineStatement'.
-           - 'time': The EXACT time string from your TIMELINE list (e.g. "10:35", "8:00 PM").
-           - 'statement': A short summary of what you said you were doing at that time.
-           - **EXAMPLES:**
-             - If your TIMELINE has "[10:35] Running network diagnostics" and your text says "At 10:35, I was running diagnostics", set revealedTimelineStatement to { time: "10:35", statement: "Running network diagnostics" }.
-             - If your TIMELINE has "[8:00 PM] Having dinner with the victim" and your text mentions dinner, set it.
-           - **RULE:** If you mention ANY time from your TIMELINE in your 'text', this field MUST be non-null. Failing to set it is a critical error.
+        6. **TIMELINE REVEAL (CONDITIONAL — NOT EVERY TURN!):**
+           - ONLY set 'revealedTimelineStatement' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
+           - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal a timeline entry.
+           - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
+           - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity.
+           - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
