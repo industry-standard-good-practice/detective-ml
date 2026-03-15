@@ -111,6 +111,12 @@ const extractTimelineFromText = (
   suspectTimeline: { time: string; activity: string }[]
 ): { time: string; statement: string } | null => {
   if (!text || !suspectTimeline || suspectTimeline.length === 0) return null;
+  
+  // CRITICAL: Only extract timeline if the text actually contains a numerical time reference
+  // This prevents false positives from keyword matching alone
+  const hasNumericalTime = /\d{1,2}:\d{2}/.test(text);
+  if (!hasNumericalTime) return null;
+  
   const lowerText = text.toLowerCase();
 
   for (const entry of suspectTimeline) {
@@ -127,21 +133,6 @@ const extractTimelineFromText = (
     const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
     if (numericMatch && lowerText.includes(numericMatch[1])) {
       return { time: timeStr, statement: entry.activity };
-    }
-  }
-
-  // Also check if the text mentions a key phrase from any activity
-  for (const entry of suspectTimeline) {
-    if (!entry.activity) continue;
-    // Extract meaningful keywords (4+ chars) from the activity
-    const keywords = entry.activity
-      .split(/\s+/)
-      .filter(w => w.length >= 4)
-      .map(w => w.toLowerCase().replace(/[^a-z]/g, ''));
-    // If at least 2 significant keywords match, consider it a hit
-    const matchCount = keywords.filter(kw => kw && lowerText.includes(kw)).length;
-    if (keywords.length >= 2 && matchCount >= 2) {
-      return { time: entry.time, statement: entry.activity };
     }
   }
 

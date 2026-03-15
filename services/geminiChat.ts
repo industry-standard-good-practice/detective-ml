@@ -27,6 +27,7 @@ export const getSuspectResponse = async (
   const isDeceased = suspect.isDeceased;
   const isBadCop = userInput.includes('[PARTNER INTERVENTION (BAD COP)]');
   const partnerName = caseData.partner?.name || "The Partner";
+  const deceasedSuspect = (caseData.suspects || []).find(s => s.isDeceased);
   
   // Robust Knowledge Injection
   const alibiStr = suspect.alibi ? `"${suspect.alibi.statement}" (Loc: ${suspect.alibi.location}, Verified: ${suspect.alibi.isTrue})` : "None";
@@ -103,7 +104,10 @@ export const getSuspectResponse = async (
         8. REVEALED SECRETS (You have already told the detective about these): ${revealedStr}
         
         Case Context: ${caseData.description}
-        Other Suspects: ${(caseData.suspects || []).map(s => s.name).join(', ')}.
+        The Victim: ${deceasedSuspect ? `${deceasedSuspect.name} (${deceasedSuspect.role})` : 'Unknown'}.
+        Other Suspects: ${(caseData.suspects || []).filter(s => !s.isDeceased).map(s => s.name).join(', ')}.
+        
+        **VICTIM REFERENCE RULE:** NEVER call the victim "the victim". Use their actual name ("${deceasedSuspect?.name || 'the deceased'}") or your relationship to them (from your RELATIONSHIPS list). Speak naturally — real people don't call someone "the victim".
         
         *** VALID NAMES ALLOWED IN DIALOGUE: ${validNamesList} ***
         
