@@ -988,7 +988,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
       const lastMsg = chatHistory[chatHistory.length - 1];
 
       // If this suspect has an unread notification, play their TTS
-      if (lastMsg?.sender === 'suspect' && lastMsg?.audioUrl && soundEnabled && unreadSuspectIds.has(suspect.id)) {
+      if ((lastMsg?.sender === 'suspect' || lastMsg?.sender === 'partner') && lastMsg?.audioUrl && soundEnabled && unreadSuspectIds.has(suspect.id)) {
         console.log("TTS Playing unread notification message", { text: lastMsg.text, audioUrl: lastMsg.audioUrl });
         setLastPlayedAudioUrl(lastMsg.audioUrl);
 
@@ -1027,7 +1027,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
     const lastMsg = chatHistory[chatHistory.length - 1];
 
-    if (lastMsg.sender === 'suspect' && lastMsg.audioUrl && lastMsg.audioUrl !== lastPlayedAudioUrl) {
+    if ((lastMsg.sender === 'suspect' || lastMsg.sender === 'partner') && lastMsg.audioUrl && lastMsg.audioUrl !== lastPlayedAudioUrl) {
       console.log("TTS Playing message from audioUrl", { text: lastMsg.text, audioUrl: lastMsg.audioUrl });
       setLastPlayedAudioUrl(lastMsg.audioUrl);
 
