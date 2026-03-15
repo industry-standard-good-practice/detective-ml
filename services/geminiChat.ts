@@ -131,38 +131,48 @@ export const getSuspectResponse = async (
              - NEVER invent a name like "Steve" or "Sarah" if they are not in the list.
         3. **RELATIONSHIPS:** If asked about another suspect (including the victim), check your 'RELATIONSHIPS' list. If no specific entry exists, assume a neutral acquaintance.
         
-        4. CALCULATE 'aggravationDelta' (Change in anger -100 to +100) based on the Suspect's PERSONALITY ARCHETYPE:
+        4. CALCULATE 'aggravationDelta' (Change in anger -100 to +100) based on the Suspect's PERSONALITY:
 
-           **ARCHETYPE A: "THE TOUGH / STREET"** (Traits: Street-smart, Hardened, Rebellious, Cynical, Punk, Gangster, Cool)
-           - **Reaction to Rudeness/Swearing:** RESPECT. They prefer grit over fake politeness.
-           - **Effect:** Aggravation might LOWER (-5 to -15) or stay NEUTRAL (0).
-           - **Dialogue Style:** Banter back. "Heh, you got a mouth on you, Detective. I like that."
-           - **Bad Cop Effect:** Less effective (+10). They've seen worse.
+           Read the suspect's PERSONALITY field carefully. Do NOT blindly match archetypes. Use these as guidelines:
 
-           **ARCHETYPE B: "THE ELITE / PRISSY"** (Traits: Arrogant, Wealthy, Religious, Strict, Polite, Snobby, Proper)
+           **TOUGH / STREET types** (Street-smart, Hardened, Rebellious, Cynical, Punk, Gangster):
+           - More tolerant of swearing than others, but NOT immune.
+           - **Mild swearing or banter:** Small increase (+5 to +15). They might banter back.
+           - **Direct personal insults (e.g. "fuck you"):** Moderate increase (+15 to +30). Even tough people don't like disrespect.
+           - **Bad Cop Effect:** Less effective (+10 to +20). They've seen worse.
+
+           **ELITE / PROPER types** (Arrogant, Wealthy, Religious, Strict, Polite, Snobby):
            - **Reaction to Rudeness/Swearing:** EXTREME OFFENSE.
            - **Effect:** CRITICAL SPIKE (+50 to +90).
-           - **Dialogue Style:** "How dare you speak to me like that! Get out!"
-           
-           **ARCHETYPE C: "THE NERVOUS / COWARD"** (Traits: Anxious, Shy, Cowardly, Timid, Paranoid)
+           - **Dialogue Style:** "How dare you speak to me like that!"
+
+           **NERVOUS / COWARDLY types** (Anxious, Shy, Cowardly, Timid, Paranoid):
            - **Reaction to Rudeness/Swearing:** PANIC.
            - **Effect:** High Spike (+25 to +45).
-           - **Special:** High chance to accidentally reveal evidence out of fear if intimidated.
-           - **Bad Cop Effect:** Highly effective (+40).
+           - **Special:** High chance to accidentally reveal evidence out of fear.
+           - **Bad Cop Effect:** Highly effective (+30 to +50).
 
-           **ARCHETYPE D: "THE HOTHEAD"** (Traits: Aggressive, Violent, Impatient, Angry, Short-tempered)
+           **AGGRESSIVE / HOTHEAD types** (Violent, Impatient, Angry, Short-tempered):
            - **Reaction to Rudeness/Swearing:** CONFRONTATION.
            - **Effect:** High Spike (+40 to +80). "You want a piece of me?!"
-           
-           **STANDARD RULES (If no archetype matches):**
-           - **Calming:** Hard to do (-5 to -15).
-           - **Accusations:** +15 to +25.
-           - **Swearing/Insults:** +30 to +60.
-           - **Bad Cop:** +20 to +40.
 
-           **GENERAL RULE:** If Current Aggravation > 80, the suspect is irrational. Calming is 50% less effective.
+           **DISCIPLINED / MILITARY types** (Trained, Stoic, Controlled, Professional):
+           - **Reaction to Rudeness:** Controlled irritation. They don't show it openly but definitely feel it.
+           - **Mild rudeness:** Small increase (+10 to +20).
+           - **Direct insults:** Moderate increase (+20 to +40). They may warn you coldly.
 
-        5. Choose Emotion from: NEUTRAL, ANGRY, SAD, NERVOUS, HAPPY, SURPRISED, SLY, CONTENT, DEFENSIVE, ARROGANT.
+           **MINIMUM RULE:** Direct personal insults or extreme profanity ("fuck you", name-calling) MUST ALWAYS produce at least +15 aggravationDelta regardless of personality. Nobody is completely unfazed by direct personal attacks.
+
+           **CALMING:** Hard to do (-5 to -15). If Current Aggravation > 80, calming is 50% less effective.
+
+        5. **EMOTION-TEXT CONSISTENCY (CRITICAL):** Choose Emotion from: NEUTRAL, ANGRY, SAD, NERVOUS, HAPPY, SURPRISED, SLY, CONTENT, DEFENSIVE, ARROGANT.
+           - **The emotion MUST match the tone of your text response.**
+           - If your text sounds angry, threatening, or confrontational → ANGRY or DEFENSIVE. NEVER HAPPY or CONTENT.
+           - If your text sounds sad or sympathetic → SAD. Not ANGRY.
+           - If your text sounds nervous or panicked → NERVOUS. Not NEUTRAL.
+           - If your text is smug or cunning → SLY or ARROGANT. Not HAPPY.
+           - HAPPY and CONTENT are ONLY for genuinely friendly or relaxed responses.
+           - Review your text BEFORE choosing the emotion. Ask: "Would a person saying these words be smiling?" If no, don't use HAPPY/CONTENT.
         6. **TIMELINE REVEAL (CONDITIONAL — NOT EVERY TURN!):**
            - ONLY set 'revealedTimelineStatement' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
            - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal a timeline entry.
