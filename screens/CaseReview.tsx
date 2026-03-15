@@ -1440,7 +1440,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   REROLL
                 </RandomizeButton>
                 <RandomizeButton
-                  onClick={() => !isSupportChar && setShowSuspectEditor(true)}
+                  onClick={() => setShowSuspectEditor(true)}
                   disabled={loadingState.visible}
                   style={{ background: '#3b82f6' }}
                 >
