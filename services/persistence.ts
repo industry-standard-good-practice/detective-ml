@@ -11,10 +11,14 @@ export const fetchCommunityCases = async (): Promise<CaseData[]> => {
     if (snapshot.exists()) {
       const data = snapshot.val();
       const allCases = Object.values(data) as CaseData[];
-      // CRITICAL: Only return cases that have been explicitly published AND have a valid author.
-      // Unpublished cases or orphaned cases without an authorId are excluded.
-      const publishedCases = allCases.filter(c => c.isUploaded === true && c.authorId);
-      console.log(`[DEBUG] fetchCommunityCases: Retrieved ${allCases.length} total, ${publishedCases.length} published`);
+      // CRITICAL: Only return cases that are explicitly published, have a valid author ID, and a real display name.
+      const PLACEHOLDER_NAMES = ['unknown author', 'anonymous', ''];
+      const publishedCases = allCases.filter(c => 
+        c.isUploaded === true && 
+        c.authorId && 
+        c.authorDisplayName && 
+        !PLACEHOLDER_NAMES.includes(c.authorDisplayName.trim().toLowerCase())
+      );
       return publishedCases;
     } else {
       console.log("[DEBUG] fetchCommunityCases: No data found");
@@ -122,9 +126,8 @@ const stripUndefined = (obj: any): any => {
 
 export const updateCase = async (caseId: string, updates: Partial<CaseData>): Promise<boolean> => {
   // CRITICAL: Never save a case without an authorId.
-  // The authorId links the case to its creator. Without it, the case is orphaned.
   if (!updates.authorId) {
-    console.error(`[CRITICAL] updateCase: REFUSED save for case ${caseId} — no authorId in updates. This would orphan the case.`);
+    console.error(`[CRITICAL] updateCase: REFUSED save for case ${caseId} — no authorId in updates.`);
     return false;
   }
 
@@ -134,16 +137,22 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
     
     const isMajorUpdate = updates.suspects || updates.title || updates.description || updates.initialEvidence;
     
-    let finalUpdates = { ...updates };
+    // CRITICAL: Strip isUploaded from incoming data.
+    // updateCase NEVER controls publish state — only publishCase can set isUploaded: true.
+    const { isUploaded: _stripped, ...safeUpdates } = updates;
+    let finalUpdates: any = { ...safeUpdates };
 
     const snapshot = await get(caseRef);
     if (snapshot.exists()) {
       const currentData = snapshot.val() as CaseData;
       
-      // CRITICAL: Preserve isUploaded from the existing record.
-      // Only publishCase should set isUploaded to true.
-      if (finalUpdates.isUploaded === undefined) {
-        finalUpdates.isUploaded = currentData.isUploaded || false;
+      // Preserve the existing publish state from the database
+      finalUpdates.isUploaded = currentData.isUploaded || false;
+
+      // GUARD: If somehow published without a valid authorDisplayName, force unpublish
+      if (finalUpdates.isUploaded === true && !currentData.authorDisplayName) {
+        console.warn(`[WARN] updateCase: Case ${caseId} is published but has no authorDisplayName. Forcing isUploaded=false.`);
+        finalUpdates.isUploaded = false;
       }
       
       // Existing case — increment version on major updates
@@ -154,12 +163,10 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
       await update(caseRef, stripUndefined(finalUpdates));
     } else {
       // New case — use set() to create it
-      // CRITICAL: New cases are NEVER published by default
+      // CRITICAL: New cases are NEVER published
       finalUpdates.version = finalUpdates.version || 1;
       finalUpdates.createdAt = finalUpdates.createdAt || Date.now();
-      if (finalUpdates.isUploaded === undefined) {
-        finalUpdates.isUploaded = false;
-      }
+      finalUpdates.isUploaded = false;
       await set(caseRef, stripUndefined(finalUpdates));
     }
 
