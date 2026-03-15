@@ -324,9 +324,19 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   // Merge local drafts + published cases by this user (deduplicated by id)
   const myCases = useMemo(() => {
     const publishedByMe = communityCases.filter(c => c.authorId === userId);
+    const publishedMap = new Map<string, CaseData>();
+    publishedByMe.forEach(c => publishedMap.set(c.id, c));
+    
     const merged = new Map<string, CaseData>();
-    // Add drafts first (they take precedence for display)
-    localDrafts.forEach(d => merged.set(d.id, d));
+    // Add drafts first, but merge heroImageUrl from published version if local is missing
+    localDrafts.forEach(d => {
+      const published = publishedMap.get(d.id);
+      if (published && !d.heroImageUrl && published.heroImageUrl) {
+        merged.set(d.id, { ...d, heroImageUrl: published.heroImageUrl });
+      } else {
+        merged.set(d.id, d);
+      }
+    });
     // Add published cases that aren't already in drafts
     publishedByMe.forEach(c => { if (!merged.has(c.id)) merged.set(c.id, c); });
     return Array.from(merged.values());
