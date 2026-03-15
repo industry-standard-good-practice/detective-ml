@@ -84,8 +84,8 @@ const DockSlot = styled.div<{ $hovered?: boolean }>`
 
 const NotificationBadge = styled.div`
   position: absolute;
-  top: 8%;
-  right: 10px;
+  top: 0;
+  right: 0;
   width: 18px;
   height: 18px;
   background: #0f0;
