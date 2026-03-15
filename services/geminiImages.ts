@@ -67,13 +67,61 @@ const generateImageRaw = async (
             contents: { parts },
             config: { imageConfig: { aspectRatio } }
         });
-        const part = res.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+
+        // Check for safety blocks in the response
+        const candidate = res.candidates?.[0];
+        if (candidate) {
+            const finishReason = candidate.finishReason as string;
+            if (finishReason === 'SAFETY') {
+                const ratings = (candidate as any).safetyRatings;
+                const blocked = ratings?.filter((r: any) => r.blocked)?.map((r: any) => r.category?.replace('HARM_CATEGORY_', '')) || [];
+                throw new Error(`Image blocked by safety filter${blocked.length ? ` (${blocked.join(', ')})` : ''}. Try adjusting the character description.`);
+            }
+            if (finishReason === 'RECITATION') {
+                throw new Error('Image blocked: too similar to existing copyrighted content. Try a more unique description.');
+            }
+            if (finishReason === 'BLOCKLIST') {
+                throw new Error('Image blocked: prompt contains restricted terms. Try rephrasing the character description.');
+            }
+        }
+
+        // Check blockReason on promptFeedback
+        const blockReason = (res as any).promptFeedback?.blockReason;
+        if (blockReason) {
+            throw new Error(`Prompt blocked by safety filter (${blockReason}). Try adjusting the character description.`);
+        }
+
+        const part = candidate?.content?.parts?.find(p => p.inlineData);
         if (part) {
              return part.inlineData.data;
         }
-    } catch (e) {
+
+        // No image returned but no explicit error — may be a silent safety block
+        throw new Error('No image was returned. This is usually caused by a safety filter. Try adjusting the character description or role.');
+    } catch (e: any) {
+        // Classify error by HTTP status or message
+        const status = e?.status || e?.code || e?.httpStatus;
+        const msg = e?.message || String(e);
+
+        if (status === 429 || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('quota')) {
+            throw new Error('Rate limit exceeded — too many image requests. Wait a minute and try again.');
+        }
+        if (status === 401 || status === 403 || msg.includes('PERMISSION_DENIED') || msg.includes('API_KEY_INVALID')) {
+            throw new Error('Authentication error — API key may be invalid or expired.');
+        }
+        if (status >= 500 || msg.includes('INTERNAL') || msg.includes('UNAVAILABLE')) {
+            throw new Error('Google AI server error — the service is temporarily unavailable. Try again in a moment.');
+        }
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ERR_NETWORK')) {
+            throw new Error('Network error — check your internet connection and try again.');
+        }
+        // If the error already has a descriptive message from our checks above, re-throw as-is
+        if (msg.startsWith('Image blocked') || msg.startsWith('Prompt blocked') || msg.startsWith('No image was returned') || msg.startsWith('Rate limit') || msg.startsWith('Reference image')) {
+            throw e;
+        }
+        // Fallback: wrap with context
         console.error("Image Gen Failed", e);
-        throw e; // Re-throw so callers can prevent state updates
+        throw new Error(`Image generation failed: ${msg}`);
     }
     return null;
 }
@@ -124,12 +172,15 @@ const generateEmotionalVariants = async (
 
 const generateForensicVariants = async (
     fullBodyUrl: string,
-    suspect: Suspect
+    suspect: Suspect,
+    onProgress?: (current: number, total: number) => void
 ): Promise<Record<string, string>> => {
     const newPortraits: Record<string, string> = { [Emotion.NEUTRAL]: fullBodyUrl };
     
     // Forensic views
     const views = [Emotion.HEAD, Emotion.TORSO, Emotion.HANDS, Emotion.LEGS];
+    let completed = 0;
+    const total = views.length;
     
     const generateView = async (view: Emotion) => {
         let partPrompt = "";
@@ -153,6 +204,8 @@ const generateForensicVariants = async (
         const prompt = `ZOOM IN: ${partPrompt} Maintain consistent clothing colors and skin tone from reference. Pixel art. ${commonNegative}`;
         // Mode 'edit' to ensure it looks like the same body, just zoomed/cropped/redrawn
         const raw = await generateImageRaw(prompt, '3:4', [fullBodyUrl], 'edit');
+        completed++;
+        onProgress?.(completed, total);
         return raw ? { view, url: `data:image/png;base64,${raw}` } : null;
     };
 
@@ -330,7 +383,13 @@ export const generateSuspectFromUpload = async (suspect: Suspect, userImageBase6
     return { ...suspect, portraits: uploadedPortraits };
 };
 
-export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacter, caseId: string, userId: string, theme: string = "Noir"): Promise<Suspect | SupportCharacter> => {
+export const regenerateSingleSuspect = async (
+    suspect: Suspect | SupportCharacter, 
+    caseId: string, 
+    userId: string, 
+    theme: string = "Noir",
+    onProgress?: (message: string) => void
+): Promise<Suspect | SupportCharacter> => {
     if (!userId) throw new Error('[CRITICAL] regenerateSingleSuspect: userId is required');
     console.log(`[DEBUG] regenerateSingleSuspect: Starting for ${suspect.name} (Theme: ${theme})`);
     const colorDesc = getSuspectColorDescription(suspect.avatarSeed);
@@ -362,34 +421,49 @@ export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacte
         `;
     }
     
+    onProgress?.("Generating base portrait...");
     const refs = STYLE_REF_URL ? [STYLE_REF_URL] : [];
     // Mode 'create' because we are making a NEW base character
     const neutralRaw = await generateImageRaw(basePrompt, '3:4', refs, 'create');
     if (!neutralRaw) throw new Error(`Failed to generate base portrait for ${suspect.name}`);
 
+    onProgress?.("Uploading base portrait...");
     const neutralBase64 = `data:image/png;base64,${neutralRaw}`;
     const neutralUrl = await uploadImage(neutralBase64, `images/${userId}/cases/${caseId}/${folder}/${suspect.id}/neutral.png`);
     
     let emotionPortraits: Record<string, string> = {};
     if (isSuspect && (suspect as Suspect).isDeceased) {
-        emotionPortraits = await generateForensicVariants(neutralBase64, suspect as Suspect);
+        onProgress?.("Generating forensic views...");
+        emotionPortraits = await generateForensicVariants(neutralBase64, suspect as Suspect, (current, total) => {
+            onProgress?.(`Generating forensic views... (${current}/${total})`);
+        });
     } else {
-        emotionPortraits = await generateEmotionalVariants(neutralBase64, suspect.avatarSeed);
+        onProgress?.("Generating emotional variants...");
+        emotionPortraits = await generateEmotionalVariants(neutralBase64, suspect.avatarSeed, (current, total) => {
+            onProgress?.(`Generating emotional variants... (${current}/${total})`);
+        });
     }
 
     // Upload all emotional variants
+    onProgress?.("Uploading variants...");
     const uploadedPortraits: Record<string, string> = {
         [Emotion.NEUTRAL]: neutralUrl
     };
-    for (const [emo, b64] of Object.entries(emotionPortraits)) {
+    const entries = Object.entries(emotionPortraits);
+    let uploaded = 0;
+    for (const [emo, b64] of entries) {
         if (emo === Emotion.NEUTRAL) continue;
         uploadedPortraits[emo] = await uploadImage(b64, `images/${userId}/cases/${caseId}/${folder}/${suspect.id}/${emo}.png`);
+        uploaded++;
+        onProgress?.(`Uploading variants... (${uploaded}/${entries.length - 1})`);
     }
 
     // If deceased, also regenerate hidden evidence to match the new victim body
     if (isSuspect && (suspect as Suspect).isDeceased && (suspect as Suspect).hiddenEvidence) {
         const s = suspect as Suspect;
-        for (const ev of s.hiddenEvidence) {
+        for (let i = 0; i < s.hiddenEvidence.length; i++) {
+            const ev = s.hiddenEvidence[i];
+            onProgress?.(`Regenerating hidden evidence... (${i + 1}/${s.hiddenEvidence.length})`);
             try {
                 const evUrl = await generateEvidenceImage(ev, caseId, userId, neutralBase64);
                 if (evUrl) ev.imageUrl = evUrl;
@@ -400,6 +474,7 @@ export const regenerateSingleSuspect = async (suspect: Suspect | SupportCharacte
         }
     }
 
+    onProgress?.("Complete!");
     return { ...suspect, portraits: uploadedPortraits };
 };
 

@@ -397,12 +397,39 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             <Controls>
               <InputGroup>
                 <Label>What would you like to change?</Label>
-                <TextArea
-                  placeholder="e.g., 'Change his hair to red', 'Add a scar over his left eye', 'Make her wear a detective hat'..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  disabled={isGenerating || isSaving}
-                />
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                  <TextArea
+                    placeholder="e.g., 'Change his hair to red', 'Add a scar over his left eye', 'Make her wear a detective hat'..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    disabled={isGenerating || isSaving}
+                    style={{ paddingBottom: '50px' }}
+                  />
+                  <div style={{
+                    position: 'absolute', bottom: '1px', left: '1px', right: '1px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '6px 8px',
+                    borderRadius: '0 0 11px 11px'
+                  }}>
+                    <Button 
+                      onClick={handleUndo} 
+                      disabled={isGenerating || isSaving || history.length <= 1}
+                      style={{ flex: 'none', padding: '8px 14px', fontSize: '0.8rem' }}
+                    >
+                      <Undo size={14} />
+                      Undo
+                    </Button>
+                    <Button 
+                      $variant="primary" 
+                      onClick={handleEdit} 
+                      disabled={isGenerating || isSaving || !prompt.trim()}
+                      style={{ flex: 'none', width: '36px', height: '36px', padding: 0, borderRadius: '10px' }}
+                      title="Generate Edit"
+                    >
+                      <Wand2 size={16} />
+                    </Button>
+                  </div>
+                </div>
                 {error && (
                   <div style={{ color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                     <AlertCircle size={14} />
@@ -410,21 +437,6 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   </div>
                 )}
               </InputGroup>
-
-              <ButtonGroup>
-                <Button onClick={handleUndo} disabled={isGenerating || isSaving || history.length <= 1}>
-                  <Undo size={16} />
-                  Undo
-                </Button>
-                <Button 
-                  $variant="primary" 
-                  onClick={handleEdit} 
-                  disabled={isGenerating || isSaving || !prompt.trim()}
-                >
-                  <Wand2 size={16} />
-                  Generate Edit
-                </Button>
-              </ButtonGroup>
 
               <ButtonGroup>
                 <Button $variant="danger" onClick={onClose} disabled={isGenerating || isSaving}>

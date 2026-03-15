@@ -125,18 +125,18 @@ const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, onCancel, isLoading
   return (
     <Container>
       <Title>New Investigation</Title>
-      
+
       {!isLoading ? (
         <>
           <p style={{ color: '#888', maxWidth: '600px', textAlign: 'center', fontSize: 'var(--type-body-lg)' }}>
             Describe the crime you want to solve. Be as specific or as vague as you like.
-            <br/><br/>
+            <br /><br />
             <i>"A murder at a jazz club in 1920s New York."</i>
-            <br/>
+            <br />
             <i>"Theft of a cybernetic arm on Mars."</i>
           </p>
-          
-          <PromptInput 
+
+          <PromptInput
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Type your case concept here..."
@@ -158,15 +158,15 @@ const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, onCancel, isLoading
         </>
       ) : (
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <LoadingText>
-                 {loadingStatus || "ANALYZING CRIME SCENE DATA..."}
-            </LoadingText>
-            
-            <ProgressBar />
+          <LoadingText>
+            {loadingStatus || "ANALYZING CRIME SCENE DATA..."}
+          </LoadingText>
 
-            <p style={{ color: '#666', marginTop: '20px', fontStyle: 'italic', maxWidth: '400px' }}>
-              Note: Generating case details and descriptions for every suspect takes quite a bit of time. Please stand by.
-            </p>
+          <ProgressBar />
+
+          <p style={{ color: '#666', marginTop: '20px', fontStyle: 'italic', maxWidth: '400px' }}>
+            Note: Generating case details and descriptions for every suspect takes quite a bit of time. Time for a cup of coffee, Detective. This is gonna take a minute or two.
+          </p>
         </div>
       )}
     </Container>

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
+import toast, { Toaster } from 'react-hot-toast';
 import Markdown from 'react-markdown';
 import { CaseData, Suspect, Emotion, Evidence, Relationship, TimelineEvent } from '../types';
 import { TTS_VOICES, getRandomVoice } from '../constants';
@@ -673,12 +674,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const handleRerollPortrait = async () => {
     if (!activeSuspect) return;
 
-    // If we are in the review screen, we always want to attempt AI regeneration if possible
-    // to ensure high quality portraits.
-    setLoadingState({ visible: true, message: "Generating new identity..." });
+    setLoadingState({ visible: true, message: "Generating base portrait..." });
     try {
       const { regenerateSingleSuspect } = await import('../services/geminiImages');
-      const updatedChar = await regenerateSingleSuspect(activeSuspect as any, draftCase.id, userId!, draftCase.type);
+      const updatedChar = await regenerateSingleSuspect(
+        activeSuspect as any, 
+        draftCase.id, 
+        userId!, 
+        draftCase.type,
+        (progressMsg) => setLoadingState({ visible: true, message: progressMsg })
+      );
 
       if (selectedSuspectId === 'officer') {
         onUpdateDraft({ ...draftCase, officer: updatedChar as any });
@@ -688,8 +693,11 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         const newSuspects = draftCase.suspects.map(s => s.id === updatedChar.id ? updatedChar as any : s);
         onUpdateDraft({ ...draftCase, suspects: newSuspects });
       }
-    } catch (e) {
+      toast.success(`Portrait regenerated for ${activeSuspect.name}!`);
+    } catch (e: any) {
       console.error("Single Reroll Failed", e);
+      const errorMsg = e?.message || 'Unknown error';
+      toast.error(`Portrait generation failed: ${errorMsg}`);
       // Fallback to just changing the seed if AI fails
       handleSuspectChange(activeSuspect.id, 'avatarSeed', Math.floor(Math.random() * 999999));
     } finally {
@@ -713,9 +721,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         const newSuspects = draftCase.suspects.map(s => s.id === updatedChar.id ? updatedChar as any : s);
         onUpdateDraft({ ...draftCase, suspects: newSuspects });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to process image.");
+      const errorMsg = err?.message || 'Unknown error';
+      toast.error(`Image upload failed: ${errorMsg}`);
     } finally {
       setLoadingState({ visible: false, message: '' });
     }
@@ -967,6 +976,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   };
 
   return (
+    <>
     <Container>
       {loadingState.visible && (
         <Overlay>
@@ -1649,14 +1659,15 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     />
                   </InputGroup>
 
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', background: '#200', padding: '10px', border: '1px solid #500' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', background: '#200', padding: '10px', border: '1px solid #500' }} data-cursor="pointer">
                     <input
                       type="checkbox"
                       checked={(activeSuspect as Suspect).isGuilty}
                       onChange={(e) => handleSuspectChange(activeSuspect.id, 'isGuilty', e.target.checked)}
                       style={{ width: '20px', height: '20px' }}
+                      data-cursor="pointer"
                     />
-                    <label style={{ color: '#f55', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <label style={{ color: '#f55', fontWeight: 'bold', cursor: 'pointer' }} data-cursor="pointer">
                       GUILTY
                     </label>
                   </div>
@@ -1792,6 +1803,29 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         />
       )}
     </Container>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#111',
+            color: '#0f0',
+            border: '1px solid #333',
+            fontFamily: "'VT323', monospace",
+            fontSize: '1rem',
+            boxShadow: '0 0 15px rgba(0,255,0,0.1)',
+          },
+          success: {
+            iconTheme: { primary: '#0f0', secondary: '#111' },
+            duration: 3000,
+          },
+          error: {
+            style: { color: '#f55', borderColor: '#500' },
+            iconTheme: { primary: '#f55', secondary: '#111' },
+            duration: 6000,
+          },
+        }}
+      />
+    </>
   );
 };
 
