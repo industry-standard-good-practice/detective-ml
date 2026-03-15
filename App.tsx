@@ -485,11 +485,19 @@ const App: React.FC = () => {
             whisperComment = "Hope that helps.";
         }
 
+        // Generate TTS for the PARTNER's dialogue
+        let partnerAudioUrl: string | null = null;
+        const partnerVoice = currentCase.partner?.voice;
+        if (!isMuted && partnerVoice && partnerVoice !== 'None') {
+            partnerAudioUrl = await generateTTS(partnerDialogue, partnerVoice);
+        }
+
         const partnerMsg: ChatMessage = {
             sender: 'partner',
             text: partnerDialogue,
             timestamp: new Date(newGameTime).toLocaleTimeString(),
-            type: action === 'badCop' ? 'action' : 'talk'
+            type: action === 'badCop' ? 'action' : 'talk',
+            audioUrl: partnerAudioUrl
         };
 
         // Partner clears suggestions for now, as context changes
@@ -508,8 +516,42 @@ const App: React.FC = () => {
         }));
         
 
-
-        // IF Deceased, we don't need a response from the suspect for these actions, the partner just talks.
+        // For deceased suspects: examine/hint should still trigger a narrator response
+        // describing the body examination result (guiding player toward evidence)
+        if (suspect.isDeceased && (action === 'examine' || action === 'hint')) {
+            const examPrompt = action === 'examine' 
+              ? `[PARTNER EXAMINATION]: "${partnerDialogue}". The partner has done an initial visual examination. Describe what is found and guide the detective to look closer at a specific area.`
+              : `[PARTNER HINT]: "${partnerDialogue}". The partner suggests where to look next.`;
+            
+            const examResponse = await getSuspectResponse(
+              suspect, currentCase, examPrompt, 'action', null, 0, false, evidenceDiscovered
+            );
+            
+            let examAudioUrl: string | null = null;
+            if (!isMuted && suspect.voice && suspect.voice !== 'None') {
+                examAudioUrl = await generateTTS(examResponse.text, suspect.voice);
+            }
+            
+            const narratorMsg: ChatMessage = {
+                sender: 'suspect',
+                text: examResponse.text,
+                timestamp: new Date(newGameTime).toLocaleTimeString(),
+                evidence: examResponse.revealedEvidence,
+                isEvidenceCollected: false,
+                audioUrl: examAudioUrl
+            };
+            
+            setGameState(prev => ({
+                ...prev,
+                chatHistory: { ...prev.chatHistory, [currentSuspectId]: [...(prev.chatHistory[currentSuspectId] || []), narratorMsg] },
+                suspectEmotions: { ...prev.suspectEmotions, [currentSuspectId]: examResponse.emotion }
+            }));
+            
+            setThinkingSuspectId(null);
+            return;
+        }
+        
+        // For alive suspects with non-combat partner actions, just return
         if (suspect.isDeceased) {
              setThinkingSuspectId(null);
              return; 
