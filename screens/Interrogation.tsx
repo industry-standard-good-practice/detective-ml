@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
+import toast from 'react-hot-toast';
 import { CaseData, Suspect, ChatMessage, Emotion, Evidence, TimelineStatement } from '../types';
 import SuspectCard from '../components/SuspectCard';
 import SuspectCardDock from '../components/SuspectCardDock';
@@ -1075,7 +1076,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser.");
+      toast.error('Speech recognition is not supported in this browser.');
       return;
     }
 

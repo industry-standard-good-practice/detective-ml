@@ -1,6 +1,7 @@
 import { CaseData, CaseStats } from '../types';
 import { database } from './firebase';
 import { ref, get, set, child, remove, update, runTransaction } from 'firebase/database';
+import toast from 'react-hot-toast';
 
 export const fetchCommunityCases = async (): Promise<CaseData[]> => {
   console.log("[DEBUG] fetchCommunityCases: Fetching published cases only...");
@@ -63,7 +64,7 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
   const finalAuthorId = caseData.authorId || authorId;
   if (!finalAuthorId) {
     console.error('[CRITICAL] publishCase: REFUSED — no authorId available. Case would be orphaned.');
-    alert('Cannot publish: No creator ID found. Please log in and try again.');
+    toast.error('Cannot publish: No creator ID found. Please log in and try again.');
     return false;
   }
 
@@ -71,7 +72,7 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
   const PLACEHOLDER_NAMES = ['unknown author', 'anonymous', ''];
   if (!finalDisplayName || PLACEHOLDER_NAMES.includes(finalDisplayName.trim().toLowerCase())) {
     console.error('[CRITICAL] publishCase: REFUSED — no valid authorDisplayName. Got:', finalDisplayName);
-    alert('Cannot publish: Author display name is missing. Please log in with a valid account.');
+    toast.error('Cannot publish: Author display name is missing. Please log in with a valid account.');
     return false;
   }
 
@@ -91,7 +92,7 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
     return true;
   } catch (error) {
     console.error("[DEBUG] publishCase: Error", error);
-    alert("Failed to upload case. Please check your network connection or API configuration.");
+    toast.error('Failed to upload case. Please check your network connection.');
     return false;
   }
 };

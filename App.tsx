@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import toast, { Toaster } from 'react-hot-toast';
 import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
 import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
 import { generateTTS } from './services/geminiTTS';
@@ -830,7 +831,7 @@ const App: React.FC = () => {
     // CRITICAL: User must be logged in to create a case (enforced by login gate)
     if (!user?.uid) {
         console.error('[CRITICAL] handleGenerateCase: No user logged in!');
-        alert('You must be logged in to create a case.');
+        toast.error('You must be logged in to create a case.');
         return;
     }
     
@@ -855,7 +856,7 @@ const App: React.FC = () => {
         setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_REVIEW }));
     } catch (e: any) {
         console.error("Generation Error:", e);
-        alert(`Case generation failed: ${e.message || "Unknown error"}`);
+        toast.error(`Case generation failed: ${e.message || 'Unknown error'}`);
     } finally {
         setIsGenerating(false);
         setGenerationStatus("");
@@ -868,7 +869,7 @@ const App: React.FC = () => {
     // CRITICAL: Enforce author identity on every save
     if (!user?.uid) {
         console.error('[CRITICAL] handleSaveAndStart: No user logged in!');
-        alert('You must be logged in to save a case.');
+        toast.error('You must be logged in to save a case.');
         return;
     }
     
@@ -886,7 +887,7 @@ const App: React.FC = () => {
         // Persist the edit to the server (case is already published)
         const success = await updateCase(stamped.id, stamped);
         if (!success) {
-            alert("Failed to save changes to the server.");
+            toast.error('Failed to save changes to the server.');
             return;
         }
         // Fetch updated case to get the new version number
@@ -925,7 +926,7 @@ const App: React.FC = () => {
     // CRITICAL: Always stamp authorId before any save
     if (!user?.uid) {
       console.error('[CRITICAL] handleSaveDraftFromHeader: No user logged in!');
-      alert('You must be logged in to save.');
+      toast.error('You must be logged in to save.');
       return;
     }
     
@@ -944,7 +945,11 @@ const App: React.FC = () => {
     const success = await doUpdate(stamped.id, stamped);
     setDraftCase(stamped); // Keep stamped version in state
     setHasUnsavedDraftChanges(false);
-    alert(success ? 'Case saved successfully!' : 'Saved locally as a fallback.');
+    if (success) {
+      toast.success('Case saved successfully!');
+    } else {
+      toast.error('Firebase save failed — saved locally as fallback.');
+    }
   };
 
   const handleEditCase = (caseId?: string | any) => {
@@ -1121,7 +1126,7 @@ const App: React.FC = () => {
 
   const handlePublishDraft = async (caseId: string) => {
     if (!user?.uid) {
-      alert('You must be logged in to publish.');
+      toast.error('You must be logged in to publish.');
       return;
     }
     // Check both local drafts and community cases
@@ -1266,6 +1271,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <>
     <Layout 
       screenState={gameState.currentScreen}
       caseTitle={currentCase?.title}
@@ -1504,6 +1510,29 @@ const App: React.FC = () => {
       )}
       <OnboardingTour />
     </Layout>
+    <Toaster
+      position="bottom-right"
+      toastOptions={{
+        style: {
+          background: '#111',
+          color: '#0f0',
+          border: '1px solid #333',
+          fontFamily: "'VT323', monospace",
+          fontSize: '1rem',
+          boxShadow: '0 0 15px rgba(0,255,0,0.1)',
+        },
+        success: {
+          iconTheme: { primary: '#0f0', secondary: '#111' },
+          duration: 3000,
+        },
+        error: {
+          style: { color: '#f55', borderColor: '#500' },
+          iconTheme: { primary: '#f55', secondary: '#111' },
+          duration: 6000,
+        },
+      }}
+    />
+    </>
   );
 };
 

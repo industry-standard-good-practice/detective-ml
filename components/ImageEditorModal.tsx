@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wand2, Save, Undo, Loader2, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { editImageWithPrompt } from '../services/geminiImages';
 
 const Overlay = styled(motion.div)`
@@ -308,9 +309,11 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       } else {
         setError("Failed to edit image. The AI might have had trouble with your prompt.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("An unexpected error occurred while editing.");
+      const errorMsg = err?.message || 'An unexpected error occurred while editing.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -323,9 +326,10 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       await onSave(currentImageUrl, (current, total) => {
         setSavingProgress({ current, total });
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to save changes.");
+      const errorMsg = err?.message || 'Failed to save changes.';
+      toast.error(`Save failed: ${errorMsg}`);
       setIsSaving(false);
     }
   };

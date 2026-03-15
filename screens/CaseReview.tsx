@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import Markdown from 'react-markdown';
 import { CaseData, Suspect, Emotion, Evidence, Relationship, TimelineEvent } from '../types';
 import { TTS_VOICES, getRandomVoice } from '../constants';
@@ -665,7 +665,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       setShowHeroEditor(false);
     } catch (err) {
       console.error("Hero image upload failed", err);
-      alert("Failed to upload hero image.");
+      toast.error('Failed to upload hero image.');
     } finally {
       setLoadingState({ visible: false, message: '' });
     }
@@ -762,7 +762,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       }
     } catch (e) {
       console.error("Camera access denied", e);
-      alert("Could not access camera. Please check browser permissions.");
+      toast.error('Could not access camera. Please check browser permissions.');
       setShowCamera(false);
     }
   };
@@ -844,39 +844,43 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
   const handleSave = async () => {
     if (!userId) {
-      alert('Cannot save: No user ID. Please log in and try again.');
+      toast.error('Cannot save: No user ID. Please log in and try again.');
       return;
     }
     setLoadingState({ visible: true, message: "Saving case..." });
-    const { updateCase, saveLocalDraft } = await import('../services/persistence');
+    try {
+      const { updateCase, saveLocalDraft } = await import('../services/persistence');
 
-    // CRITICAL: Always stamp authorId before any save
-    const stampedCase = { ...draftCase, authorId: userId };
+      // CRITICAL: Always stamp authorId before any save
+      const stampedCase = { ...draftCase, authorId: userId };
 
-    // Save to Firebase (private unless already published)
-    const success = await updateCase(stampedCase.id, stampedCase);
-    
-    if (!success) {
-      // Fallback to local storage
+      // ALWAYS save locally first as a safety net (prevents data loss)
       saveLocalDraft(stampedCase);
+
+      // Save to Firebase (private unless already published)
+      const success = await updateCase(stampedCase.id, stampedCase);
+
+      // Update the draft in parent state with stamped data
+      onUpdateDraft(stampedCase);
+
+      // Update refs so "unsaved changes" detection resets
+      initialDraftCase.current = stampedCase;
+      baselineRef.current = JSON.parse(JSON.stringify(stampedCase));
+      // Explicitly clear unsaved state (useEffect won't re-run since draftCase didn't change)
+      setHasUnsavedChanges(false);
+      onHasUnsavedChanges?.(false);
+
+      if (success) {
+        toast.success("Case saved successfully!");
+      } else {
+        toast.error("Firebase save failed — saved locally as fallback.");
+      }
+    } catch (err: any) {
+      console.error("[CRITICAL] handleSave error:", err);
+      toast.error(`Save failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setLoadingState({ visible: false, message: '' });
     }
-
-    // Update the draft in parent state with stamped data
-    onUpdateDraft(stampedCase);
-
-    // Update refs so "unsaved changes" detection resets
-    initialDraftCase.current = stampedCase;
-    baselineRef.current = JSON.parse(JSON.stringify(stampedCase));
-    // Explicitly clear unsaved state (useEffect won't re-run since draftCase didn't change)
-    setHasUnsavedChanges(false);
-    onHasUnsavedChanges?.(false);
-
-    if (success) {
-      alert("Case saved successfully!");
-    } else {
-      alert("Saved locally as a fallback.");
-    }
-    setLoadingState({ visible: false, message: '' });
   };
 
   const handleCheckConsistency = async () => {
@@ -890,7 +894,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       setConsistencyModal({ visible: true, report, updatedCase });
     } catch (e) {
       console.error("Consistency Audit Failed:", e);
-      alert("Failed to generate consistency report. Please try again.");
+      toast.error('Failed to generate consistency report. Please try again.');
     } finally {
       setLoadingState({ visible: false, message: '' });
     }
@@ -916,7 +920,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       setEditPrompt(''); // Clear prompt after success
     } catch (e) {
       console.error("Case Transformation Failed:", e);
-      alert("Failed to transform case. Please try again.");
+      toast.error('Failed to transform case. Please try again.');
     } finally {
       setLoadingState({ visible: false, message: '' });
     }
@@ -929,7 +933,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       onUpdateDraft(consistencyModal.updatedCase);
     }
     setConsistencyModal({ visible: false, report: '', updatedCase: null });
-    alert("Changes applied locally. Remember to click 'Save' to persist to the database.");
+    toast.success("Changes applied! Remember to click 'Save' to persist.");
   };
 
   const [voicePreviewUrl, setVoicePreviewUrl] = useState<string | null>(null);
@@ -976,7 +980,6 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   };
 
   return (
-    <>
     <Container>
       {loadingState.visible && (
         <Overlay>
@@ -1803,29 +1806,6 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         />
       )}
     </Container>
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: '#111',
-            color: '#0f0',
-            border: '1px solid #333',
-            fontFamily: "'VT323', monospace",
-            fontSize: '1rem',
-            boxShadow: '0 0 15px rgba(0,255,0,0.1)',
-          },
-          success: {
-            iconTheme: { primary: '#0f0', secondary: '#111' },
-            duration: 3000,
-          },
-          error: {
-            style: { color: '#f55', borderColor: '#500' },
-            iconTheme: { primary: '#f55', secondary: '#111' },
-            duration: 6000,
-          },
-        }}
-      />
-    </>
   );
 };
 
