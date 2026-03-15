@@ -1016,7 +1016,14 @@ const Interrogation: React.FC<InterrogationProps> = ({
     }
 
     // Only play if the chat actually grew (new message received while viewing)
-    if (!chatGrew || !soundEnabled || chatHistory.length === 0) return;
+    if (!chatGrew || chatHistory.length === 0) return;
+
+    // The user is actively viewing this suspect — clear any unread flag immediately
+    if (unreadSuspectIds.has(suspect.id)) {
+      onClearUnread?.(suspect.id);
+    }
+
+    if (!soundEnabled) return;
 
     const lastMsg = chatHistory[chatHistory.length - 1];
 
