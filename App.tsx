@@ -1130,7 +1130,10 @@ const App: React.FC = () => {
 
   const handleToggleFeatured = async (caseId: string, isFeatured: boolean) => {
     if (!isAdmin) return;
-    const success = await updateCase(caseId, { isFeatured });
+    const targetCase = communityCases.find(c => c.id === caseId);
+    const authorId = targetCase?.authorId || user?.uid;
+    if (!authorId) return;
+    const success = await updateCase(caseId, { isFeatured, authorId });
     if (success) {
       setCommunityCases(prev => prev.map(c => c.id === caseId ? { ...c, isFeatured } : c));
     }
