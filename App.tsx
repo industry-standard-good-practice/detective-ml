@@ -193,6 +193,7 @@ const App: React.FC = () => {
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [pendingPublishDraftId, setPendingPublishDraftId] = useState<string | null>(null);
   const [thinkingSuspectId, setThinkingSuspectId] = useState<string | null>(null);
   const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
   const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
@@ -1166,11 +1167,18 @@ const App: React.FC = () => {
     setAllCaseStats(prev => ({ ...prev, [gameState.selectedCaseId!]: stats }));
   };
 
-  const handlePublishDraft = async (caseId: string) => {
+  const handlePublishDraft = (caseId: string) => {
     if (!user?.uid) {
       toast.error('You must be logged in to publish.');
       return;
     }
+    setPendingPublishDraftId(caseId);
+  };
+
+  const executePublishDraft = async () => {
+    const caseId = pendingPublishDraftId;
+    setPendingPublishDraftId(null);
+    if (!caseId || !user?.uid) return;
     // Check both local drafts and community cases
     const draft = localDrafts.find(d => d.id === caseId) || communityCases.find(c => c.id === caseId);
     if (!draft) return;
@@ -1507,6 +1515,25 @@ const App: React.FC = () => {
                 [ Cancel ]
               </ModalButton>
               <ModalButton $variant="confirm" onClick={executePublish}>
+                [ CONFIRM UPLOAD ]
+              </ModalButton>
+            </ButtonRow>
+          </ConfirmBox>
+        </Overlay>
+      )}
+
+      {pendingPublishDraftId && (
+        <Overlay>
+          <ConfirmBox>
+            <WarningTitle>⚠ WARNING ⚠</WarningTitle>
+            <WarningText>
+              Uploading this case to the Network will make it <strong>PUBLICLY AVAILABLE</strong>.
+            </WarningText>
+            <ButtonRow>
+              <ModalButton $variant="cancel" onClick={() => setPendingPublishDraftId(null)}>
+                [ Cancel ]
+              </ModalButton>
+              <ModalButton $variant="confirm" onClick={executePublishDraft}>
                 [ CONFIRM UPLOAD ]
               </ModalButton>
             </ButtonRow>
