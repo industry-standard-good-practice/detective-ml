@@ -53,9 +53,19 @@ const initPatch = () => {
     instance.cursorEl.style.left = x + 'px';
     instance.cursorEl.style.top = y + 'px';
     
-    if (instance.cursorEl.dataset.animecursorHide) {
-      instance.cursorEl.style.display = 'block';
+    // Check if mouse is inside the monitor screen area
+    const targetEl = document.elementFromPoint(x, y) as HTMLElement | null;
+    const insideMonitor = targetEl?.closest('[data-monitor]') !== null;
+    
+    if (!insideMonitor) {
+      // Outside monitor — hide custom cursor, show OS cursor
+      instance.cursorEl.style.display = 'none';
+      document.body.style.cursor = '';
+      return;
     }
+    
+    // Inside monitor — show custom cursor
+    instance.cursorEl.style.display = 'block';
     
     if (instance.debugEl) {
       instance.debugEl.style.left = x + 'px';
@@ -66,7 +76,7 @@ const initPatch = () => {
     
     // Walk up from the target to find data-cursor.
     // Pointer on an ancestor overrides text on a descendant.
-    let el = document.elementFromPoint(x, y) as HTMLElement | null;
+    let el = targetEl;
     while (el && el !== document.body) {
       if (el.dataset?.cursor) {
         const cursorVal = el.dataset.cursor;
@@ -80,7 +90,7 @@ const initPatch = () => {
           nextCursorType = cursorVal;
         }
       }
-      el = el.parentElement;
+      el = el.parentElement as HTMLElement | null;
     }
     
     // Fallback to default

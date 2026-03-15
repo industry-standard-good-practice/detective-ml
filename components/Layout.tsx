@@ -122,6 +122,7 @@ const MainContainer = styled.div`
   justify-content: center;
   position: relative;
   background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+  cursor: auto !important; /* Show OS cursor outside the monitor */
   
   @media (max-width: 768px) {
     background: #000;
@@ -143,6 +144,11 @@ const MonitorBezel = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 10;
+  cursor: none !important; /* Hide OS cursor inside monitor — custom cursor takes over */
+  
+  &, & * {
+    cursor: none !important;
+  }
   
   &::before {
     content: '';
@@ -563,7 +569,7 @@ const Layout: React.FC<LayoutProps> = ({
     <>
       <GlobalStyle />
       <MainContainer>
-        <MonitorBezel>
+        <MonitorBezel data-monitor>
           <Screen $powerState={powerState}>
             <CRTOverlay />
             {!isBooting && (
