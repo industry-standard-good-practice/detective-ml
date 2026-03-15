@@ -58,11 +58,12 @@ const EvidenceBoard = styled.div`
   
   @media (max-width: 768px) {
     padding: 15px;
+    padding-top: 0;
     border: 1px dashed #333;
     background: rgba(0,0,0,0.2);
-    overflow-y: visible; /* Scroll handled by parent MobileContentArea */
-    flex: none; 
-    min-height: 100%; /* Ensure it spans at least full height of scroll area */
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
   }
 `;
 
@@ -581,15 +582,15 @@ const TabItem = styled.button<{ $active: boolean }>`
   text-transform: uppercase;
 `;
 
-const MobileContentArea = styled.div<{ $noPadding?: boolean }>`
+const MobileContentArea = styled.div<{ $noPadding?: boolean; $noScroll?: boolean }>`
   display: none;
   @media (max-width: 768px) {
     display: flex;
     flex: 1;
     flex-direction: column;
-    overflow-y: auto;
+    overflow-y: ${props => props.$noScroll ? 'hidden' : 'auto'};
     padding: ${props => props.$noPadding ? '0' : '10px'};
-    gap: 15px;
+    gap: ${props => props.$noScroll ? '0' : '15px'};
     min-height: 0; /* CRITICAL: Enables proper scrolling in flex child */
   }
 `;
@@ -641,15 +642,15 @@ interface CaseHubProps {
   unreadSuspectIds?: Set<string>;
 }
 
-const CaseHub: React.FC<CaseHubProps> = ({ 
-  caseData, 
-  evidenceDiscovered, 
+const CaseHub: React.FC<CaseHubProps> = ({
+  caseData,
+  evidenceDiscovered,
   timelineStatements,
-  notes, 
-  officerHintsRemaining, 
+  notes,
+  officerHintsRemaining,
   officerHistory,
   isThinking,
-  onStartInterrogation, 
+  onStartInterrogation,
   onNavigate,
   onSendOfficerMessage,
   unreadSuspectIds = new Set()
@@ -700,126 +701,135 @@ const CaseHub: React.FC<CaseHubProps> = ({
   return (
     <HubContainer>
       <LayoutGroup>
-      {/* MOBILE TABS */}
-      <MobileTabBar id="mobile-tab-bar">
-        <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
-        <TabItem $active={activeMobileTab === 'FILES'} onClick={() => setActiveMobileTab('FILES')}>FILES</TabItem>
-        <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
-        <TabItem $active={activeMobileTab === 'SUSPECTS'} onClick={() => setActiveMobileTab('SUSPECTS')}>SUSPECTS</TabItem>
-      </MobileTabBar>
+        {/* MOBILE TABS */}
+        <MobileTabBar id="mobile-tab-bar">
+          <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
+          <TabItem $active={activeMobileTab === 'FILES'} onClick={() => setActiveMobileTab('FILES')}>BRIEF</TabItem>
+          <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
+          <TabItem $active={activeMobileTab === 'SUSPECTS'} onClick={() => setActiveMobileTab('SUSPECTS')}>SUSPECTS</TabItem>
+        </MobileTabBar>
 
-      {/* MOBILE CONTENT RENDERER */}
-      <MobileContentArea $noPadding={activeMobileTab === 'SUSPECTS'}>
-        {activeMobileTab === 'BOARD' && (
-            <EvidenceBoard id="evidence-board-mobile">
+        {/* MOBILE CONTENT RENDERER */}
+        <MobileContentArea $noPadding={activeMobileTab === 'SUSPECTS'} $noScroll={activeMobileTab === 'BOARD'}>
+          {activeMobileTab === 'BOARD' && (
+            <>
+              <EvidenceBoard id="evidence-board-mobile">
                 <h2 style={{ color: '#aaa', borderBottom: '1px dashed #444', paddingBottom: '10px' }}>
-                    EVIDENCE BOARD
+                  EVIDENCE BOARD
                 </h2>
                 <EvidenceGrid>
-                    {evidenceDiscovered.map((ev, i) => (
-                      <EvidenceItemBase key={ev.id || i}>
-                        <PolaroidImage $src={ev.imageUrl}>
-                            {!ev.imageUrl && 'No IMG'}
-                        </PolaroidImage>
-                        <PolaroidText>
-                            <strong>{ev.title}</strong>
-                            <span>{ev.description}</span>
-                        </PolaroidText>
-                      </EvidenceItemBase>
-                    ))}
-                    {Object.entries(notes).flatMap(([sId, noteList]) => 
-                        (noteList as string[]).map((n, i) => (
-                            <NoteItem key={`note-${sId}-${i}`}>
-                                <strong>{caseData.suspects.find(s=>s.id === sId)?.name}</strong>
-                                {n}
-                            </NoteItem>
-                        ))
-                    )}
+                  {evidenceDiscovered.map((ev, i) => (
+                    <EvidenceItemBase key={ev.id || i}>
+                      <PolaroidImage $src={ev.imageUrl}>
+                        {!ev.imageUrl && 'No IMG'}
+                      </PolaroidImage>
+                      <PolaroidText>
+                        <strong>{ev.title}</strong>
+                        <span>{ev.description}</span>
+                      </PolaroidText>
+                    </EvidenceItemBase>
+                  ))}
+                  {Object.entries(notes).flatMap(([sId, noteList]) =>
+                    (noteList as string[]).map((n, i) => (
+                      <NoteItem key={`note-${sId}-${i}`}>
+                        <strong>{caseData.suspects.find(s => s.id === sId)?.name}</strong>
+                        {n}
+                      </NoteItem>
+                    ))
+                  )}
                 </EvidenceGrid>
-            </EvidenceBoard>
-        )}
-
-        {activeMobileTab === 'FILES' && (
-            <BriefingWidget>
-                <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <h3>Mission Briefing</h3>
-                    <div className="tags">
-                       <Tag>{caseData.type}</Tag>
-                       <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
-                    </div>
-                    <p>{caseData.description}</p>
-                </div>
-            </BriefingWidget>
-        )}
-
-        {activeMobileTab === 'HQ' && (
-            <>
-                <ChiefWidget>
-                    <ChiefStatus>
-                        <img src={officerPortrait} alt={officerName} />
-                        <div>
-                            <span style={{ fontWeight: 'bold' }}>{officerName.toUpperCase()}</span>
-                            <span style={{ color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
-                                BATT: {officerHintsRemaining * 10}%
-                            </span>
-                        </div>
-                    </ChiefStatus>
-                    <SecureLineButton id="secure-line-mobile" onClick={() => setIsChatOpen(true)}>
-                        [SECURE LINE]
-                    </SecureLineButton>
-                </ChiefWidget>
-                <TimelineButton id="timeline-button-mobile" onClick={() => setIsTimelineOpen(true)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    TIMELINE
-                </TimelineButton>
-                <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>
-                    MAKE ACCUSATION
-                </AccuseButton>
+              </EvidenceBoard>
+              <TimelineButton id="timeline-button-mobile-board" onClick={() => setIsTimelineOpen(true)} style={{ flexShrink: 0 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                TIMELINE ({timelineStatements.length})
+              </TimelineButton>
             </>
-        )}
+          )}
 
-        {activeMobileTab === 'SUSPECTS' && (
+          {activeMobileTab === 'FILES' && (
+            <BriefingWidget>
+              <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3>Mission Briefing</h3>
+                <div className="tags">
+                  <Tag>{caseData.type}</Tag>
+                  <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
+                </div>
+                <p>{caseData.description}</p>
+              </div>
+            </BriefingWidget>
+          )}
+
+          {activeMobileTab === 'HQ' && (
+            <>
+              <ChiefWidget>
+                <ChiefStatus>
+                  <img src={officerPortrait} alt={officerName} />
+                  <div>
+                    <span style={{ fontWeight: 'bold' }}>{officerName.toUpperCase()}</span>
+                    <span style={{ color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
+                      BATT: {officerHintsRemaining * 10}%
+                    </span>
+                  </div>
+                </ChiefStatus>
+                <SecureLineButton id="secure-line-mobile" onClick={() => setIsChatOpen(true)}>
+                  [SECURE LINE]
+                </SecureLineButton>
+              </ChiefWidget>
+              <TimelineButton id="timeline-button-mobile" onClick={() => setIsTimelineOpen(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                TIMELINE
+              </TimelineButton>
+              <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>
+                MAKE ACCUSATION
+              </AccuseButton>
+            </>
+          )}
+
+          {activeMobileTab === 'SUSPECTS' && (
             <MobileCarousel id="suspect-cards-container-mobile">
-                {caseData.suspects.map(s => (
-                    <CarouselSnapItem key={s.id}>
-                        <SuspectCard 
-                            suspect={s} 
-                            width="280px" 
-                            height="450px" 
-                            variant="default"
-                            onAction={() => {
-                              completeStep(OnboardingStep.SUSPECT_CARDS, true);
-                              onStartInterrogation(s.id);
-                            }}
-                            actionLabel="INTERROGATE"
-                        />
-                    </CarouselSnapItem>
-                ))}
+              {caseData.suspects.map(s => (
+                <CarouselSnapItem key={s.id}>
+                  <SuspectCard
+                    suspect={s}
+                    width="280px"
+                    height="450px"
+                    variant="default"
+                    onAction={() => {
+                      completeStep(OnboardingStep.SUSPECT_CARDS, true);
+                      onStartInterrogation(s.id);
+                    }}
+                    actionLabel="INTERROGATE"
+                  />
+                </CarouselSnapItem>
+              ))}
             </MobileCarousel>
-        )}
-      </MobileContentArea>
+          )}
+        </MobileContentArea>
 
-      {/* DESKTOP LAYOUT */}
-      <BoardSection>
-        <MainLayout>
-          <EvidenceBoard id="evidence-board">
-            <h2 style={{ 
-                marginTop: 0, 
-                marginBottom: '20px', 
-                fontSize: 'var(--type-h3)', 
-                color: '#aaa', 
-                borderBottom: '1px dashed #444', 
+        {/* DESKTOP LAYOUT */}
+        <BoardSection>
+          <MainLayout>
+            <EvidenceBoard id="evidence-board">
+              <h2 style={{
+                marginTop: 0,
+                marginBottom: '20px',
+                fontSize: 'var(--type-h3)',
+                color: '#aaa',
+                borderBottom: '1px dashed #444',
                 paddingBottom: '10px',
                 fontWeight: 'normal'
-            }}>
+              }}>
                 EVIDENCE BOARD: <span style={{ color: '#fff', fontWeight: 'bold' }}>{caseData.title.toUpperCase()}</span>
-            </h2>
+              </h2>
 
-            <EvidenceGrid>
-              {evidenceDiscovered.map((ev, i) => {
+              <EvidenceGrid>
+                {evidenceDiscovered.map((ev, i) => {
                   const eKey = `ev-desktop-${ev.id || i}`;
                   const isSelected = selectedEvidenceId === eKey;
                   return (
@@ -836,57 +846,57 @@ const CaseHub: React.FC<CaseHubProps> = ({
                       }}
                     >
                       <PolaroidImage $src={ev.imageUrl}>
-                          {!ev.imageUrl && 'No IMG'}
+                        {!ev.imageUrl && 'No IMG'}
                       </PolaroidImage>
                       <PolaroidText>
-                          <strong>{ev.title}</strong>
-                          <span>{ev.description}</span>
+                        <strong>{ev.title}</strong>
+                        <span>{ev.description}</span>
                       </PolaroidText>
                     </EvidenceItemBase>
                   );
-              })}
-               {Object.entries(notes).flatMap(([sId, noteList]) => 
+                })}
+                {Object.entries(notes).flatMap(([sId, noteList]) =>
                   (noteList as string[]).map((n, i) => (
                     <NoteItem key={`note-${sId}-${i}`} style={{ transform: `rotate(${Math.random() * 6 - 3}deg)` }}>
-                      <strong>Note on {caseData.suspects.find(s=>s.id === sId)?.name}</strong>
+                      <strong>Note on {caseData.suspects.find(s => s.id === sId)?.name}</strong>
                       {n}
                     </NoteItem>
                   ))
-               )}
-            </EvidenceGrid>
-          </EvidenceBoard>
+                )}
+              </EvidenceGrid>
+            </EvidenceBoard>
 
-          <SidePanel>
-          <BriefingWidget>
+            <SidePanel>
+              <BriefingWidget>
                 <div id="mission-briefing" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <h3>Mission Briefing</h3>
-                    <div className="tags">
-                       <Tag>{caseData.type}</Tag>
-                       <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
-                    </div>
-                    <p>{caseData.description}</p>
+                  <h3>Mission Briefing</h3>
+                  <div className="tags">
+                    <Tag>{caseData.type}</Tag>
+                    <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
+                  </div>
+                  <p>{caseData.description}</p>
                 </div>
               </BriefingWidget>
-              
+
               <ChiefWidget>
-                  <ChiefStatus>
-                    <img src={officerPortrait} alt={officerName} />
-                    <div>
-                      <span style={{ fontWeight: 'bold', fontSize: 'var(--type-body)' }}>{officerName.toUpperCase()}</span>
-                      <span style={{ fontSize: 'var(--type-small)', color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
-                        BATT: {officerHintsRemaining * 10}%
-                      </span>
-                    </div>
-                  </ChiefStatus>
-                  <SecureLineButton id="secure-line" onClick={() => setIsChatOpen(true)}>
-                    [SECURE LINE]
-                  </SecureLineButton>
+                <ChiefStatus>
+                  <img src={officerPortrait} alt={officerName} />
+                  <div>
+                    <span style={{ fontWeight: 'bold', fontSize: 'var(--type-body)' }}>{officerName.toUpperCase()}</span>
+                    <span style={{ fontSize: 'var(--type-small)', color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
+                      BATT: {officerHintsRemaining * 10}%
+                    </span>
+                  </div>
+                </ChiefStatus>
+                <SecureLineButton id="secure-line" onClick={() => setIsChatOpen(true)}>
+                  [SECURE LINE]
+                </SecureLineButton>
               </ChiefWidget>
 
               <TimelineButton id="timeline-button" onClick={() => setIsTimelineOpen(true)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
                 TIMELINE
               </TimelineButton>
@@ -894,91 +904,91 @@ const CaseHub: React.FC<CaseHubProps> = ({
               <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>
                 MAKE ACCUSATION
               </AccuseButton>
-          </SidePanel>
-        </MainLayout>
+            </SidePanel>
+          </MainLayout>
 
-      </BoardSection>
+        </BoardSection>
 
-      <SuspectCardDock
-        suspects={caseData.suspects}
-        onSelectSuspect={(id) => {
-          completeStep(OnboardingStep.SUSPECT_CARDS, true);
-          onStartInterrogation(id);
-        }}
-        inactiveActionLabel="TALK"
-        unreadSuspectIds={unreadSuspectIds}
-        onFlipCard={(flipped) => {
-          if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
-        }}
-      />
-
-      {isChatOpen && (
-        <ModalOverlay>
-          <ChatModal>
-            <ChatHeader>
-              <span>SECURE LINE: {officerRole.toUpperCase()}</span>
-              <CloseButton onClick={() => setIsChatOpen(false)}>[X]</CloseButton>
-            </ChatHeader>
-            <ChatLog ref={logRef}>
-              {officerHistory.map((msg, i) => (
-                <OfficerBubble key={i} $sender={msg.sender as 'player' | 'officer'}>
-                  <div className="name">{msg.sender === 'player' ? 'DETECTIVE' : officerName.toUpperCase()}</div>
-                  {msg.text}
-                </OfficerBubble>
-              ))}
-              {isThinking && <div style={{ color: '#555', fontStyle: 'italic' }}>Incoming transmission...</div>}
-              {officerHintsRemaining <= 0 && <div style={{ color: '#b00', textAlign: 'center' }}>[CONNECTION LOST - BATTERY DEPLETED]</div>}
-            </ChatLog>
-            <InputZone>
-              <ChatInput 
-                value={inputVal}
-                onChange={e => setInputVal(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder={officerHintsRemaining > 0 ? "Ask for guidance..." : "Connection lost."}
-                disabled={officerHintsRemaining <= 0 || isThinking}
-              />
-              <SendButton onClick={handleSend} disabled={officerHintsRemaining <= 0 || isThinking}>
-                SEND
-              </SendButton>
-            </InputZone>
-          </ChatModal>
-        </ModalOverlay>
-      )}
-
-      {isTimelineOpen && (
-        <TimelineModal 
-          statements={timelineStatements} 
-          suspects={caseData.suspects} 
-          onClose={() => setIsTimelineOpen(false)} 
+        <SuspectCardDock
+          suspects={caseData.suspects}
+          onSelectSuspect={(id) => {
+            completeStep(OnboardingStep.SUSPECT_CARDS, true);
+            onStartInterrogation(id);
+          }}
+          inactiveActionLabel="TALK"
+          unreadSuspectIds={unreadSuspectIds}
+          onFlipCard={(flipped) => {
+            if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
+          }}
         />
-      )}
 
-      {/* EVIDENCE LIGHTBOX */}
-      <AnimatePresence>
-        {selectedEvidenceId && lightboxEvidence && (
-          <LightboxOverlay
-            key="lightbox-overlay"
-            initial={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
-            animate={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
-            exit={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
-            transition={{ duration: 0.25 }}
-            onClick={closeLightbox}
-          >
-            <LightboxClose onClick={closeLightbox}>[CLOSE]</LightboxClose>
-            <LightboxCardWrapper
-              layoutId={selectedEvidenceId}
-              onClick={e => e.stopPropagation()}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            >
-              <LightboxImage $src={lightboxEvidence.imageUrl} />
-              <LightboxText>
-                <strong>{lightboxEvidence.title}</strong>
-                <span>{lightboxEvidence.description}</span>
-              </LightboxText>
-            </LightboxCardWrapper>
-          </LightboxOverlay>
+        {isChatOpen && (
+          <ModalOverlay>
+            <ChatModal>
+              <ChatHeader>
+                <span>SECURE LINE: {officerRole.toUpperCase()}</span>
+                <CloseButton onClick={() => setIsChatOpen(false)}>[X]</CloseButton>
+              </ChatHeader>
+              <ChatLog ref={logRef}>
+                {officerHistory.map((msg, i) => (
+                  <OfficerBubble key={i} $sender={msg.sender as 'player' | 'officer'}>
+                    <div className="name">{msg.sender === 'player' ? 'DETECTIVE' : officerName.toUpperCase()}</div>
+                    {msg.text}
+                  </OfficerBubble>
+                ))}
+                {isThinking && <div style={{ color: '#555', fontStyle: 'italic' }}>Incoming transmission...</div>}
+                {officerHintsRemaining <= 0 && <div style={{ color: '#b00', textAlign: 'center' }}>[CONNECTION LOST - BATTERY DEPLETED]</div>}
+              </ChatLog>
+              <InputZone>
+                <ChatInput
+                  value={inputVal}
+                  onChange={e => setInputVal(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                  placeholder={officerHintsRemaining > 0 ? "Ask for guidance..." : "Connection lost."}
+                  disabled={officerHintsRemaining <= 0 || isThinking}
+                />
+                <SendButton onClick={handleSend} disabled={officerHintsRemaining <= 0 || isThinking}>
+                  SEND
+                </SendButton>
+              </InputZone>
+            </ChatModal>
+          </ModalOverlay>
         )}
-      </AnimatePresence>
+
+        {isTimelineOpen && (
+          <TimelineModal
+            statements={timelineStatements}
+            suspects={caseData.suspects}
+            onClose={() => setIsTimelineOpen(false)}
+          />
+        )}
+
+        {/* EVIDENCE LIGHTBOX */}
+        <AnimatePresence>
+          {selectedEvidenceId && lightboxEvidence && (
+            <LightboxOverlay
+              key="lightbox-overlay"
+              initial={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
+              animate={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+              exit={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
+              transition={{ duration: 0.25 }}
+              onClick={closeLightbox}
+            >
+              <LightboxClose onClick={closeLightbox}>[CLOSE]</LightboxClose>
+              <LightboxCardWrapper
+                layoutId={selectedEvidenceId}
+                onClick={e => e.stopPropagation()}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
+                <LightboxImage $src={lightboxEvidence.imageUrl} />
+                <LightboxText>
+                  <strong>{lightboxEvidence.title}</strong>
+                  <span>{lightboxEvidence.description}</span>
+                </LightboxText>
+              </LightboxCardWrapper>
+            </LightboxOverlay>
+          )}
+        </AnimatePresence>
       </LayoutGroup>
     </HubContainer>
   );
