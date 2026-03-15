@@ -197,12 +197,7 @@ const App: React.FC = () => {
     }, 600);
   };
 
-  // Load voices on mount
-  useEffect(() => {
-    const loadVoices = () => window.speechSynthesis.getVoices();
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-  }, []);
+
 
   // Handle Auth
   useEffect(() => {
@@ -251,49 +246,7 @@ const App: React.FC = () => {
     setLocalDrafts(fetchLocalDrafts());
   };
 
-  useEffect(() => {
-    window.speechSynthesis.cancel();
-  }, [gameState.currentScreen, gameState.currentSuspectId, isMuted]);
 
-  // --- AUDIO HELPER ---
-  const playCharacterVoice = (text: string, characterId: string, voiceName?: string) => {
-    if (isMuted || !window.speechSynthesis || voiceName === 'None') return;
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) return;
-
-    const qualityKeywords = ['Google', 'Microsoft', 'Natural', 'Premium', 'Enhanced'];
-    const preferredVoices = voices.filter(v => 
-      v.lang.startsWith('en') && 
-      qualityKeywords.some(keyword => v.name.includes(keyword))
-    );
-    const fallbackVoices = voices.filter(v => v.lang.startsWith('en'));
-    const targetPool = preferredVoices.length > 0 ? preferredVoices : (fallbackVoices.length > 0 ? fallbackVoices : voices);
-
-    const hash = characterId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const voiceIndex = hash % targetPool.length;
-    
-    utterance.voice = targetPool[voiceIndex];
-
-    if (characterId === 'officer') {
-      utterance.pitch = 0.9;
-      utterance.rate = 1.05;
-    } else if (characterId === 'partner') {
-      utterance.pitch = 1.2;
-      utterance.rate = 1.1;
-    } else if (characterId === 'system') {
-      utterance.pitch = 0.5;
-      utterance.rate = 1.0;
-    } else {
-      const normHash = (hash % 100) / 100; 
-      utterance.pitch = 0.95 + (normHash * 0.2); 
-      utterance.rate = 0.95 + ((hash % 10) / 50); 
-    }
-    
-    window.speechSynthesis.speak(utterance);
-  };
 
   // --- HELPERS ---
 
@@ -493,7 +446,7 @@ const App: React.FC = () => {
           suspectSuggestions: { ...prev.suspectSuggestions, [currentSuspectId]: [] } // Clear persisted
         }));
         
-        playCharacterVoice(partnerDialogue, 'partner', currentCase.partner.voice);
+
 
         // IF Deceased, we don't need a response from the suspect for these actions, the partner just talks.
         if (suspect.isDeceased) {
@@ -527,8 +480,8 @@ const App: React.FC = () => {
 
         // Generate TTS Audio
         let audioUrl: string | null = null;
-        if (!isMuted && suspect.voice !== 'None') {
-            audioUrl = await generateTTS(suspectMsg.text, suspect.voice || 'Kore');
+        if (!isMuted && suspect.voice && suspect.voice !== 'None') {
+            audioUrl = await generateTTS(suspectMsg.text, suspect.voice);
         }
 
         let finalWhisper = whisperComment;
@@ -566,8 +519,6 @@ const App: React.FC = () => {
         if (audioUrl) {
             const audio = new Audio(audioUrl);
             audio.play().catch(e => console.error("Audio playback failed", e));
-        } else if (!isMuted && suspect.voice !== 'None') {
-            playCharacterVoice(suspectMsg.text, suspect.id, suspect.voice);
         }
 
     } catch (e: any) {
@@ -663,8 +614,8 @@ const App: React.FC = () => {
 
       // Generate TTS Audio
       let audioUrl: string | null = null;
-      if (!isMuted && currentSuspect.voice !== 'None') {
-          audioUrl = await generateTTS(finalMsgText, currentSuspect.voice || 'Kore');
+      if (!isMuted && currentSuspect.voice && currentSuspect.voice !== 'None') {
+          audioUrl = await generateTTS(finalMsgText, currentSuspect.voice);
       }
       
       const suspectMsg: ChatMessage = { 
@@ -715,8 +666,6 @@ const App: React.FC = () => {
       if (audioUrl) {
           const audio = new Audio(audioUrl);
           audio.play().catch(e => console.error("Audio playback failed", e));
-      } else if (!isMuted && currentSuspect.voice !== 'None') {
-          playCharacterVoice(finalMsgText, currentSuspect.id, currentSuspect.voice);
       }
 
       setCurrentSuggestions(response.hints);
@@ -764,7 +713,7 @@ const App: React.FC = () => {
         gameState.chatHistory 
       );
       
-      playCharacterVoice(responseText, 'officer', currentCase.officer.voice);
+
       
       const officerMsg: ChatMessage = { sender: 'officer', text: responseText, timestamp: new Date(newGameTime).toLocaleTimeString() };
       

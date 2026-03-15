@@ -938,7 +938,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const isMounted = useRef(true);
 
   useEffect(() => {
-    voiceRef.current = suspect.voice || 'Zephyr';
+    voiceRef.current = suspect.voice || null;
   }, [suspect.id]);
 
   useEffect(() => {

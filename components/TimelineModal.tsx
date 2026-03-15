@@ -1,8 +1,13 @@
 
 import React from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { TimelineStatement, Suspect } from '../types';
 import SuspectPortrait from './SuspectPortrait';
+
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -75,7 +80,7 @@ const ScrollContent = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
   min-height: 100%;
   padding: 30px 20px;
   box-sizing: border-box;
@@ -93,7 +98,7 @@ const ScrollContent = styled.div`
     width: 2px;
     background: #415a77;
     transform: translateX(-50%);
-    z-index: 1;
+    z-index: 0;
     
     @media (max-width: 600px) {
       left: 20px;
@@ -101,81 +106,144 @@ const ScrollContent = styled.div`
   }
 `;
 
-const TimelineItem = styled.div<{ $side: 'left' | 'right' }>`
-  display: flex;
-  justify-content: ${props => props.$side === 'left' ? 'flex-end' : 'flex-start'};
-  width: 50%;
-  align-self: ${props => props.$side === 'left' ? 'flex-start' : 'flex-end'};
-  position: relative;
-  padding: 0 30px;
+/* --- Time group: a cluster of events that share the same timestamp --- */
 
-  &::after {
-    content: '';
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    background: #0f0;
-    border-radius: 50%;
-    top: 20px;
-    ${props => props.$side === 'left' ? 'right: -6px;' : 'left: -6px;'}
-    box-shadow: 0 0 10px #0f0;
-    z-index: 2;
-  }
+const TimeGroup = styled.div`
+  position: relative;
+  margin-bottom: 30px;
+  animation: ${fadeIn} 0.3s ease-out both;
+`;
+
+const TimeGroupLabel = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 3;
+  margin-bottom: 12px;
 
   @media (max-width: 600px) {
-    width: 100%;
-    display: block;
-    align-self: flex-start;
-    padding-left: 40px;
-    padding-right: 10px;
-    box-sizing: border-box;
-
-    &::after {
-      left: 4px;
-      right: auto;
-    }
+    align-items: flex-start;
+    padding-left: 10px;
   }
 `;
 
-const StatementCard = styled.div`
-  background: #1b263b;
-  border: 1px solid #415a77;
-  padding: 15px;
-  border-radius: 4px;
-  width: 100%;
+const TimeBadge = styled.div`
+  background: #0d1b2a;
+  color: #0f0;
+  border: 1px solid #0f0;
+  padding: 4px 16px;
+  font-family: 'VT323', monospace;
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.15);
+  position: relative;
+  z-index: 3;
+  margin-bottom: 6px;
+
+  @media (max-width: 600px) {
+    font-size: 1.1rem;
+    padding: 3px 12px;
+  }
+`;
+
+const TimeStem = styled.div`
+  width: 2px;
+  height: 14px;
+  background: #0f0;
+  opacity: 0.5;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+`;
+
+const TimeGroupDot = styled.div`
+  width: 14px;
+  height: 14px;
+  background: #0f0;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #0f0;
+  z-index: 2;
+  flex-shrink: 0;
+
+  @media (max-width: 600px) {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+`;
+
+const EventsRow = styled.div`
+  display: flex;
+  gap: 20px;
+  position: relative;
+  padding: 0 30px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    padding-left: 40px;
+    padding-right: 10px;
+    gap: 10px;
+  }
+`;
+
+const LeftEvents = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  gap: 8px;
+  align-items: flex-end;
+
+  @media (max-width: 600px) {
+    align-items: flex-start;
+  }
+`;
+
+const RightEvents = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+`;
+
+/* Invisible spacer so groups stay balanced */
+const Spacer = styled.div`
+  flex: 1;
+  @media (max-width: 600px) { display: none; }
+`;
+
+const StatementCard = styled.div<{ $isInitial?: boolean }>`
+  background: #1b263b;
+  border: 1px solid #415a77;
+  ${props => props.$isInitial ? 'border-left: 4px solid #0f0;' : ''}
+  padding: 12px 15px;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 `;
 
 const CardHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  border-bottom: 1px solid #415a77;
-  padding-bottom: 8px;
-`;
-
-const TimeLabel = styled.div`
-  font-family: 'VT323', monospace;
-  color: #0f0;
-  font-size: 1.2rem;
-
-  @media (max-width: 600px) {
-    font-size: 1rem;
-  }
+  gap: 8px;
 `;
 
 const SuspectInfo = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  
+
   span {
     font-weight: bold;
     color: #fff;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 `;
 
@@ -184,6 +252,7 @@ const StatementText = styled.p`
   color: #e0e1dd;
   font-style: italic;
   line-height: 1.4;
+  font-size: 0.95rem;
 `;
 
 const EmptyState = styled.div`
@@ -211,6 +280,36 @@ interface TimelineModalProps {
   onClose: () => void;
 }
 
+/**
+ * Parse any common time format to a sortable minute-of-day value.
+ * Supports: "8:00 PM", "20:00", "8:00pm", "20:00 GTS", etc.
+ */
+const parseTimeToMinutes = (t: string): number => {
+  if (!t) return -1;
+  const cleaned = t.trim();
+
+  // Try 12-hour: "8:00 PM", "8:00pm", "8:00 pm"
+  const match12 = cleaned.match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i);
+  if (match12) {
+    let h = parseInt(match12[1]);
+    const m = parseInt(match12[2]);
+    const isPm = match12[3].toLowerCase() === 'pm';
+    if (isPm && h < 12) h += 12;
+    if (!isPm && h === 12) h = 0;
+    return h * 60 + m;
+  }
+
+  // Try 24-hour: "20:00", "20:45", "08:30 GTS"
+  const match24 = cleaned.match(/^(\d{1,2}):(\d{2})/);
+  if (match24) {
+    const h = parseInt(match24[1]);
+    const m = parseInt(match24[2]);
+    return h * 60 + m;
+  }
+
+  return -1;
+};
+
 const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose }) => {
   // Combine discovered statements with initial timeline events
   const allEvents = [
@@ -219,30 +318,65 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
       time: s.time,
       text: s.statement,
       suspectId: s.suspectId,
+      suspectName: s.suspectName,
       isInitial: false
     })),
     ...initialTimeline.map((e, idx) => ({
       id: `initial-${idx}`,
       time: e.time,
       text: e.statement,
-      suspectId: null,
+      suspectId: null as string | null,
+      suspectName: null as string | null,
       isInitial: true
     }))
   ];
 
-  const sortedEvents = allEvents.sort((a, b) => {
-    const getTimeVal = (t: string) => {
-        const match = t.match(/(\d+):(\d+)\s*(am|pm)/i);
-        if (!match) return 0;
-        let h = parseInt(match[1]);
-        const m = parseInt(match[2]);
-        const isPm = match[3].toLowerCase() === 'pm';
-        if (isPm && h < 12) h += 12;
-        if (!isPm && h === 12) h = 0;
-        return h * 60 + m;
-    };
-    return getTimeVal(a.time) - getTimeVal(b.time);
+  // Sort all events chronologically
+  const sortedEvents = [...allEvents].sort((a, b) => {
+    const aMin = parseTimeToMinutes(a.time);
+    const bMin = parseTimeToMinutes(b.time);
+    if (aMin !== bMin) return aMin - bMin;
+    // Stable: initial events first within same time
+    if (a.isInitial && !b.isInitial) return -1;
+    if (!a.isInitial && b.isInitial) return 1;
+    return 0;
   });
+
+  // Group events by their time string (normalized)
+  const groups: { time: string; minutes: number; events: typeof sortedEvents }[] = [];
+  sortedEvents.forEach(e => {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.time === e.time) {
+      lastGroup.events.push(e);
+    } else {
+      groups.push({ time: e.time, minutes: parseTimeToMinutes(e.time), events: [e] });
+    }
+  });
+
+  const renderEvent = (e: typeof sortedEvents[0]) => {
+    const suspect = e.suspectId ? suspects.find(sus => sus.id === e.suspectId) : null;
+    return (
+      <StatementCard key={e.id} $isInitial={e.isInitial}>
+        <CardHeader>
+          {suspect ? (
+            <SuspectInfo>
+              <SuspectPortrait suspect={suspect} size={28} />
+              <span>{suspect.name}</span>
+            </SuspectInfo>
+          ) : e.suspectName ? (
+            <SuspectInfo>
+              <span>{e.suspectName}</span>
+            </SuspectInfo>
+          ) : e.isInitial ? (
+            <SuspectInfo>
+              <span style={{ color: '#0f0', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Initial Discovery</span>
+            </SuspectInfo>
+          ) : null}
+        </CardHeader>
+        <StatementText>"{e.text}"</StatementText>
+      </StatementCard>
+    );
+  };
 
   return (
     <ModalOverlay onClick={onClose}>
@@ -254,7 +388,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
         
         <TimelineContainer>
           <ScrollContent>
-            {sortedEvents.length === 0 ? (
+            {groups.length === 0 ? (
               <EmptyState>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
@@ -263,27 +397,48 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
                 <p>No timeline events discovered yet.<br/>Interrogate suspects or examine evidence to reveal the sequence of events.</p>
               </EmptyState>
             ) : (
-              sortedEvents.map((e, idx) => {
-                const suspect = e.suspectId ? suspects.find(sus => sus.id === e.suspectId) : null;
+              groups.map((group, groupIdx) => {
+                // Split events: initial/no-suspect go left, suspect statements go right
+                const leftItems = group.events.filter(e => e.isInitial || !e.suspectId);
+                const rightItems = group.events.filter(e => !e.isInitial && e.suspectId);
+
+                // If all items are one side, alternate sides by group index for visual balance
+                const allLeft = rightItems.length === 0;
+                const allRight = leftItems.length === 0;
+
                 return (
-                  <TimelineItem key={e.id} $side={idx % 2 === 0 ? 'left' : 'right'}>
-                    <StatementCard style={e.isInitial ? { borderLeft: '4px solid #0f0' } : {}}>
-                      <CardHeader>
-                        <TimeLabel>{e.time}</TimeLabel>
-                        {suspect ? (
-                          <SuspectInfo>
-                            <SuspectPortrait suspect={suspect} size={30} />
-                            <span>{suspect.name}</span>
-                          </SuspectInfo>
-                        ) : e.isInitial ? (
-                          <SuspectInfo>
-                            <span style={{ color: '#0f0', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Initial Discovery</span>
-                          </SuspectInfo>
-                        ) : null}
-                      </CardHeader>
-                      <StatementText>"{e.text}"</StatementText>
-                    </StatementCard>
-                  </TimelineItem>
+                  <TimeGroup key={group.time + '-' + groupIdx} style={{ animationDelay: `${groupIdx * 0.05}s` }}>
+                    <TimeGroupLabel>
+                      <TimeBadge>{group.time}</TimeBadge>
+                      <TimeStem />
+                      <TimeGroupDot />
+                    </TimeGroupLabel>
+                    <EventsRow>
+                      {allRight ? (
+                        <>
+                          {groupIdx % 2 === 0 ? <Spacer /> : null}
+                          <RightEvents>
+                            {rightItems.map(renderEvent)}
+                          </RightEvents>
+                          {groupIdx % 2 !== 0 ? <Spacer /> : null}
+                        </>
+                      ) : allLeft ? (
+                        <>
+                          {groupIdx % 2 === 0 ? (
+                            <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                          ) : <Spacer />}
+                          {groupIdx % 2 !== 0 ? (
+                            <RightEvents>{leftItems.map(renderEvent)}</RightEvents>
+                          ) : <Spacer />}
+                        </>
+                      ) : (
+                        <>
+                          <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                          <RightEvents>{rightItems.map(renderEvent)}</RightEvents>
+                        </>
+                      )}
+                    </EventsRow>
+                  </TimeGroup>
                 );
               })
             )}

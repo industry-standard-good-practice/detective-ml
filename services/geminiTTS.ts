@@ -2,16 +2,13 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { GEMINI_MODELS } from "./geminiModels";
 
-const GEMINI_VOICES = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'];
-
 export const generateTTS = async (text: string, voiceName: string): Promise<string | null> => {
-  if (!process.env.GEMINI_API_KEY || voiceName === 'None') {
+  // Skip TTS if no voice selected, voice is "None", or no API key
+  if (!voiceName || voiceName === 'None' || !process.env.GEMINI_API_KEY) {
     if (voiceName === 'None') console.log("TTS skipped: Voice set to None");
     return null;
   }
 
-  // Ensure we use a voice supported by Gemini TTS
-  const validVoice = GEMINI_VOICES.includes(voiceName) ? voiceName : 'Kore';
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -22,7 +19,7 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
         responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: validVoice },
+            prebuiltVoiceConfig: { voiceName: voiceName },
           },
         },
       },
