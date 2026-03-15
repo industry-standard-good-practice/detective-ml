@@ -1021,10 +1021,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         </CameraOverlay>
       )}
 
-      {showSuspectEditor && activeSuspect?.portraits?.[Emotion.NEUTRAL] && (
+      {showSuspectEditor && activeSuspect && (
         <ImageEditorModal
-          title={`Edit ${activeSuspect.name}`}
-          initialImageUrl={activeSuspect.portraits[Emotion.NEUTRAL]}
+          title={activeSuspect.portraits?.[Emotion.NEUTRAL] ? `Edit ${activeSuspect.name}` : `Create ${activeSuspect.name}`}
+          initialImageUrl={activeSuspect.portraits?.[Emotion.NEUTRAL] || undefined}
           onClose={() => setShowSuspectEditor(false)}
           onSave={handleSaveEditedSuspect}
           aspectRatio="3:4"
@@ -1387,10 +1387,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </RandomizeButton>
                 <RandomizeButton
                   onClick={() => !isSupportChar && setShowSuspectEditor(true)}
-                  disabled={loadingState.visible || !activeSuspect.portraits?.[Emotion.NEUTRAL]}
+                  disabled={loadingState.visible}
                   style={{ background: '#3b82f6' }}
                 >
-                  EDIT
+                  {activeSuspect.portraits?.[Emotion.NEUTRAL] ? 'EDIT' : 'CREATE'}
                 </RandomizeButton>
                 <UploadButton onClick={triggerUpload} disabled={loadingState.visible}>
                   UPLOAD REF

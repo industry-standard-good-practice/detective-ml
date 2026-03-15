@@ -293,6 +293,15 @@ export const getSuspectPortrait = async (suspect: Suspect, emotion: Emotion, agg
     return getPixelArtUrl(seed, 300);
 };
 
+export const createImageFromPrompt = async (
+    userPrompt: string,
+    aspectRatio: string = '3:4'
+): Promise<string | null> => {
+    const refs = STYLE_REF_URL ? [STYLE_REF_URL] : [];
+    const raw = await generateImageRaw(userPrompt, aspectRatio, refs, 'create');
+    return raw ? `data:image/png;base64,${raw}` : null;
+};
+
 export const editImageWithPrompt = async (
     baseImageBase64: string, 
     userPrompt: string, 

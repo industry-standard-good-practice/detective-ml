@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wand2, Save, Undo, Loader2, AlertCircle } from 'lucide-react';
+import { X, Wand2, Save, Undo, Loader2, AlertCircle, ImagePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { editImageWithPrompt } from '../services/geminiImages';
+import { editImageWithPrompt, createImageFromPrompt } from '../services/geminiImages';
 
 const Overlay = styled(motion.div)`
   position: absolute;
@@ -220,7 +220,7 @@ const ProgressFill = styled(motion.div)`
 `;
 
 interface ImageEditorModalProps {
-  initialImageUrl: string;
+  initialImageUrl?: string;
   onSave: (newImageUrl: string, onProgress?: (current: number, total: number) => void) => Promise<void>;
   onClose: () => void;
   aspectRatio?: string;
@@ -234,8 +234,9 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   aspectRatio = '3:4',
   title = "Edit Image"
 }) => {
-  const [currentImageUrl, setCurrentImageUrl] = useState(initialImageUrl);
-  const [history, setHistory] = useState<string[]>([initialImageUrl]);
+  const isCreateMode = !initialImageUrl;
+  const [currentImageUrl, setCurrentImageUrl] = useState(initialImageUrl || '');
+  const [history, setHistory] = useState<string[]>(initialImageUrl ? [initialImageUrl] : []);
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -246,6 +247,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   useEffect(() => {
     // If the initial image is a remote URL, try to fetch it and convert to base64
     // to avoid CORS issues during editing.
+    if (!initialImageUrl) return;
     const prepareImage = async () => {
       if (initialImageUrl.startsWith('http')) {
         try {
@@ -292,22 +294,30 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     if (!prompt.trim() || isGenerating || isSaving) return;
     setError(null);
 
-    // Try to get base64 first to avoid fetch errors in the service
-    const base64 = getBase64FromImage();
-    if (!base64) {
-      setError("Could not process image for editing. This might be a cross-origin issue.");
-      return;
-    }
-
     setIsGenerating(true);
     try {
-      const result = await editImageWithPrompt(base64, prompt, aspectRatio);
+      let result: string | null = null;
+
+      if (!currentImageUrl) {
+        // Create mode: generate from scratch
+        result = await createImageFromPrompt(prompt, aspectRatio);
+      } else {
+        // Edit mode: modify existing image
+        const base64 = getBase64FromImage();
+        if (!base64) {
+          setError("Could not process image for editing. This might be a cross-origin issue.");
+          setIsGenerating(false);
+          return;
+        }
+        result = await editImageWithPrompt(base64, prompt, aspectRatio);
+      }
+
       if (result) {
-        setHistory(prev => [...prev, result]);
+        setHistory(prev => [...prev, result!]);
         setCurrentImageUrl(result);
         setPrompt('');
       } else {
-        setError("Failed to edit image. The AI might have had trouble with your prompt.");
+        setError(isCreateMode && !currentImageUrl ? "Failed to generate image. Try a different description." : "Failed to edit image. The AI might have had trouble with your prompt.");
       }
     } catch (err: any) {
       console.error(err);
@@ -365,12 +375,19 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
           <Content>
             <ImageContainer style={{ aspectRatio }}>
-              <PreviewImage 
-                ref={imageRef}
-                src={currentImageUrl} 
-                alt="Preview" 
-                referrerPolicy="no-referrer" 
-              />
+              {currentImageUrl ? (
+                <PreviewImage 
+                  ref={imageRef}
+                  src={currentImageUrl} 
+                  alt="Preview" 
+                  referrerPolicy="no-referrer" 
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: 'rgba(255,255,255,0.3)', padding: '40px', textAlign: 'center' }}>
+                  <ImagePlus size={48} />
+                  <span style={{ fontSize: '0.9rem' }}>Describe your character below to generate a portrait</span>
+                </div>
+              )}
               {isGenerating && (
                 <LoadingOverlay>
                   <Loader2 className="animate-spin" size={32} />
@@ -400,10 +417,10 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
             <Controls>
               <InputGroup>
-                <Label>What would you like to change?</Label>
+                <Label>{currentImageUrl ? 'What would you like to change?' : 'Describe the character to generate'}</Label>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                   <TextArea
-                    placeholder="e.g., 'Change his hair to red', 'Add a scar over his left eye', 'Make her wear a detective hat'..."
+                    placeholder={currentImageUrl ? "e.g., 'Change his hair to red', 'Add a scar over his left eye', 'Make her wear a detective hat'..." : "e.g., 'A stern female detective with short gray hair, wearing a trench coat'..."}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     disabled={isGenerating || isSaving}
@@ -446,7 +463,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                 <Button $variant="danger" onClick={onClose} disabled={isGenerating || isSaving}>
                   Cancel
                 </Button>
-                <Button $variant="primary" onClick={handleSave} disabled={isGenerating || isSaving}>
+                <Button $variant="primary" onClick={handleSave} disabled={isGenerating || isSaving || !currentImageUrl}>
                   <Save size={16} />
                   Save Edit
                 </Button>
