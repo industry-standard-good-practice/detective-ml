@@ -829,6 +829,7 @@ interface InterrogationProps {
   onPartnerAction: (type: 'goodCop' | 'badCop' | 'examine' | 'hint') => void;
   mobileIntelOpen?: boolean;
   soundEnabled?: boolean;
+  volume?: number;
   isAdmin: boolean;
   userId?: string;
   unreadSuspectIds?: Set<string>;
@@ -857,6 +858,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   onPartnerAction,
   mobileIntelOpen = false,
   soundEnabled = true,
+  volume = 0.7,
   isAdmin,
   userId,
   unreadSuspectIds = new Set(),
@@ -995,6 +997,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         }
 
         const audio = new Audio(lastMsg.audioUrl);
+        audio.volume = volume;
         audioRef.current = audio;
         audio.play().catch(e => console.error("Audio playback failed", e));
 
@@ -1026,10 +1029,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
       }
 
       const audio = new Audio(lastMsg.audioUrl);
+      audio.volume = volume;
       audioRef.current = audio;
       audio.play().catch(e => console.error("Audio playback failed", e));
     }
-  }, [chatHistory, soundEnabled, suspect.id, lastPlayedAudioUrl, unreadSuspectIds, onClearUnread]);
+  }, [chatHistory, soundEnabled, volume, suspect.id, lastPlayedAudioUrl, unreadSuspectIds, onClearUnread]);
 
   // Force Action type if Deceased, reset to Talk otherwise (when switching)
   useEffect(() => {
@@ -1121,7 +1125,39 @@ const Interrogation: React.FC<InterrogationProps> = ({
     return undefined;
   };
 
+  // Evidence collection sound effect
+  const playEvidenceSfx = () => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const now = ctx.currentTime;
+
+      // Short ascending 3-note "discovery" chime
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square'; // Retro / pixel feel
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, now + i * 0.08);
+        gain.gain.linearRampToValueAtTime(0.15 * volume, now + i * 0.08 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.25);
+      });
+
+      // Clean up context after sounds finish
+      setTimeout(() => ctx.close(), 500);
+    } catch (e) {
+      console.warn('Evidence SFX failed:', e);
+    }
+  };
+
   const handleEvidenceClick = (index: number, name: string, suspectId: string) => {
+    // Play evidence collection sound
+    playEvidenceSfx();
     // Pass the full name string (including description if present) to celebration
     setCelebratingItem({ index, name, suspectId });
   };

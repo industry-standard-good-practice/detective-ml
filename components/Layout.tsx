@@ -516,6 +516,8 @@ interface LayoutProps {
   onCloseCase?: () => void;
   onCheckConsistency?: () => void;
   onTestInvestigation?: () => void;
+  volume?: number;
+  onVolumeChange?: (v: number) => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({
@@ -539,7 +541,9 @@ const Layout: React.FC<LayoutProps> = ({
   onSaveCase,
   onCloseCase,
   onCheckConsistency,
-  onTestInvestigation
+  onTestInvestigation,
+  volume = 0.7,
+  onVolumeChange
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -639,9 +643,32 @@ const Layout: React.FC<LayoutProps> = ({
                     </NavButton>
                   )}
 
-                  <NavButton onClick={() => handleMenuNav(onToggleMute)} style={{ color: isMuted ? '#777' : '#0f0' }}>
+                  <NavButton onClick={onToggleMute} style={{ color: isMuted ? '#777' : '#0f0' }}>
                     {isMuted ? '[Sound: OFF]' : '[Sound: ON]'}
                   </NavButton>
+
+                  {!isMuted && onVolumeChange && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '4px 0 8px 0', borderBottom: '1px solid #1a1a1a'
+                    }}>
+                      <span style={{ color: '#555', fontSize: '0.8rem', minWidth: '50px' }}>VOL</span>
+                      <input
+                        type="range"
+                        min="0" max="1" step="0.05"
+                        value={volume}
+                        onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+                        data-cursor="pointer"
+                        style={{
+                          flex: 1, height: '4px', appearance: 'none', background: '#333',
+                          outline: 'none', accentColor: '#0f0'
+                        }}
+                      />
+                      <span style={{ color: '#555', fontSize: '0.8rem', minWidth: '30px', textAlign: 'right' }}>
+                        {Math.round(volume * 100)}%
+                      </span>
+                    </div>
+                  )}
 
                   {screenState === ScreenState.CASE_HUB && (
                     <NavButton onClick={() => handleMenuNav(startTour)} style={{ color: '#0f0' }}>

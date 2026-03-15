@@ -99,6 +99,54 @@ const formatAuthorName = (displayName: string | null | undefined): string => {
   return `${parts[0]} ${parts[parts.length - 1][0]}.`;
 };
 
+/**
+ * Fallback timeline extraction: scans the suspect's text response for any
+ * mention of their known timeline entries. Returns the first match, or null.
+ * This catches cases where the AI mentions a time but forgets to populate
+ * the structured `revealedTimelineStatement` field.
+ */
+const extractTimelineFromText = (
+  text: string,
+  suspectTimeline: { time: string; activity: string }[]
+): { time: string; statement: string } | null => {
+  if (!text || !suspectTimeline || suspectTimeline.length === 0) return null;
+  const lowerText = text.toLowerCase();
+
+  for (const entry of suspectTimeline) {
+    // Normalize the time for matching (e.g. "10:35" or "8:00 PM")
+    const timeStr = entry.time?.trim();
+    if (!timeStr) continue;
+
+    // Check if the response text contains the time string
+    if (lowerText.includes(timeStr.toLowerCase())) {
+      return { time: timeStr, statement: entry.activity };
+    }
+
+    // Also try matching just the numeric part (e.g. "10:35" from "10:35 AM")
+    const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
+    if (numericMatch && lowerText.includes(numericMatch[1])) {
+      return { time: timeStr, statement: entry.activity };
+    }
+  }
+
+  // Also check if the text mentions a key phrase from any activity
+  for (const entry of suspectTimeline) {
+    if (!entry.activity) continue;
+    // Extract meaningful keywords (4+ chars) from the activity
+    const keywords = entry.activity
+      .split(/\s+/)
+      .filter(w => w.length >= 4)
+      .map(w => w.toLowerCase().replace(/[^a-z]/g, ''));
+    // If at least 2 significant keywords match, consider it a hit
+    const matchCount = keywords.filter(kw => kw && lowerText.includes(kw)).length;
+    if (keywords.length >= 2 && matchCount >= 2) {
+      return { time: entry.time, statement: entry.activity };
+    }
+  }
+
+  return null;
+};
+
 const DEFAULT_SUGGESTIONS = [
   { label: "Where were you?", text: "Good evening. I'm the detective assigned to this case. Can you tell me where you were at the time of the crime?" },
   { label: "Connection to Victim", text: "I apologize for the intrusion during this difficult time, but I need to ask: how exactly did you know the victim?" },
@@ -163,12 +211,20 @@ const App: React.FC = () => {
   
   const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem('globalVolume');
+    return saved !== null ? parseFloat(saved) : 0.7;
+  });
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
   const [unreadSuspects, setUnreadSuspects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     localStorage.setItem('isMuted', String(isMuted));
   }, [isMuted]);
+
+  useEffect(() => {
+    localStorage.setItem('globalVolume', String(volume));
+  }, [volume]);
 
   // Sync draftCase changes back to communityCases for UI consistency
   useEffect(() => {
@@ -513,12 +569,39 @@ const App: React.FC = () => {
             const prevHistory = prev.chatHistory[currentSuspectId] || [];
             const newHistory = [...prevHistory, suspectMsg];
 
+            // Timeline extraction for partner action responses (was previously missing!)
+            let newTimelineStatements = [...prev.timelineStatementsDiscovered];
+            let timelineEntry = response.revealedTimelineStatement;
+            if (!timelineEntry && finalAgg < 100) {
+              timelineEntry = extractTimelineFromText(response.text, suspect.timeline || []);
+              if (timelineEntry) {
+                console.log("[DEBUG] Timeline Statement (PARTNER FALLBACK):", timelineEntry);
+              }
+            }
+            if (timelineEntry && finalAgg < 100) {
+              const alreadyExists = newTimelineStatements.some(ts => 
+                ts.suspectId === currentSuspectId && 
+                ts.time === timelineEntry!.time
+              );
+              if (!alreadyExists) {
+                newTimelineStatements.push({
+                  id: `ts-${Date.now()}`,
+                  suspectId: currentSuspectId,
+                  suspectName: suspect.name,
+                  suspectPortrait: suspect.portraits?.[Emotion.NEUTRAL] || undefined,
+                  time: timelineEntry.time,
+                  statement: timelineEntry.statement
+                });
+              }
+            }
+
             return {
                 ...prev,
                 aggravationLevels: { ...prev.aggravationLevels, [currentSuspectId]: finalAgg },
                 sidekickComment: finalWhisper,
                 suspectEmotions: { ...prev.suspectEmotions, [currentSuspectId]: response.emotion },
-                chatHistory: { ...prev.chatHistory, [currentSuspectId]: newHistory }
+                chatHistory: { ...prev.chatHistory, [currentSuspectId]: newHistory },
+                timelineStatementsDiscovered: newTimelineStatements
             };
         });
 
@@ -636,12 +719,20 @@ const App: React.FC = () => {
         const updatedHistory = [...prev.chatHistory[currentSuspectId], suspectMsg];
         let newTimelineStatements = [...prev.timelineStatementsDiscovered];
 
-        if (response.revealedTimelineStatement && newAgg < 100) {
-          console.log("[DEBUG] Timeline Statement Revealed:", response.revealedTimelineStatement);
+        // Use AI's explicit timeline statement, or fall back to client-side extraction
+        let timelineEntry = response.revealedTimelineStatement;
+        if (!timelineEntry && newAgg < 100) {
+          timelineEntry = extractTimelineFromText(response.text, currentSuspect.timeline || []);
+          if (timelineEntry) {
+            console.log("[DEBUG] Timeline Statement (FALLBACK extraction):", timelineEntry);
+          }
+        }
+
+        if (timelineEntry && newAgg < 100) {
+          console.log("[DEBUG] Timeline Statement Revealed:", timelineEntry);
           const alreadyExists = newTimelineStatements.some(ts => 
             ts.suspectId === currentSuspectId && 
-            ts.time === response.revealedTimelineStatement!.time &&
-            ts.statement === response.revealedTimelineStatement!.statement
+            ts.time === timelineEntry!.time
           );
 
           if (!alreadyExists) {
@@ -649,9 +740,9 @@ const App: React.FC = () => {
               id: `ts-${Date.now()}`,
               suspectId: currentSuspectId,
               suspectName: currentSuspect.name,
-              suspectPortrait: currentSuspect.portraits[Emotion.NEUTRAL] || undefined,
-              time: response.revealedTimelineStatement.time,
-              statement: response.revealedTimelineStatement.statement
+              suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
+              time: timelineEntry.time,
+              statement: timelineEntry.statement
             });
           }
         }
@@ -1181,6 +1272,8 @@ const App: React.FC = () => {
       onNavigate={navigateTo}
       isMuted={isMuted}
       onToggleMute={() => setIsMuted(!isMuted)}
+      volume={volume}
+      onVolumeChange={setVolume}
       onPublish={initiatePublish}
       canPublish={canPublish}
       isPublishing={isPublishing}
@@ -1303,6 +1396,7 @@ const App: React.FC = () => {
               partnerCharges={gameState.partnerCharges}
               gameTime={gameState.gameTime}
               soundEnabled={!isMuted}
+              volume={volume}
               onSendMessage={handleSendMessage}
               onCollectEvidence={collectEvidence}
               onSwitchSuspect={startInterrogation}

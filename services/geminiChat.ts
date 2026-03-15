@@ -156,10 +156,13 @@ export const getSuspectResponse = async (
            **GENERAL RULE:** If Current Aggravation > 80, the suspect is irrational. Calming is 50% less effective.
 
         5. Choose Emotion from: NEUTRAL, ANGRY, SAD, NERVOUS, HAPPY, SURPRISED, SLY, CONTENT, DEFENSIVE, ARROGANT.
-        6. **TIMELINE REVEAL (CRITICAL):** If your response explicitly mentions an activity or location from your TIMELINE (Activities), you MUST set 'revealedTimelineStatement' to the matching entry.
-           - 'time': The exact time string from your timeline.
-           - 'statement': The activity/statement you just made about that time.
-           - **IMPORTANT:** If you mention a time or location in your 'text', you MUST populate this field.
+        6. **TIMELINE REVEAL (CRITICAL — NEVER SKIP):** Whenever your 'text' response mentions ANY specific time, activity, or location from your TIMELINE (Activities), you MUST ALWAYS set 'revealedTimelineStatement'.
+           - 'time': The EXACT time string from your TIMELINE list (e.g. "10:35", "8:00 PM").
+           - 'statement': A short summary of what you said you were doing at that time.
+           - **EXAMPLES:**
+             - If your TIMELINE has "[10:35] Running network diagnostics" and your text says "At 10:35, I was running diagnostics", set revealedTimelineStatement to { time: "10:35", statement: "Running network diagnostics" }.
+             - If your TIMELINE has "[8:00 PM] Having dinner with the victim" and your text mentions dinner, set it.
+           - **RULE:** If you mention ANY time from your TIMELINE in your 'text', this field MUST be non-null. Failing to set it is a critical error.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
