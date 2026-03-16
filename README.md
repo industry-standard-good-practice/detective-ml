@@ -95,8 +95,52 @@ detective-ml/
 ├── services/         # API clients (Gemini, Firebase, TTS, persistence)
 ├── types.ts          # TypeScript type definitions
 ├── server.ts         # Express + Vite dev server
+├── public/           # PWA assets (manifest, service worker, icons)
 └── index.tsx         # App entry point
 ```
+
+## PWA Local Development
+
+DetectiveML is an installable PWA. To test PWA installation on a mobile device during local development, you need a **publicly-accessible HTTPS URL** (Chrome requires trusted HTTPS to create a proper standalone WebAPK).
+
+### Using localtunnel
+
+1. **Start the dev server:**
+   ```bash
+   npm run dev
+   ```
+
+2. **Start a localtunnel in a separate terminal:**
+   ```bash
+   npx localtunnel --port 3000 --subdomain detectiveml
+   ```
+   This gives you `https://detectiveml.loca.lt`.
+
+3. **On your mobile device:**
+   - Open `https://detectiveml.loca.lt` in Chrome
+   - When prompted for a password, enter your **public IP address** (find it at [whatismyip.com](https://whatismyip.com))
+   - Wait for the app to load — a green "Install DetectiveML" banner will appear
+   - Tap **Install** to add it to your home screen in fullscreen mode
+
+### Firebase Auth Setup for Tunnel URLs
+
+For Google Sign-In to work through the tunnel, you must add the tunnel domain to Firebase:
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Select your project → **Authentication** → **Settings**
+3. Under **Authorized domains**, click **Add domain**
+4. Add: `detectiveml.loca.lt`
+5. Save — sign-in will now work through the tunnel
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "Blocked request" / host not allowed | Already handled — `vite.config.ts` has `allowedHosts: true` |
+| 503 tunnel unavailable | Restart localtunnel — it can be flaky |
+| App opens in Chrome with address bar | Uninstall, clear site data, re-install via the green banner |
+| Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold) |
+| localtunnel ignores `--subdomain` | The subdomain may be taken — wait a minute and retry |
 
 ## License
 
