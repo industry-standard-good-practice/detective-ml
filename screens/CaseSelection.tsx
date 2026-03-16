@@ -91,6 +91,9 @@ const Carousel = styled.div`
     & > div {
       flex: 0 0 90%;
       scroll-snap-align: center;
+      max-height: none;
+      height: 100%;
+      overflow-y: hidden;
     }
   }
 `;
@@ -135,6 +138,28 @@ const CaseCard = styled.div<{ $isCommunity?: boolean }>`
     transform: translateY(-2px);
     box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
   }
+
+  @media (max-width: 768px) {
+    overflow: hidden;
+  }
+`;
+
+const CardTextContent = styled.div`
+  display: contents;
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+    margin-right: -20px;
+    padding-right: 20px;
+    
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  }
 `;
 
 const CaseImage = styled.div<{ $src?: string }>`
@@ -155,6 +180,7 @@ const CaseImage = styled.div<{ $src?: string }>`
   color: #333;
   font-size: var(--type-small);
   text-transform: uppercase;
+  flex-shrink: 0;
 `;
 
 const CreateCard = styled(CaseCard)`
@@ -193,6 +219,7 @@ const AdminControls = styled.div`
   margin-top: auto;
   padding-top: 15px;
   border-top: 1px solid #222;
+  flex-shrink: 0;
 `;
 
 const AdminButton = styled.button<{ $variant?: 'delete' | 'feature' | 'publish' }>`
@@ -357,21 +384,23 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
         {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
       </CaseImage>
-      <h3 style={{ color: isCommunity ? '#0ff' : '#fff', fontSize: 'var(--type-h3)', margin: '0 0 5px 0' }}>{c.title || "[ NO TITLE ]"}</h3>
-      <div style={{ marginBottom: '10px' }}>
-        <span style={{ background: isCommunity ? '#044' : '#333', color: isCommunity ? '#0ff' : undefined, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-        <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-        {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-      </div>
-      <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
-      <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-      {caseStats[c.id] && caseStats[c.id].plays > 0 && (
-        <StatsLine>
-          <span>▶ {caseStats[c.id].plays} plays</span>
-          <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-          <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-        </StatsLine>
-      )}
+      <CardTextContent>
+        <h3 style={{ color: isCommunity ? '#0ff' : '#fff', fontSize: 'var(--type-h3)', margin: '0 0 5px 0' }}>{c.title || "[ NO TITLE ]"}</h3>
+        <div style={{ marginBottom: '10px' }}>
+          <span style={{ background: isCommunity ? '#044' : '#333', color: isCommunity ? '#0ff' : undefined, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
+          <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+          {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
+        </div>
+        <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
+        <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
+        {caseStats[c.id] && caseStats[c.id].plays > 0 && (
+          <StatsLine>
+            <span>▶ {caseStats[c.id].plays} plays</span>
+            <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
+            <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
+          </StatsLine>
+        )}
+      </CardTextContent>
     </>
   );
 
