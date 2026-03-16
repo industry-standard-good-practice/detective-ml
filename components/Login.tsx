@@ -11,6 +11,12 @@ const Container = styled.div`
   height: 100%;
   gap: 30px;
   background: #050505;
+  padding: 20px;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 40px 30px;
+  }
 `;
 
 const Title = styled.h1`
@@ -20,6 +26,11 @@ const Title = styled.h1`
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 5px;
+
+  @media (max-width: 768px) {
+    font-size: 2.2rem;
+    letter-spacing: 3px;
+  }
 `;
 
 const Subtitle = styled.p`
@@ -64,7 +75,7 @@ const Login: React.FC = () => {
       <Title>DetectiveML</Title>
       <Subtitle>Unauthorized Access Prohibited</Subtitle>
       <LoginButton onClick={signInWithGoogle}>
-        [ Sign In with Google ]
+        Sign In with Google
       </LoginButton>
       <Warning>
         BY LOGGING IN, YOU AGREE TO THE TERMS OF THE BUREAU. 
