@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { CaseData, CaseStats } from '../types';
 import { useDragScroll } from '../hooks/useDragScroll';
@@ -153,7 +153,7 @@ const NetworkGrid = styled.div`
   }
 `;
 
-const CaseCard = styled.div<{ $isCommunity?: boolean }>`
+const CaseCard = styled.div<{ $isCommunity?: boolean; $isActive?: boolean }>`
   border: 2px solid ${props => props.$isCommunity ? '#0aa' : '#333'};
   padding: 20px;
   cursor: pointer;
@@ -164,14 +164,28 @@ const CaseCard = styled.div<{ $isCommunity?: boolean }>`
   flex-direction: column;
   max-width: 100%;
 
-  &:hover {
-    border-color: ${props => props.$isCommunity ? '#0ff' : '#fff'};
-    transform: translateY(-2px);
-    box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+  @media (min-width: 769px) {
+    &:hover {
+      border-color: ${props => props.$isCommunity ? '#0ff' : '#fff'};
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+    }
   }
 
   @media (max-width: 768px) {
     overflow: hidden;
+    
+    ${props => props.$isActive && `
+      border-color: ${props.$isCommunity ? '#0ff' : '#fff'};
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px ${props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+    `}
+    
+    &:active {
+      border-color: ${props => props.$isCommunity ? '#0ff' : '#fff'};
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+    }
   }
 `;
 
@@ -224,9 +238,11 @@ const CreateCard = styled(CaseCard)`
   flex-direction: column;
   background: rgba(0, 50, 0, 0.2);
   
-  &:hover {
-    background: rgba(0, 50, 0, 0.4);
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  @media (min-width: 769px) {
+    &:hover {
+      background: rgba(0, 50, 0, 0.4);
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
   }
 
   h3 { color: #0f0 !important; }
@@ -240,9 +256,25 @@ const CreateCard = styled(CaseCard)`
 const DraftCard = styled(CaseCard)`
   border: 2px solid #a80;
   
-  &:hover {
-    border-color: #fc0;
-    box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
+  @media (min-width: 769px) {
+    &:hover {
+      border-color: #fc0;
+      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
+    }
+  }
+
+  @media (max-width: 768px) {
+    ${props => props.$isActive && `
+      border-color: #fc0;
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
+    `}
+    
+    &:active {
+      border-color: #fc0;
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
+    }
   }
 `;
 
@@ -388,7 +420,42 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   };
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
   const carouselDragRef = useDragScroll<HTMLDivElement>();
+  const carouselElRef = useRef<HTMLDivElement | null>(null);
   const networkGridRef = useRef<HTMLDivElement>(null);
+  const [activeFeaturedId, setActiveFeaturedId] = useState<string | null>(null);
+  const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null);
+  const [activeMyCaseId, setActiveMyCaseId] = useState<string | null>(null);
+  const myCasesGridRef = useRef<HTMLDivElement>(null);
+
+  // Combined ref callback for carousel: sets both drag-scroll and element ref
+  const carouselRef = useCallback((el: HTMLDivElement | null) => {
+    carouselElRef.current = el;
+    carouselDragRef(el);
+  }, [carouselDragRef]);
+
+  // IntersectionObserver to detect centered card in carousel
+  const observeCarousel = (container: HTMLElement | null, setActiveId: (id: string | null) => void) => {
+    if (!container || window.innerWidth > 768) return;
+    const cards = container.querySelectorAll('[data-case-id]');
+    if (cards.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestEntry: IntersectionObserverEntry | null = null;
+        entries.forEach(entry => {
+          if (entry.isIntersecting && (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio)) {
+            bestEntry = entry;
+          }
+        });
+        if (bestEntry) {
+          setActiveId((bestEntry as IntersectionObserverEntry).target.getAttribute('data-case-id'));
+        }
+      },
+      { root: container, threshold: 0.6 }
+    );
+    cards.forEach(card => observer.observe(card));
+    return () => observer.disconnect();
+  };
 
   useEffect(() => {
     if (networkGridRef.current) {
@@ -412,6 +479,16 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     }
   }, [communityCases, caseStats, sortMode]);
 
+  useEffect(() => {
+    if (activeTab === 'featured') return observeCarousel(carouselElRef.current, setActiveFeaturedId);
+  }, [activeTab, featuredCases.length]);
+
+  useEffect(() => {
+    if (activeTab === 'network') return observeCarousel(networkGridRef.current, setActiveNetworkId);
+  }, [activeTab, sortedNetworkCases.length]);
+
+
+
   // Merge local drafts + published cases by this user (deduplicated by id)
   const myCases = useMemo(() => {
     const publishedByMe = communityCases.filter(c => c.authorId === userId);
@@ -432,6 +509,10 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     publishedByMe.forEach(c => { if (!merged.has(c.id)) merged.set(c.id, c); });
     return Array.from(merged.values());
   }, [localDrafts, communityCases, userId]);
+
+  useEffect(() => {
+    if (activeTab === 'mycases') return observeCarousel(myCasesGridRef.current, setActiveMyCaseId);
+  }, [activeTab, myCases.length]);
 
   const renderCaseCardContent = (c: CaseData, isCommunity: boolean) => (
     <>
@@ -496,14 +577,14 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
 
       {activeTab === 'featured' ? (
         <>
-          <Carousel ref={carouselDragRef}>
+          <Carousel ref={carouselRef}>
             {featuredCases.length === 0 && !isLoadingCommunity && (
               <div key="no-featured" style={{ color: '#555', padding: '20px' }}>No featured cases available.</div>
             )}
             {featuredCases.map((c) => {
               if (!c.id) return null;
               return (
-                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer">
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer" data-case-id={c.id} $isActive={activeFeaturedId === c.id}>
                   {renderCaseCardContent(c, false)}
                   <AdminControls onClick={(e) => e.stopPropagation()}>
                     {(isAdmin || c.authorId === userId) && onEditCase && (
@@ -544,7 +625,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
             {sortedNetworkCases.map((c) => {
               if (!c.id) return null;
               return (
-                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer">
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer" data-case-id={c.id} $isActive={activeNetworkId === c.id}>
                   {renderCaseCardContent(c, true)}
                   <AdminControls onClick={(e) => e.stopPropagation()}>
                     {(isAdmin || c.authorId === userId) && onEditCase && (
@@ -569,7 +650,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       ) : (
         /* MY CASES TAB */
         <>
-          <NetworkGrid>
+          <NetworkGrid ref={myCasesGridRef}>
             <CreateCard onClick={onCreateNew} data-cursor="pointer">
               <h3 style={{ fontSize: 'var(--type-h3)', margin: 0 }}>+ CREATE A NEW CASE</h3>
             </CreateCard>
@@ -584,7 +665,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               if (!c.id) return null;
               const isPublished = c.isUploaded;
               return (
-                <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer">
+                <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer" data-case-id={c.id} $isActive={activeMyCaseId === c.id}>
                   <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
                     {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
                   </CaseImage>
