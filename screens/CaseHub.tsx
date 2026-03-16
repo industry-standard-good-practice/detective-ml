@@ -260,9 +260,11 @@ const ChiefWidget = styled.div`
   
   @media (max-width: 768px) {
     width: 100%;
-    flex: 1; /* Fill available space on mobile */
-    gap: 20px;
+    flex-shrink: 1;
+    gap: 10px;
     justify-content: center;
+    min-height: 0;
+    overflow: hidden;
   }
 `;
 
@@ -286,17 +288,24 @@ const ChiefStatus = styled.div`
   }
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    text-align: center;
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+    gap: 12px;
     
     img {
-      width: 150px;
-      height: 150px;
-      margin-bottom: 10px;
+      width: 80px;
+      height: 80px;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    
+    div {
+      align-items: flex-start;
     }
     
     div span:first-child {
-      font-size: var(--type-h2);
+      font-size: var(--type-h3);
       color: #fff;
     }
     
@@ -1041,17 +1050,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
 
           {activeMobileTab === 'HQ' && (
             <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              <BriefingWidget id="mission-briefing-mobile" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <h3>Mission Briefing</h3>
-                  <div className="tags">
-                    <Tag>{caseData.type}</Tag>
-                    <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
-                  </div>
-                  <p>{caseData.description}</p>
-                </div>
-              </BriefingWidget>
-              <ChiefWidget style={{ flexShrink: 0 }}>
+              <ChiefWidget style={{ flexShrink: 1, minHeight: 0 }}>
                 <ChiefStatus>
                   <img src={officerPortrait} alt={officerName} />
                   <div>
@@ -1065,6 +1064,16 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   [SECURE LINE]
                 </SecureLineButton>
               </ChiefWidget>
+              <BriefingWidget id="mission-briefing-mobile" style={{ flex: 1, minHeight: '30vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h3>Mission Briefing</h3>
+                  <div className="tags">
+                    <Tag>{caseData.type}</Tag>
+                    <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
+                  </div>
+                  <p>{caseData.description}</p>
+                </div>
+              </BriefingWidget>
               <AccuseButton style={{ flexShrink: 0 }} onClick={() => onNavigate(ScreenState.ACCUSATION)}>
                 MAKE ACCUSATION
               </AccuseButton>
