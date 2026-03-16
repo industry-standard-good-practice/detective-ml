@@ -25,7 +25,7 @@ const Highlight = styled(motion.div)`
   z-index: 10001;
 `;
 
-const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right' }>`
+const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right'; $hideTail?: boolean }>`
   position: absolute;
   background: #111;
   border: 1px solid #0f0;
@@ -43,6 +43,7 @@ const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'ri
     content: '';
     position: absolute;
     border: 10px solid transparent;
+    ${props => props.$hideTail && 'display: none;'}
     ${props => props.$position === 'top' && `
       bottom: -20px;
       left: 50%;
@@ -129,6 +130,7 @@ interface StepConfig {
   requiresProfile?: boolean;
   requiresIntel?: boolean;
   completedTargetId?: string;
+  centered?: boolean;
 }
 
 const STEPS: Record<number, StepConfig> = {
@@ -206,7 +208,7 @@ const STEPS: Record<number, StepConfig> = {
     description: "You're ready. The clock is ticking, and the truth is out there. Trust your instincts, follow the evidence, and bring this killer to justice. We're counting on you.",
     targetId: "hub-button",
     position: "bottom",
-    requiresMenu: true
+    centered: true
   }
 };
 
@@ -337,6 +339,19 @@ export const OnboardingTour: React.FC = () => {
         }
       }
 
+      // If step is centered, just place tooltip in the middle of the screen
+      if (step.centered) {
+        const tooltipWidth = isMobile ? Math.min(280, window.innerWidth - 20) : 300;
+        const estimatedHeight = tooltipRef.current?.offsetHeight || 200;
+        setRect(null);
+        setTooltipPos({
+          top: (window.innerHeight - estimatedHeight) / 2,
+          left: (window.innerWidth - tooltipWidth) / 2
+        });
+        setRenderedPosition('bottom');
+        return;
+      }
+
       const targetId = (step.completedTargetId && isActionCompleted) ? step.completedTargetId : step.targetId;
       const elements = document.querySelectorAll(`[id="${targetId}"], [id="${targetId}-mobile"]`);
       const el = Array.from(elements).find(e => {
@@ -462,7 +477,7 @@ export const OnboardingTour: React.FC = () => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {rect && (
+        {rect && !step.centered && (
           <Highlight
             initial={false}
             animate={{
@@ -478,6 +493,7 @@ export const OnboardingTour: React.FC = () => {
         <Tooltip
           ref={tooltipRef}
           $position={renderedPosition}
+          $hideTail={!!step.centered}
           initial={{ opacity: 0, scale: 0.9, y: 10 }}
           animate={{
             opacity: 1,
