@@ -674,7 +674,7 @@ const AccordionPanel = styled.div<{ $isOpen: boolean }>`
   grid-template-rows: ${props => props.$isOpen ? '1fr' : '0fr'};
   transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
               flex-grow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.25s ease;
+              opacity ${props => props.$isOpen ? '0.15s ease 0.3s' : '0.1s ease 0s'};
   flex: ${props => props.$isOpen ? '1' : '0'};
   min-height: 0;
   opacity: ${props => props.$isOpen ? 1 : 0};
