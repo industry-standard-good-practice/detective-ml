@@ -406,6 +406,90 @@ export const enforceTimelines = (caseData: any) => {
 };
 
 /**
+ * Validates and fixes the startTime to ensure it falls after all crime-day timeline events.
+ * If the startTime is before the latest event on the day of the crime, it is shifted forward.
+ */
+export const enforceStartTimeAlignment = (caseData: any) => {
+    if (!caseData.startTime) return caseData;
+
+    const startDate = new Date(caseData.startTime);
+    if (isNaN(startDate.getTime())) return caseData; // Invalid date, skip
+
+    // Helper: parse a 12-hour time string (e.g. "10:30 PM") into hours and minutes
+    const parseTime12h = (timeStr: string): { hours: number; minutes: number } | null => {
+        if (!timeStr) return null;
+        const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!match) return null;
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3].toUpperCase();
+        if (period === 'AM' && hours === 12) hours = 0;
+        if (period === 'PM' && hours !== 12) hours += 12;
+        return { hours, minutes };
+    };
+
+    // Collect all crime-day timeline events (dayOffset === 0)
+    const crimeDayEvents: { hours: number; minutes: number }[] = [];
+
+    // From initialTimeline
+    (caseData.initialTimeline || []).forEach((entry: any) => {
+        if ((entry.dayOffset ?? 0) === 0) {
+            const parsed = parseTime12h(entry.time);
+            if (parsed) crimeDayEvents.push(parsed);
+        }
+    });
+
+    // From suspect timelines
+    (caseData.suspects || []).forEach((s: any) => {
+        (s.timeline || []).forEach((entry: any) => {
+            if ((entry.dayOffset ?? 0) === 0) {
+                const parsed = parseTime12h(entry.time);
+                if (parsed) crimeDayEvents.push(parsed);
+            }
+        });
+    });
+
+    if (crimeDayEvents.length === 0) return caseData;
+
+    // Find the latest crime-day event
+    const latestEvent = crimeDayEvents.reduce((latest, ev) => {
+        const evMinutes = ev.hours * 60 + ev.minutes;
+        const latestMinutes = latest.hours * 60 + latest.minutes;
+        return evMinutes > latestMinutes ? ev : latest;
+    });
+
+    const latestEventMinutes = latestEvent.hours * 60 + latestEvent.minutes;
+    const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+
+    // If startTime is before or equal to the latest crime-day event, shift it forward by 30 min
+    if (startMinutes <= latestEventMinutes) {
+        const newMinutes = latestEventMinutes + 30;
+        const newHours = Math.floor(newMinutes / 60);
+        const newMins = newMinutes % 60;
+
+        if (newHours < 24) {
+            startDate.setHours(newHours, newMins, 0, 0);
+        } else {
+            // Rolls past midnight — move to next day
+            startDate.setDate(startDate.getDate() + 1);
+            startDate.setHours(newHours - 24, newMins, 0, 0);
+        }
+
+        // Format back to ISO datetime-local string (without seconds/timezone)
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, '0');
+        const day = String(startDate.getDate()).padStart(2, '0');
+        const hours = String(startDate.getHours()).padStart(2, '0');
+        const minutes = String(startDate.getMinutes()).padStart(2, '0');
+        caseData.startTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        console.log(`[DEBUG] enforceStartTimeAlignment: Shifted startTime to ${caseData.startTime} (latest crime-day event was at ${latestEvent.hours}:${String(latestEvent.minutes).padStart(2, '0')})`);
+    }
+
+    return caseData;
+};
+
+/**
  * Comprehensive post-processor that validates and fixes EVERY field on every suspect.
  * Comprehensive post-processor that validates every field on every suspect.
  * Instead of patching with placeholder defaults, it CARRIES FORWARD the original
@@ -677,6 +761,19 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - EXAMPLE BAD BIO: "A talented performer who was cornered by Thomas. When threatened, she chose to seize the opportunity to end her abuse permanently."
 - EXAMPLE GOOD BIO: "A talented jazz singer and regular performer at The Blue Note. Known for her captivating stage presence and sharp wit, she has been a fixture of the local music scene for five years. Recently rumored to be in a dispute with the club's management over her contract."
 - This rule applies to ALL suspects — both guilty and innocent. Bios must be indistinguishable in tone between guilty and innocent suspects.`,
+
+    /** Start time alignment with timeline — used in generation, consistency, and edit */
+    START_TIME_ALIGNMENT: `**START TIME — TIMELINE ALIGNMENT (CRITICAL):**
+- The 'startTime' field is an ISO datetime string (e.g. "2030-09-12T23:30") representing when the player begins their investigation.
+- The startTime MUST be AFTER all crime-day events in the initialTimeline and suspect timelines. The detective cannot arrive before the crime is discovered.
+- Cross-reference the latest initialTimeline entry on the day of the crime (dayOffset: 0). The startTime MUST be at least 30 minutes after this event.
+- Cross-reference suspect timeline entries on the day of the crime. The startTime should be after the crime window.
+- If any timeline events on the crime day have times LATER than startTime, either:
+  (a) Adjust the startTime to be after those events, OR
+  (b) Move those events to earlier times if narratively appropriate.
+- The startTime DATE must align with the crime-day date implied by the timeline. If the initialTimeline mentions events on "September 12", the startTime must also be on September 12 (or shortly after midnight on September 13 for very late-night crimes).
+- Choose a startTime that fits the case atmosphere: noir murders → late night; corporate crimes → evening; daytime incidents → afternoon.  
+- The startTime should be close enough to the crime that the trail is still warm.`,
 } as const;
 
 // --- SCHEMAS ---
@@ -913,11 +1010,7 @@ ${userChangeLog}
     
     8. ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
     
-    9. **START TIME VALIDATION:**
-       - The 'startTime' field is an ISO datetime string (e.g. "2030-09-12T23:30") representing when the player begins their investigation.
-       - Ensure the startTime makes narrative sense for the case. A gritty noir murder should start late at night, not at 9:00 AM.
-       - The startTime should be AFTER the crime has occurred but close enough that the trail is still warm.
-       - If the current startTime doesn't fit the narrative, update it to something appropriate.
+    9. ${PROMPT_RULES.START_TIME_ALIGNMENT}
     
     10. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
     
@@ -964,6 +1057,8 @@ ${userChangeLog}
     hydratedCase.authorId = caseData.authorId;
     hydratedCase.version = caseData.version;
     hydratedCase.isUploaded = caseData.isUploaded;
+    // Prefer the AI's startTime if it returned one (it may have corrected alignment);
+    // only fall back to original if AI returned nothing
     if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
     if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
 
@@ -993,7 +1088,7 @@ ${userChangeLog}
         }
     });
 
-    const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData);
+    const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
     
     // --- SAFETY NET: Re-apply user's field-level edits ---
     // The AI was instructed to respect these, but we enforce them as a fallback
@@ -1136,8 +1231,10 @@ ${userChangeLog}
       9. ${PROMPT_RULES.DATA_COMPLETENESS}
 
       10. ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
+
+      11. ${PROMPT_RULES.START_TIME_ALIGNMENT}
            
-      11. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+      12. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
       
       CASE DATA:
       ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -1173,6 +1270,8 @@ ${userChangeLog}
         hydratedCase.authorId = caseData.authorId;
         hydratedCase.version = caseData.version;
         hydratedCase.isUploaded = caseData.isUploaded;
+        // Prefer the AI's startTime if it returned one (it may have corrected alignment);
+        // only fall back to original if AI returned nothing
         if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
 
         const themeChanged = hydratedCase.type !== caseData.type;
@@ -1265,7 +1364,7 @@ ${userChangeLog}
             }
         });
 
-        const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData);
+        const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
 
         // --- SAFETY NET: Re-apply user's field-level edits ---
         if (baseline) {
@@ -1393,8 +1492,7 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
     
     CRITICAL INSTRUCTION - START TIME:
-    - Generate a 'startTime' field as an ISO datetime string (e.g. "2030-09-12T23:30").
-    - Choose a time that fits the case's atmosphere and theme. Noir cases should be late night, daytime crimes can start in the morning, etc.
+    ${PROMPT_RULES.START_TIME_ALIGNMENT}
     
     Output JSON structure matching CaseData interface.
   `;
@@ -1531,6 +1629,6 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
   });
   
   // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
-  const finalData = enforceSuspectSchema(enforceTimelines(enforceRelationships(data)));
+  const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(data))));
   return finalData as CaseData;
 };

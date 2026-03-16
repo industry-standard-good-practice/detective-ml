@@ -12,7 +12,8 @@ export const getSuspectResponse = async (
   evidenceAttachment: string | null,
   currentAggravation: number,
   isFirstTurn: boolean,
-  discoveredEvidence: Evidence[] = []
+  discoveredEvidence: Evidence[] = [],
+  currentGameTime?: number // The current in-game timestamp (ms since epoch)
 ): Promise<{
   text: string;
   emotion: Emotion;
@@ -117,13 +118,27 @@ export const getSuspectResponse = async (
       const formattedDate = startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const formattedTime = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
+      // Current time context — if gameTime is provided, use it; otherwise fall back to startTime
+      const currentDate = currentGameTime ? new Date(currentGameTime) : startDate;
+      const currentFormattedTime = currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const currentFormattedDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Calculate how long they've been sitting
+      const elapsedMs = currentDate.getTime() - startDate.getTime();
+      const elapsedMins = Math.floor(elapsedMs / (60 * 1000));
+      const elapsedStr = elapsedMins < 60
+        ? `${elapsedMins} minutes`
+        : `${Math.floor(elapsedMins / 60)} hour${Math.floor(elapsedMins / 60) > 1 ? 's' : ''} and ${elapsedMins % 60} minutes`;
+
       interrogationContextStr = `
         --- INTERROGATION SITUATION ---
         You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
         The interrogation began on ${formattedDate} at ${formattedTime}.
+        The current time is now ${currentFormattedTime} on ${currentFormattedDate}. You have been in this interrogation room for approximately ${elapsedStr}.
         The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
         You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
         You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+        **TIME AWARENESS:** You know roughly what time it is. If you've been sitting here for a long time, you may be tired, irritable, or impatient. You can reference the time naturally (e.g. "It's almost midnight and I've been here for two hours", "Can we wrap this up?").
 
         --- YOUR DISPOSITION ---
         ${dispositionStr}

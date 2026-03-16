@@ -526,7 +526,7 @@ const App: React.FC = () => {
               : `[PARTNER HINT]: "${partnerDialogue}". The partner suggests where to look next.`;
             
             const examResponse = await getSuspectResponse(
-              suspect, currentCase, examPrompt, 'action', null, 0, false, evidenceDiscovered
+              suspect, currentCase, examPrompt, 'action', null, 0, false, evidenceDiscovered, newGameTime
             );
             
             let examAudioUrl: string | null = null;
@@ -569,7 +569,8 @@ const App: React.FC = () => {
           null, 
           newAgg, 
           false,
-          evidenceDiscovered // Pass discovered evidence
+          evidenceDiscovered, // Pass discovered evidence
+          newGameTime // Pass current game time
         );
 
         let finalAgg = newAgg + response.aggravationDelta;
@@ -742,7 +743,8 @@ const App: React.FC = () => {
         attachment || null,
         currentAgg,
         isFirstTurn,
-        evidenceDiscovered // Pass discovered evidence
+        evidenceDiscovered, // Pass discovered evidence
+        newGameTime // Pass current game time
       );
 
       let newAgg = (aggravationLevels[currentSuspectId] || 0) + response.aggravationDelta;
