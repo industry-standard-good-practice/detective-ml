@@ -704,9 +704,9 @@ const CaseHub: React.FC<CaseHubProps> = ({
         {/* MOBILE TABS */}
         <MobileTabBar id="mobile-tab-bar">
           <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
+          <TabItem $active={activeMobileTab === 'SUSPECTS'} onClick={() => setActiveMobileTab('SUSPECTS')}>SUSPECTS</TabItem>
           <TabItem $active={activeMobileTab === 'FILES'} onClick={() => setActiveMobileTab('FILES')}>BRIEF</TabItem>
           <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
-          <TabItem $active={activeMobileTab === 'SUSPECTS'} onClick={() => setActiveMobileTab('SUSPECTS')}>SUSPECTS</TabItem>
         </MobileTabBar>
 
         {/* MOBILE CONTENT RENDERER */}
@@ -778,13 +778,6 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   [SECURE LINE]
                 </SecureLineButton>
               </ChiefWidget>
-              <TimelineButton id="timeline-button-mobile" onClick={() => setIsTimelineOpen(true)}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                TIMELINE
-              </TimelineButton>
               <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>
                 MAKE ACCUSATION
               </AccuseButton>

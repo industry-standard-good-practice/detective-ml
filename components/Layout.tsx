@@ -579,9 +579,24 @@ const Layout: React.FC<LayoutProps> = ({
             {!isBooting && (
               <>
                 <TopBar>
-                  {/* HAMBURGER — always visible */}
-                  <HamburgerButton id="hamburger-button" $visible onClick={toggleMenu}>
-                    {menuOpen ? '[X]' : '[Menu]'}
+                  {/* HAMBURGER — on mobile interrogation, show Back button instead */}
+                  <HamburgerButton
+                    id="hamburger-button"
+                    $visible
+                    onClick={() => {
+                      const isMobile = window.innerWidth <= 768;
+                      if (isMobile && screenState === ScreenState.INTERROGATION) {
+                        onNavigate(ScreenState.CASE_HUB);
+                      } else {
+                        toggleMenu();
+                      }
+                    }}
+                  >
+                    {(() => {
+                      const isMobileCheck = typeof window !== 'undefined' && window.innerWidth <= 768;
+                      if (isMobileCheck && screenState === ScreenState.INTERROGATION) return '[← Back]';
+                      return menuOpen ? '[X]' : '[Menu]';
+                    })()}
                   </HamburgerButton>
 
                   {/* MOBILE CUSTOM ACTION */}
