@@ -378,7 +378,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   return (
     <Container>
       <Header>
-        <h2 style={{ margin: 0 }}>OPEN CASES</h2>
+        <h2 className="hide-on-mobile" style={{ margin: 0 }}>OPEN CASES</h2>
         <TabBar>
           <TabButton
             $active={activeTab === 'featured'}

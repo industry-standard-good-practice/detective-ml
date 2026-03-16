@@ -55,10 +55,12 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const nextStep = () => {
-    if (currentStep < OnboardingStep.COMPLETED) {
-      setCurrentStep(prev => prev + 1);
-    } else {
+    const next = currentStep + 1;
+    if (next >= OnboardingStep.COMPLETED) {
+      // Tour is finished — persist completion and deactivate
       skipTour();
+    } else {
+      setCurrentStep(next);
     }
   };
 

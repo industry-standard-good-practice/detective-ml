@@ -160,7 +160,7 @@ const STEPS: Record<number, StepConfig> = {
   },
   [OnboardingStep.EVIDENCE_BOARD]: {
     title: "Evidence Board",
-    description: "As you interrogate suspects and find clues, they will appear here. You can click on evidence to review details at any time.",
+    description: "As you interrogate suspects and find clues, they will appear here.",
     targetId: "evidence-board",
     position: "bottom",
     mobileTab: "BOARD",
@@ -208,14 +208,14 @@ const STEPS: Record<number, StepConfig> = {
   },
   [OnboardingStep.PARTNER_SUPPORT]: {
     title: "Partner Support",
-    description: "Your partner is here to help. Ask them to intervene if you're having trouble getting evidence, but be careful! Their actions will sway the aggravation meter depending on what you choose.",
+    description: "Your partner is here to help. Ask them to intervene if you're having trouble getting evidence, but be careful. Their actions will sway the aggravation meter depending on what you choose.",
     targetId: "partner-support",
     position: "left",
     requiresIntel: true
   },
   [OnboardingStep.FINAL_GOOD_LUCK]: {
     title: "Good Luck, Detective",
-    description: "You're ready. The clock is ticking, and the truth is out there. Trust your instincts, follow the evidence, and bring this killer to justice. We're counting on you.",
+    description: "You're ready. The clock is ticking, and the truth is out there. Trust your instincts, follow the evidence, and bring the guilty to justice. We're counting on you.",
     targetId: "hub-button",
     position: "bottom",
     centered: true
@@ -367,7 +367,7 @@ export const OnboardingTour: React.FC = () => {
       const el = Array.from(elements).find(e => {
         const style = window.getComputedStyle(e);
         return style.display !== 'none' && style.visibility !== 'hidden' && (e as HTMLElement).offsetParent !== null;
-      }) as HTMLElement | null || elements[0] as HTMLElement | null;
+      }) as HTMLElement | null;
 
       if (el) {
         const r = el.getBoundingClientRect();

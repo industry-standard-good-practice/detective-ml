@@ -1042,8 +1042,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
 
           {activeMobileTab === 'HQ' && (
             <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              <BriefingWidget style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <BriefingWidget id="mission-briefing-mobile" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <h3>Mission Briefing</h3>
                   <div className="tags">
                     <Tag>{caseData.type}</Tag>
