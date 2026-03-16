@@ -212,6 +212,7 @@ const App: React.FC = () => {
   });
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
   const [unreadSuspects, setUnreadSuspects] = useState<Set<string>>(new Set());
+  const [caseSelectionTab, setCaseSelectionTab] = useState<'featured' | 'network' | 'mycases'>('featured');
 
   useEffect(() => {
     localStorage.setItem('isMuted', String(isMuted));
@@ -1397,6 +1398,8 @@ const App: React.FC = () => {
                 onPlayDraft={handlePlayDraft}
                 onUnpublish={handleUnpublishCase}
                 onDeleteMyCase={handleDeleteMyCase}
+                initialTab={caseSelectionTab}
+                onTabChange={setCaseSelectionTab}
             />
           )}
 

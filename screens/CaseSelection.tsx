@@ -283,6 +283,8 @@ interface CaseSelectionProps {
   onPlayDraft?: (caseData: CaseData) => void;
   onUnpublish?: (caseId: string) => void;
   onDeleteMyCase?: (caseId: string) => void;
+  initialTab?: 'featured' | 'network' | 'mycases';
+  onTabChange?: (tab: 'featured' | 'network' | 'mycases') => void;
 }
 
 const CaseSelection: React.FC<CaseSelectionProps> = ({
@@ -301,9 +303,15 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   onDeleteDraft,
   onPlayDraft,
   onUnpublish,
-  onDeleteMyCase
+  onDeleteMyCase,
+  initialTab = 'featured',
+  onTabChange
 }) => {
-  const [activeTab, setActiveTab] = useState<'featured' | 'network' | 'mycases'>('featured');
+  const [activeTab, setActiveTabLocal] = useState<'featured' | 'network' | 'mycases'>(initialTab);
+  const setActiveTab = (tab: 'featured' | 'network' | 'mycases') => {
+    setActiveTabLocal(tab);
+    onTabChange?.(tab);
+  };
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
   const carouselDragRef = useDragScroll<HTMLDivElement>();
 
