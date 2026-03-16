@@ -323,6 +323,7 @@ const DayDivider = styled.div`
   }
 
   @media (max-width: 600px) {
+    background: none;
     padding: 25px 10px 25px 40px;
     &::before { display: none; }
   }
