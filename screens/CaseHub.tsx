@@ -576,7 +576,7 @@ const TabItem = styled.button<{ $active: boolean }>`
   color: ${props => props.$active ? '#fff' : '#666'};
   border: none;
   border-top: 3px solid ${props => props.$active ? '#0f0' : 'transparent'};
-  padding: 10px 5px;
+  padding: 14px 5px;
   font-family: inherit;
   font-size: var(--type-body-lg);
   font-weight: bold;

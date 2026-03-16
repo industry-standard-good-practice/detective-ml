@@ -211,6 +211,7 @@ const InputContainer = styled.div`
   
   @media (max-width: 768px) {
     padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
 `;
 

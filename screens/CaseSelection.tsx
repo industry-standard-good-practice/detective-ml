@@ -71,7 +71,7 @@ const BottomTabButton = styled.button<{ $active: boolean; $color: string }>`
   font-family: inherit;
   font-size: var(--type-body-lg);
   font-weight: bold;
-  padding: 10px 5px;
+  padding: 14px 5px;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
