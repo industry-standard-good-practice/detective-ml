@@ -35,6 +35,10 @@ const GlobalStyle = createGlobalStyle`
 
   /* Large Screen / 2K+ Breakpoint */
   
+  html {
+    background: #000;
+  }
+
   body {
     background: #050505;
     color: #e0e0e0;

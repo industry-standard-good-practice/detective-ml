@@ -17,6 +17,7 @@
     "express": "^5.2.1",
     "firebase": "^12.9.0",
     "framer-motion": "^12.36.0",
+    "localtunnel": "^2.0.2",
     "lucide-react": "^0.577.0",
     "motion": "^12.35.1",
     "node-fetch": "^3.3.2",

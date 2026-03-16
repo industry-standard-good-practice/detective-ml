@@ -4,6 +4,37 @@ import https from "https";
 import { createServer as createViteServer } from "vite";
 import fetch from "node-fetch";
 import selfsigned from "selfsigned";
+import localtunnel from "localtunnel";
+
+const TUNNEL_SUBDOMAIN = "detectiveml";
+const TUNNEL_ENABLED = !process.argv.includes("--no-tunnel");
+
+async function startTunnel(port: number, retries = 5): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const tunnel = await localtunnel({ port, subdomain: TUNNEL_SUBDOMAIN });
+      console.log(`\n🌐 Tunnel active: ${tunnel.url}`);
+      console.log(`   → Open this URL on your phone for PWA testing\n`);
+
+      tunnel.on("close", () => {
+        console.warn("⚠ Tunnel closed. Reconnecting...");
+        setTimeout(() => startTunnel(port, retries), 2000);
+      });
+
+      tunnel.on("error", (err: Error) => {
+        console.error("Tunnel error:", err.message);
+      });
+
+      return;
+    } catch (err: any) {
+      console.warn(`Tunnel attempt ${attempt}/${retries} failed: ${err.message}`);
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+  }
+  console.error("❌ Could not establish tunnel after all retries. Run without tunnel or retry manually.");
+}
 
 async function startServer() {
   const app = express();
@@ -54,6 +85,11 @@ async function startServer() {
   // HTTP server
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP server running on http://0.0.0.0:${PORT}`);
+
+    // Start tunnel after HTTP server is ready
+    if (TUNNEL_ENABLED) {
+      startTunnel(PORT);
+    }
   });
 
   // HTTPS server with self-signed cert (for PWA installability on mobile over LAN)
@@ -78,6 +114,14 @@ async function startServer() {
       { key: pems.private, cert: pems.cert },
       app
     );
+
+    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        console.warn(`⚠ HTTPS port ${HTTPS_PORT} already in use — skipping HTTPS server (tunnel still works)`);
+      } else {
+        console.error("HTTPS server error:", err);
+      }
+    });
 
     httpsServer.listen(HTTPS_PORT, "0.0.0.0", () => {
       console.log(`HTTPS server running on https://0.0.0.0:${HTTPS_PORT}`);

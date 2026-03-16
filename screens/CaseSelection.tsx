@@ -64,7 +64,7 @@ const TabButton = styled.button<{ $active: boolean; $color: string }>`
 
 const Carousel = styled.div`
   display: flex;
-  gap: 20px;
+  gap: 12px;
   padding: 40px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -86,10 +86,10 @@ const Carousel = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 15px;
+    padding: 15px 5vw;
     scroll-snap-type: x mandatory;
     & > div {
-      flex: 0 0 90%;
+      flex: 0 0 90vw;
       scroll-snap-align: center;
       max-height: none;
       height: 100%;
@@ -101,7 +101,7 @@ const Carousel = styled.div`
 const NetworkGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 12px;
   padding: 40px;
   overflow-y: auto;
   flex: 1;
@@ -118,7 +118,7 @@ const NetworkGrid = styled.div`
 
   @media (max-width: 768px) {
     display: flex;
-    padding: 15px;
+    padding: 15px 5vw;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -128,7 +128,7 @@ const NetworkGrid = styled.div`
     scrollbar-width: none;
 
     & > div {
-      flex: 0 0 90%;
+      flex: 0 0 90vw;
       scroll-snap-align: center;
       max-height: none;
       height: 100%;
@@ -310,6 +310,23 @@ const StatsLine = styled.div`
   color: #555;
 `;
 
+const SwipeHint = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 15px;
+    color: #555;
+    font-size: var(--type-small);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+`;
+
 interface CaseSelectionProps {
   communityCases: CaseData[];
   localDrafts: CaseData[];
@@ -458,130 +475,139 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
       </Header>
 
       {activeTab === 'featured' ? (
-        <Carousel ref={carouselDragRef}>
-          {featuredCases.length === 0 && !isLoadingCommunity && (
-            <div key="no-featured" style={{ color: '#555', padding: '20px' }}>No featured cases available.</div>
-          )}
-          {featuredCases.map((c) => {
-            if (!c.id) return null;
-            return (
-              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer">
-                {renderCaseCardContent(c, false)}
-                <AdminControls onClick={(e) => e.stopPropagation()}>
-                  {(isAdmin || c.authorId === userId) && onEditCase && (
-                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
-                  )}
-                  {isAdmin && onToggleFeatured && (
-                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
-                  )}
-                  {c.authorId === userId && onUnpublish && (
-                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
-                  )}
-                  {isAdmin && onDeleteCase && (
-                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
-                  )}
-                </AdminControls>
-              </CaseCard>
-            );
-          })}
-        </Carousel>
+        <>
+          <Carousel ref={carouselDragRef}>
+            {featuredCases.length === 0 && !isLoadingCommunity && (
+              <div key="no-featured" style={{ color: '#555', padding: '20px' }}>No featured cases available.</div>
+            )}
+            {featuredCases.map((c) => {
+              if (!c.id) return null;
+              return (
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer">
+                  {renderCaseCardContent(c, false)}
+                  <AdminControls onClick={(e) => e.stopPropagation()}>
+                    {(isAdmin || c.authorId === userId) && onEditCase && (
+                      <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
+                    )}
+                    {isAdmin && onToggleFeatured && (
+                      <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
+                    )}
+                    {c.authorId === userId && onUnpublish && (
+                      <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
+                    )}
+                    {isAdmin && onDeleteCase && (
+                      <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
+                    )}
+                  </AdminControls>
+                </CaseCard>
+              );
+            })}
+          </Carousel>
+          <SwipeHint>«  Swipe to view  »</SwipeHint>
+        </>
       ) : activeTab === 'network' ? (
-        <NetworkGrid>
-          {isLoadingCommunity && (
-            <div key="loading-network" style={{ color: '#0ff', padding: '20px' }}>Accessing secure network...</div>
-          )}
+        <>
+          <NetworkGrid>
+            {isLoadingCommunity && (
+              <div key="loading-network" style={{ color: '#0ff', padding: '20px' }}>Accessing secure network...</div>
+            )}
 
-          {!isLoadingCommunity && communityCases.length === 0 && (
-            <div key="no-network" style={{ color: '#555', padding: '20px' }}>No signals detected on the network.</div>
-          )}
+            {!isLoadingCommunity && communityCases.length === 0 && (
+              <div key="no-network" style={{ color: '#555', padding: '20px' }}>No signals detected on the network.</div>
+            )}
 
-          {sortedNetworkCases.map((c) => {
-            if (!c.id) return null;
-            return (
-              <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer">
-                {renderCaseCardContent(c, true)}
-                <AdminControls onClick={(e) => e.stopPropagation()}>
-                  {(isAdmin || c.authorId === userId) && onEditCase && (
-                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
-                  )}
-                  {isAdmin && onToggleFeatured && (
-                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
-                  )}
-                  {c.authorId === userId && onUnpublish && (
-                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
-                  )}
-                  {isAdmin && onDeleteCase && (
-                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
-                  )}
-                </AdminControls>
-              </CaseCard>
-            );
-          })}
-        </NetworkGrid>
+            {sortedNetworkCases.map((c) => {
+              if (!c.id) return null;
+              return (
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer">
+                  {renderCaseCardContent(c, true)}
+                  <AdminControls onClick={(e) => e.stopPropagation()}>
+                    {(isAdmin || c.authorId === userId) && onEditCase && (
+                      <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
+                    )}
+                    {isAdmin && onToggleFeatured && (
+                      <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
+                    )}
+                    {c.authorId === userId && onUnpublish && (
+                      <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
+                    )}
+                    {isAdmin && onDeleteCase && (
+                      <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
+                    )}
+                  </AdminControls>
+                </CaseCard>
+              );
+            })}
+          </NetworkGrid>
+          <SwipeHint>«  Swipe to view  »</SwipeHint>
+        </>
       ) : (
         /* MY CASES TAB */
-        <NetworkGrid>
-          <CreateCard onClick={onCreateNew} data-cursor="pointer">
-            <h3 style={{ fontSize: 'var(--type-h3)', margin: 0 }}>+ CREATE A NEW CASE</h3>
-          </CreateCard>
+        <>
+          <NetworkGrid>
+            <CreateCard onClick={onCreateNew} data-cursor="pointer">
+              <h3 style={{ fontSize: 'var(--type-h3)', margin: 0 }}>+ CREATE A NEW CASE</h3>
+            </CreateCard>
 
-          {myCases.length === 0 && (
-            <div key="no-mycases" style={{ color: '#555', padding: '20px', gridColumn: '1 / -1' }}>
-              No cases yet. Create one to get started!
-            </div>
-          )}
+            {myCases.length === 0 && (
+              <div key="no-mycases" style={{ color: '#555', padding: '20px', gridColumn: '1 / -1' }}>
+                No cases yet. Create one to get started!
+              </div>
+            )}
 
-          {myCases.map((c) => {
-            if (!c.id) return null;
-            const isPublished = c.isUploaded;
-            return (
-              <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer">
-                <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
-                  {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
-                </CaseImage>
-                <CardTextContent>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                    {isPublished
-                      ? <span style={{ background: '#0a5', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
-                      : <DraftBadge>DRAFT</DraftBadge>
-                    }
-                    <h3 style={{ color: isPublished ? '#0f0' : '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
-                  </div>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-                    <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-                    {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-                  </div>
-                  <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-                  {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
-                    <StatsLine>
-                      <span>▶ {caseStats[c.id].plays} plays</span>
-                      <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-                      <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-                    </StatsLine>
-                  )}
-                </CardTextContent>
-                <AdminControls onClick={(e) => e.stopPropagation()}>
-                  {onEditCase && (
-                    <AdminButton onClick={() => onEditCase(c.id)}>EDIT</AdminButton>
-                  )}
-                  {isPublished && onUnpublish && (
-                    <AdminButton $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
-                  )}
-                  {!isPublished && onPublishDraft && (
-                    <AdminButton $variant="publish" onClick={() => onPublishDraft(c.id)}>PUBLISH</AdminButton>
-                  )}
-                  {!isPublished && onDeleteDraft && (
-                    <AdminButton $variant="delete" onClick={() => onDeleteDraft(c.id)}>DELETE</AdminButton>
-                  )}
-                  {isPublished && onDeleteMyCase && (
-                    <AdminButton $variant="delete" onClick={() => onDeleteMyCase(c.id)}>DELETE</AdminButton>
-                  )}
-                </AdminControls>
-              </DraftCard>
-            );
-          })}
-        </NetworkGrid>
+            {myCases.map((c) => {
+              if (!c.id) return null;
+              const isPublished = c.isUploaded;
+              return (
+                <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer">
+                  <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
+                    {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
+                  </CaseImage>
+                  <CardTextContent>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                      {isPublished
+                        ? <span style={{ background: '#0a5', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
+                        : <DraftBadge>DRAFT</DraftBadge>
+                      }
+                      <h3 style={{ color: isPublished ? '#0f0' : '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
+                      <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+                      {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
+                    </div>
+                    <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
+                    {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
+                      <StatsLine>
+                        <span>▶ {caseStats[c.id].plays} plays</span>
+                        <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
+                        <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
+                      </StatsLine>
+                    )}
+                  </CardTextContent>
+                  <AdminControls onClick={(e) => e.stopPropagation()}>
+                    {onEditCase && (
+                      <AdminButton onClick={() => onEditCase(c.id)}>EDIT</AdminButton>
+                    )}
+                    {isPublished && onUnpublish && (
+                      <AdminButton $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
+                    )}
+                    {!isPublished && onPublishDraft && (
+                      <AdminButton $variant="publish" onClick={() => onPublishDraft(c.id)}>PUBLISH</AdminButton>
+                    )}
+                    {!isPublished && onDeleteDraft && (
+                      <AdminButton $variant="delete" onClick={() => onDeleteDraft(c.id)}>DELETE</AdminButton>
+                    )}
+                    {isPublished && onDeleteMyCase && (
+                      <AdminButton $variant="delete" onClick={() => onDeleteMyCase(c.id)}>DELETE</AdminButton>
+                    )}
+                  </AdminControls>
+                </DraftCard>
+              );
+            })}
+          </NetworkGrid>
+          <SwipeHint>«  Swipe to view  »</SwipeHint>
+        </>
       )}
     </Container>
   );

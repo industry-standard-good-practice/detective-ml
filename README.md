@@ -103,20 +103,28 @@ detective-ml/
 
 DetectiveML is an installable PWA. To test PWA installation on a mobile device during local development, you need a **publicly-accessible HTTPS URL** (Chrome requires trusted HTTPS to create a proper standalone WebAPK).
 
-### Using localtunnel
+### Automatic Tunnel
 
-1. **Start the dev server:**
+A [localtunnel](https://theboroer.github.io/localtunnel-www/) starts automatically when you run `npm run dev`, giving you a public HTTPS URL at `https://detectiveml.loca.lt`. The tunnel:
+- Starts after the HTTP server is ready
+- Auto-reconnects if the connection drops
+- Retries up to 5 times on initial connection failure
+- Survives Vite hot reloads (only the tunnel process restarts if the server itself restarts)
+
+To disable the tunnel (e.g. if you're only working locally):
+```bash
+npx tsx server.ts --no-tunnel
+```
+
+### Testing on Mobile
+
+1. **Run the dev server:**
    ```bash
    npm run dev
    ```
+   Wait for the `🌐 Tunnel active: https://detectiveml.loca.lt` message.
 
-2. **Start a localtunnel in a separate terminal:**
-   ```bash
-   npx localtunnel --port 3000 --subdomain detectiveml
-   ```
-   This gives you `https://detectiveml.loca.lt`.
-
-3. **On your mobile device:**
+2. **On your mobile device:**
    - Open `https://detectiveml.loca.lt` in Chrome
    - When prompted for a password, enter your **public IP address** (find it at [whatismyip.com](https://whatismyip.com))
    - Wait for the app to load — a green "Install DetectiveML" banner will appear
@@ -137,10 +145,10 @@ For Google Sign-In to work through the tunnel, you must add the tunnel domain to
 | Issue | Solution |
 |-------|----------|
 | "Blocked request" / host not allowed | Already handled — `vite.config.ts` has `allowedHosts: true` |
-| 503 tunnel unavailable | Restart localtunnel — it can be flaky |
+| 503 tunnel unavailable | The tunnel will auto-retry; if persistent, restart `npm run dev` |
 | App opens in Chrome with address bar | Uninstall, clear site data, re-install via the green banner |
 | Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold) |
-| localtunnel ignores `--subdomain` | The subdomain may be taken — wait a minute and retry |
+| Tunnel gets wrong subdomain | The subdomain `detectiveml` may be taken — wait a minute and retry |
 
 ## License
 
