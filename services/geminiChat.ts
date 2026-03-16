@@ -85,6 +85,62 @@ export const getSuspectResponse = async (
       4. Hints: Return an EMPTY ARRAY []. Do not give suggestion chips for a corpse.
       `;
   } else {
+    // --- INTERROGATION CONTEXT: Date, time since crime, setting, disposition ---
+    const isGuilty = suspect.isGuilty;
+    const dispositionStr = isGuilty
+      ? `You ARE guilty. You committed the crime or were directly involved. You need to protect yourself.
+        Your goal is to avoid suspicion — lie, deflect, redirect blame, or stonewall as fits your personality.
+        
+        **CONFESSION RULE (ABSOLUTE):** You must NEVER confess. NEVER say "I did it", "It was me", "I killed them", or anything equivalent.
+        - Even when confronted with overwhelming evidence, you DENY, RATIONALIZE, DEFLECT, or GO SILENT.
+        - You may say "That doesn't prove anything", "You're twisting the facts", "Someone must have planted that", or "I want my lawyer."
+        - You may become emotional, angry, panicked, or break down crying — but you do NOT admit guilt.
+        - The ONLY exception is if your aggravation is at absolute maximum (95+) AND multiple pieces of irrefutable physical evidence have been presented against you in this conversation AND the detective has systematically dismantled every single one of your lies — even then, the most you give is a CRACK: a bitter, ambiguous line like "You don't know what it was like..." or "They deserved it..." that IMPLIES guilt without being a clean confession. This should be EXTREMELY RARE.
+        - A real criminal fights to the bitter end. Act like one.
+        
+        Your personality (${suspect.personality}) determines HOW you hide the truth:
+        - If you are naturally nervous or cowardly, you may give contradictory answers, stumble over lies, or panic — but you still DENY.
+        - If you are arrogant or confident, you may be dismissive, mock the detective, and act untouchable.
+        - If you are aggressive, you may become threatening, hostile, and try to intimidate the detective into backing off.
+        - If you are calm, calculated, or charming, you stay cool and collected — you cooperate just enough to seem helpful, redirect conversations smoothly, and never show cracks. You are the hardest type to catch.`
+      : `You are INNOCENT. You did NOT commit this crime and you know it.
+        Your personality (${suspect.personality}) determines how you handle being questioned:
+        - If you are cooperative, helpful, or kind: You WANT to help the detective solve this. You may volunteer useful information, share what you saw, and point the detective toward leads. You are an ally, not an obstacle.
+        - If you are nervous or anxious: You are worried about being wrongly accused, but you still want to help. You may ramble or over-explain out of fear.
+        - If you are arrogant or proud: You are offended at being treated as a suspect and may be difficult despite being innocent.
+        - If you are guarded or private: You cooperate minimally but honestly. You answer what's asked but don't volunteer extras.
+        Regardless of personality, you have NO reason to lie about the facts of the case. You may have personal secrets unrelated to the crime, but your account of events should be truthful.`;
+
+    let interrogationContextStr = '';
+    if (caseData.startTime) {
+      const startDate = new Date(caseData.startTime);
+      const formattedDate = startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const formattedTime = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+      interrogationContextStr = `
+        --- INTERROGATION SITUATION ---
+        You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
+        The interrogation began on ${formattedDate} at ${formattedTime}.
+        The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
+        You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
+        You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+
+        --- YOUR DISPOSITION ---
+        ${dispositionStr}
+      `;
+    } else {
+      interrogationContextStr = `
+        --- INTERROGATION SITUATION ---
+        You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
+        The crime occurred recently and you are being questioned shortly after it happened.
+        You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
+        You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+
+        --- YOUR DISPOSITION ---
+        ${dispositionStr}
+      `;
+    }
+
     systemPrompt = `
         You are an NPC in a noir detective game.
         Character: ${suspect.name}, ${suspect.role}.
@@ -92,7 +148,7 @@ export const getSuspectResponse = async (
         Professional Skills: ${suspect.professionalBackground || "None"}.
         Personality: ${suspect.personality}.
         Secret: ${suspect.secret}.
-        
+        ${interrogationContextStr}
         --- KNOWLEDGE BASE (STRICT SOURCE OF TRUTH) ---
         1. ALIBI: ${alibiStr}
         2. MOTIVE: "${suspect.motive || 'Unknown'}"
@@ -204,7 +260,7 @@ export const getSuspectResponse = async (
         REVEALING EVIDENCE RULES:
         1. If the user explicitly asks about a specific piece of UNREVEALED SECRETS you possess (e.g., "What about the ledger?"), YOU MUST REVEAL IT. Set 'revealedEvidence' to the EXACT title.
         2. If the user asks about a topic related to your UNREVEALED SECRETS, YOU MUST REVEAL IT. Do not hide it behind an aggravation check. Reveal it regardless of your anger level.
-        3. If the user presents evidence that proves your guilt or contradicts your story, confess and REVEAL related UNREVEALED SECRETS.
+        3. If the user presents evidence that contradicts your story, you REVEAL the related UNREVEALED SECRET (the evidence itself is now on the table) — but you do NOT confess guilt. You may explain it away, claim ignorance, or say it was planted. Revealing evidence ≠ admitting to the crime.
         4. DO NOT set 'revealedEvidence' for items in REVEALED SECRETS. The detective already knows them. You can discuss them freely.
         `}
       `;
