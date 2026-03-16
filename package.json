@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "dev:local": "tsx server.ts --no-tunnel",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
@@ -18,7 +17,6 @@
     "express": "^5.2.1",
     "firebase": "^12.9.0",
     "framer-motion": "^12.36.0",
-    "localtunnel": "^2.0.2",
     "lucide-react": "^0.577.0",
     "motion": "^12.35.1",
     "node-fetch": "^3.3.2",
@@ -34,7 +32,6 @@
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.1",
-    "selfsigned": "^5.5.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

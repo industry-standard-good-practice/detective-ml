@@ -79,8 +79,7 @@ DetectiveML includes a full case editor where you can:
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start the dev server + localtunnel (for mobile PWA testing) |
-| `npm run dev:local` | Start the dev server only (no tunnel) |
+| `npm run dev` | Start the dev server |
 | `npm run build` | Build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Type-check with TypeScript |
@@ -100,55 +99,96 @@ detective-ml/
 └── index.tsx         # App entry point
 ```
 
-## PWA Local Development
+## PWA Mobile Testing
 
-DetectiveML is an installable PWA. To test PWA installation on a mobile device during local development, you need a **publicly-accessible HTTPS URL** (Chrome requires trusted HTTPS to create a proper standalone WebAPK).
+DetectiveML is an installable PWA on both Android and iOS. Both platforms open in **standalone mode** (no browser UI).
 
-### Automatic Tunnel
+### Find Your PC's LAN IP
 
-A [localtunnel](https://theboroer.github.io/localtunnel-www/) starts automatically when you run `npm run dev`, giving you a public HTTPS URL at `https://detectiveml.loca.lt`. The tunnel:
-- Starts inline with the dev server and auto-reconnects if the connection drops
-- Restarts automatically whenever the server restarts
-- Uses the same subdomain (`detectiveml`) for a consistent URL
-
-To run without the tunnel:
+You'll need this for iOS testing. Run in a terminal:
 ```bash
-npm run dev:local
+ipconfig
+# Look for "IPv4 Address" under your active adapter (e.g. 192.168.86.244)
 ```
 
-### Testing on Mobile
+### Android (Chrome USB Port Forwarding)
 
-1. **Run the dev server:**
+Chrome on Android requires a secure context (`localhost` or HTTPS) for standalone PWA install. USB port forwarding maps your PC's `localhost:3000` to `localhost:3000` on your phone.
+
+#### Prerequisites
+
+1. **Install ADB** (one-time — required for Chrome to communicate with your phone):
+   ```bash
+   winget install Google.PlatformTools
+   ```
+
+2. **Enable Developer Mode on your Android phone:**
+   - `Settings → About phone` → tap **Build number** 7 times
+
+3. **Enable USB Debugging:**
+   - `Settings → Developer options` → toggle on **USB debugging**
+
+#### Testing Workflow
+
+1. **Start the dev server:**
    ```bash
    npm run dev
    ```
-   Wait for the `🌐 Tunnel active: https://detectiveml.loca.lt` message.
 
-2. **On your mobile device:**
-   - Open `https://detectiveml.loca.lt` in Chrome
-   - When prompted for a password, enter your **public IP address** (find it at [whatismyip.com](https://whatismyip.com))
-   - Wait for the app to load — a green "Install DetectiveML" banner will appear
-   - Tap **Install** to add it to your home screen in fullscreen mode
+2. **Connect your phone via USB** (must be a data cable, not charge-only)
+   - Accept the **"Allow USB debugging?"** prompt on your phone
+   - Verify with `adb devices` — your device should show as `device` (not `unauthorized`)
 
-### Firebase Auth Setup for Tunnel URLs
+3. **Set up port forwarding:**
+   - On your PC, open Chrome → `chrome://inspect/#devices`
+   - Your phone should appear (with a green dot if port forwarding is active)
+   - Click **"Port forwarding..."** → add rule: `3000` → `localhost:3000`
+   - Check **"Enable port forwarding"** → **Done**
 
-For Google Sign-In to work through the tunnel, you must add the tunnel domain to Firebase:
+4. **On your phone:**
+   - Open Chrome → `localhost:3000`
+   - Wait ~30 seconds → tap **Install**
+   - The app opens in **standalone mode** (no address bar) ✅
 
-1. Go to the [Firebase Console](https://console.firebase.google.com/)
-2. Select your project → **Authentication** → **Settings**
-3. Under **Authorized domains**, click **Add domain**
-4. Add: `detectiveml.loca.lt`
-5. Save — sign-in will now work through the tunnel
+#### Bonus: Remote Debugging
+
+Click **"inspect"** next to your phone's tab in `chrome://inspect` to get full Chrome DevTools — Elements, Console, Network, and more.
+
+### iOS (Safari over LAN)
+
+Safari respects the `apple-mobile-web-app-capable` meta tag over HTTP, so you can install directly over your local network — no USB cable needed.
+
+#### Testing Workflow
+
+1. **Start the dev server:**
+   ```bash
+   npm run dev
+   ```
+
+2. **On your iPhone/iPad** (same WiFi network as your PC):
+   - Open **Safari** → go to `http://<your-lan-ip>:3000` (e.g. `http://192.168.86.244:3000`)
+   - Tap **Share** (square with arrow) → **"Add to Home Screen"** → **Add**
+   - The app opens in **standalone mode** (no Safari UI) ✅
+
+> **Note:** Service workers require HTTPS, so offline caching won't work over HTTP during development. This doesn't affect normal testing — the app works fully while connected to your network.
+
+#### Remote Debugging (macOS only)
+
+1. On your iPhone: `Settings → Safari → Advanced → Web Inspector` → enable
+2. Connect iPhone to Mac via USB
+3. In Safari on Mac: `Develop → [Your iPhone] → [Your Page]`
 
 ### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| "Blocked request" / host not allowed | Already handled — `vite.config.ts` has `allowedHosts: true` |
-| 503 tunnel unavailable | The tunnel auto-retries every 3 seconds |
-| App opens in Chrome with address bar | Uninstall, clear site data, re-install via the green banner |
-| Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold) |
-| Tunnel gets wrong subdomain | The subdomain `detectiveml` may be taken — wait a minute and retry |
+| **Android:** `adb devices` shows nothing | Unplug and replug the USB cable. Accept the debugging prompt on your phone. Try a different cable |
+| **Android:** Phone shows "Offline" in `chrome://inspect` | Revoke USB debugging authorizations in Developer options, reconnect |
+| **Android:** Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold). Ensure manifest and service worker are valid |
+| **Android:** Port forwarding indicator isn't green | Make sure the dev server is running on port 3000 |
+| **iOS:** Can't reach `http://<ip>:3000` | Ensure phone and PC are on the same network. Check Windows Firewall allows Node.js |
+| **iOS:** App opens in Safari instead of standalone | Delete the shortcut, clear Safari cache (`Settings → Safari → Clear History`), re-add |
+| **Both:** App opens with browser UI after install | Uninstall/remove the app, clear site data, re-install |
 
 ## License
 

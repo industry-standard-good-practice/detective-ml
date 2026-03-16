@@ -1,42 +1,11 @@
 
 import express from "express";
-import https from "https";
 import { createServer as createViteServer } from "vite";
 import fetch from "node-fetch";
-import selfsigned from "selfsigned";
-import localtunnel from "localtunnel";
-
-const TUNNEL_SUBDOMAIN = "detectiveml";
-
-async function startTunnel(port: number) {
-  while (true) {
-    try {
-      const tunnel = await localtunnel({ port, subdomain: TUNNEL_SUBDOMAIN });
-      console.log(`\n🌐 Tunnel active: ${tunnel.url}`);
-      console.log(`   → Open this URL on your phone for PWA testing\n`);
-
-      await new Promise<void>((resolve) => {
-        tunnel.on("close", () => {
-          console.warn("⚠ Tunnel closed. Reconnecting in 3s...");
-          resolve();
-        });
-        tunnel.on("error", (err: Error) => {
-          console.error("Tunnel error:", err.message);
-          tunnel.close();
-          resolve();
-        });
-      });
-    } catch (err: any) {
-      console.warn(`Tunnel connect failed: ${err.message}`);
-    }
-    await new Promise(r => setTimeout(r, 3000));
-  }
-}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
-  const HTTPS_PORT = 3443;
 
   // Proxy endpoint to bypass CORS
   app.get("/api/proxy-image", async (req, res) => {
@@ -82,51 +51,9 @@ async function startServer() {
   // HTTP server
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP server running on http://0.0.0.0:${PORT}`);
-
-    // Start tunnel inline (reconnects automatically)
-    if (!process.argv.includes("--no-tunnel")) {
-      startTunnel(PORT);
-    }
+    console.log(`  → For mobile PWA testing, use Chrome USB port forwarding (see README)`);
   });
-
-  // HTTPS server with self-signed cert (for PWA installability on mobile over LAN)
-  try {
-    const attrs = [{ name: "commonName", value: "localhost" }];
-    const notAfter = new Date();
-    notAfter.setFullYear(notAfter.getFullYear() + 1);
-
-    const pems = await selfsigned.generate(attrs, {
-      algorithm: "sha256",
-      keySize: 2048,
-      notAfterDate: notAfter,
-      extensions: [
-        { name: "subjectAltName", altNames: [
-          { type: 2, value: "localhost" },
-          { type: 7, ip: "127.0.0.1" },
-        ]}
-      ]
-    });
-
-    const httpsServer = https.createServer(
-      { key: pems.private, cert: pems.cert },
-      app
-    );
-
-    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        console.warn(`⚠ HTTPS port ${HTTPS_PORT} already in use — skipping HTTPS server (tunnel still works)`);
-      } else {
-        console.error("HTTPS server error:", err);
-      }
-    });
-
-    httpsServer.listen(HTTPS_PORT, "0.0.0.0", () => {
-      console.log(`HTTPS server running on https://0.0.0.0:${HTTPS_PORT}`);
-      console.log(`  → Open https://<your-lan-ip>:${HTTPS_PORT} on your phone for PWA install`);
-    });
-  } catch (err) {
-    console.warn("Could not start HTTPS server:", err);
-  }
 }
 
 startServer();
+
