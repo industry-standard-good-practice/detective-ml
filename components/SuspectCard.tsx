@@ -347,11 +347,11 @@ const FlipButton = styled.button<{ $isBack?: boolean }>`
 
 // --- BACK STYLES ---
 
-const BackContent = styled.div`
+const BackContent = styled.div<{ $allowHorizontalScroll?: boolean }>`
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  touch-action: pan-y !important;
+  touch-action: ${props => props.$allowHorizontalScroll ? 'pan-x pan-y' : 'pan-y'} !important;
   margin-top: 0;
   margin-bottom: 30px; 
   padding: 0 20px 20px 20px;
@@ -417,6 +417,7 @@ interface SuspectCardProps {
   turnId?: string;
   onFlip?: (isFlipped: boolean) => void;
   id?: string;
+  disableTouchRotation?: boolean;
 }
 
 const SuspectCard: React.FC<SuspectCardProps> = ({ 
@@ -432,7 +433,8 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
   className,
   turnId,
   onFlip,
-  id
+  id,
+  disableTouchRotation = false
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -480,13 +482,13 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
       data-cursor="pointer"
     >
       <Atropos 
-        activeOffset={40} 
+        activeOffset={disableTouchRotation ? 0 : 40} 
         shadow={false} 
         highlight={false} 
         className="my-atropos"
-        rotateXMax={variant === 'peek' ? 5 : 15}
-        rotateYMax={variant === 'peek' ? 5 : 15}
-        rotateTouch={isFlipped ? false : 'scroll-y'} /* Allow scrolling on touch */
+        rotateXMax={disableTouchRotation ? 0 : (variant === 'peek' ? 5 : 15)}
+        rotateYMax={disableTouchRotation ? 0 : (variant === 'peek' ? 5 : 15)}
+        rotateTouch={disableTouchRotation ? false : (isFlipped ? false : 'scroll-y')} /* Allow scrolling on touch */
       >
         <FlipContainer $flipped={isFlipped}>
           
@@ -568,12 +570,13 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
                 </Header>
 
                 <BackContent 
+                  $allowHorizontalScroll={disableTouchRotation}
                   onWheel={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
                     e.currentTarget.scrollTop += e.deltaY;
                   }}
-                  onTouchMove={(e) => e.stopPropagation()}
+                  onTouchMove={disableTouchRotation ? undefined : (e) => e.stopPropagation()}
                 >
                   <InfoList>
                     <InfoItem>

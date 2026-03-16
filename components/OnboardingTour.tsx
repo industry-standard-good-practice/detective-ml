@@ -123,7 +123,7 @@ interface StepConfig {
   position: 'top' | 'bottom' | 'left' | 'right';
   mobilePosition?: 'top' | 'bottom' | 'left' | 'right';
   requiresAction?: boolean;
-  mobileTab?: 'BOARD' | 'FILES' | 'HQ' | 'SUSPECTS';
+  mobileTab?: 'BOARD' | 'HQ';
   requiresMenu?: boolean;
   requiresProfile?: boolean;
   requiresIntel?: boolean;
@@ -136,7 +136,7 @@ const STEPS: Record<number, StepConfig> = {
     description: "This is your primary source of truth. Read the case summary here to understand the crime, the victim, and the initial circumstances. Knowledge is your best weapon.",
     targetId: "mission-briefing",
     position: "left",
-    mobileTab: "FILES"
+    mobileTab: "HQ"
   },
   [OnboardingStep.SECURE_LINE]: {
     title: "Secure Line",
@@ -157,7 +157,7 @@ const STEPS: Record<number, StepConfig> = {
     description: "Keep track of everyone's movements. The timeline shows confirmed events and contradictions. Use it to spot lies and build your case.",
     targetId: "timeline-button",
     position: "bottom",
-    mobileTab: "HQ"
+    mobileTab: "BOARD"
   },
   [OnboardingStep.SUSPECT_CARDS]: {
     title: "Suspect Profiles",
@@ -165,7 +165,7 @@ const STEPS: Record<number, StepConfig> = {
     targetId: "suspect-cards-container",
     position: "top",
     requiresAction: true,
-    mobileTab: "SUSPECTS"
+    mobileTab: "BOARD"
   },
   [OnboardingStep.FLIP_CARD]: {
     title: "Deep Dive",

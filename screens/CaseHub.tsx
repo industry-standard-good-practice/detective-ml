@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup, useDragControls } from 'framer-motion';
 import { CaseData, ScreenState, ChatMessage, Evidence, Emotion, TimelineStatement } from '../types';
 import { getPixelArtUrl } from '../services/gameHelpers';
 import SuspectCard from '../components/SuspectCard';
@@ -628,6 +628,137 @@ const CarouselSnapItem = styled.div`
   width: 280px; 
 `;
 
+// --- BOTTOM SHEET FOR SUSPECTS ---
+
+const BottomSheetBackdrop = styled(motion.div)`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 999;
+`;
+
+const BottomSheet = styled(motion.div)`
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 60px;
+  z-index: 1000;
+  background: #0a0f14;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+`;
+
+const BottomSheetHeader = styled.div`
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  
+  &:active {
+    cursor: grabbing;
+  }
+`;
+
+const BottomSheetHandle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  
+  &::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+  }
+`;
+
+const BottomSheetTitle = styled.div`
+  color: #0f0;
+  font-size: var(--type-body-lg);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 0 20px 12px 20px;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+`;
+
+const BottomSheetContent = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+`;
+
+const SheetCarousel = styled.div<{ $sidePad?: number }>`
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 20px;
+  padding: 0 ${props => props.$sidePad ?? 40}px;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  user-select: none;
+  width: 100%;
+  box-sizing: border-box;
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+  }
+`;
+
+const SheetCardItem = styled.div`
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
+
+const InterrogateSheetButton = styled.button`
+  background: linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%);
+  color: #0f0;
+  border: 2px solid #1a3a1a;
+  padding: 14px;
+  font-family: inherit;
+  font-size: var(--type-body-lg);
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: linear-gradient(180deg, #2a3a2a 0%, #1a2a1a 100%);
+    border-color: #0f0;
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
 interface CaseHubProps {
   caseData: CaseData;
   evidenceDiscovered: Evidence[];
@@ -670,7 +801,13 @@ const CaseHub: React.FC<CaseHubProps> = ({
     setLightboxEvidence(null);
   };
   const [inputVal, setInputVal] = useState('');
-  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'FILES' | 'HQ' | 'SUSPECTS'>('BOARD');
+  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'HQ'>('BOARD');
+  const [isSuspectSheetOpen, setIsSuspectSheetOpen] = useState(false);
+  const sheetContentRef = useRef<HTMLDivElement>(null);
+  const [sheetCardSize, setSheetCardSize] = useState({ w: 280, h: 450, pad: 40 });
+  const sheetDragControls = useDragControls();
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const carouselDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
   const logRef = useRef<HTMLDivElement>(null);
   const { startTour, completeStep, currentStep } = useOnboarding();
 
@@ -681,6 +818,93 @@ const CaseHub: React.FC<CaseHubProps> = ({
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [officerHistory, isChatOpen]);
+
+  // Compute card size from available sheet space
+  useEffect(() => {
+    if (!isSuspectSheetOpen) return;
+    const measure = () => {
+      const el = sheetContentRef.current;
+      if (!el) return;
+      const availH = el.clientHeight - 20; // 20px padding
+      const availW = window.innerWidth;
+      const ASPECT = 280 / 450;
+      // Height-constrained: derive width from height
+      let cardH = availH;
+      let cardW = cardH * ASPECT;
+      // Width-constrained: if card would be too wide, derive from width
+      const maxCardW = availW - 80; // 40px padding each side
+      if (cardW > maxCardW) {
+        cardW = maxCardW;
+        cardH = cardW / ASPECT;
+      }
+      const pad = Math.max(20, (availW - cardW) / 2);
+      setSheetCardSize({ w: Math.round(cardW), h: Math.round(cardH), pad: Math.round(pad) });
+    };
+    // Slight delay to allow sheet to render
+    requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isSuspectSheetOpen]);
+
+  // Mouse-drag scrolling for the carousel (mouse only, not touch)
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || !isSuspectSheetOpen) return;
+
+    const state = carouselDrag.current;
+
+    // Prevent native image drag
+    const onDragStart = (e: DragEvent) => e.preventDefault();
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return; // Let touch scroll natively
+      state.isDown = true;
+      state.startX = e.pageX;
+      state.scrollLeft = el.scrollLeft;
+      (state as any).didDrag = false;
+      el.style.cursor = 'grabbing';
+      el.style.scrollSnapType = 'none';
+      el.style.scrollBehavior = 'auto';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!state.isDown) return;
+      if (Math.abs(e.pageX - state.startX) > 5) {
+        (state as any).didDrag = true;
+      }
+      const walk = (e.pageX - state.startX) * 1.5;
+      el.scrollLeft = state.scrollLeft - walk;
+    };
+    const onUp = () => {
+      if (!state.isDown) return;
+      state.isDown = false;
+      el.style.cursor = 'grab';
+      requestAnimationFrame(() => {
+        el.style.scrollBehavior = 'smooth';
+        el.style.scrollSnapType = 'x mandatory';
+      });
+      setTimeout(() => { (state as any).didDrag = false; }, 0);
+    };
+    const onClick = (e: MouseEvent) => {
+      if ((state as any).didDrag) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('pointerdown', onDown, { capture: true });
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    el.addEventListener('click', onClick, { capture: true });
+
+    return () => {
+      el.removeEventListener('dragstart', onDragStart);
+      el.removeEventListener('pointerdown', onDown, { capture: true });
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      el.removeEventListener('click', onClick, { capture: true });
+    };
+  }, [isSuspectSheetOpen]);
 
   const handleSend = () => {
     if (!inputVal.trim() || isThinking || officerHintsRemaining <= 0) return;
@@ -704,13 +928,11 @@ const CaseHub: React.FC<CaseHubProps> = ({
         {/* MOBILE TABS */}
         <MobileTabBar id="mobile-tab-bar">
           <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
-          <TabItem $active={activeMobileTab === 'SUSPECTS'} onClick={() => setActiveMobileTab('SUSPECTS')}>SUSPECTS</TabItem>
-          <TabItem $active={activeMobileTab === 'FILES'} onClick={() => setActiveMobileTab('FILES')}>BRIEF</TabItem>
           <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
         </MobileTabBar>
 
         {/* MOBILE CONTENT RENDERER */}
-        <MobileContentArea $noPadding={activeMobileTab === 'SUSPECTS'} $noScroll={activeMobileTab === 'BOARD'}>
+        <MobileContentArea $noScroll={activeMobileTab === 'BOARD'}>
           {activeMobileTab === 'BOARD' && (
             <>
               <EvidenceBoard id="evidence-board-mobile">
@@ -746,24 +968,30 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 </svg>
                 TIMELINE ({timelineStatements.length})
               </TimelineButton>
+              <InterrogateSheetButton onClick={() => setIsSuspectSheetOpen(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                INTERROGATE SUSPECTS ({caseData.suspects.filter(s => !s.isDeceased).length})
+              </InterrogateSheetButton>
             </>
-          )}
-
-          {activeMobileTab === 'FILES' && (
-            <BriefingWidget>
-              <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3>Mission Briefing</h3>
-                <div className="tags">
-                  <Tag>{caseData.type}</Tag>
-                  <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
-                </div>
-                <p>{caseData.description}</p>
-              </div>
-            </BriefingWidget>
           )}
 
           {activeMobileTab === 'HQ' && (
             <>
+              <BriefingWidget>
+                <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h3>Mission Briefing</h3>
+                  <div className="tags">
+                    <Tag>{caseData.type}</Tag>
+                    <Tag $color={getDiffColor(caseData.difficulty)}>{caseData.difficulty}</Tag>
+                  </div>
+                  <p>{caseData.description}</p>
+                </div>
+              </BriefingWidget>
               <ChiefWidget>
                 <ChiefStatus>
                   <img src={officerPortrait} alt={officerName} />
@@ -783,27 +1011,73 @@ const CaseHub: React.FC<CaseHubProps> = ({
               </AccuseButton>
             </>
           )}
-
-          {activeMobileTab === 'SUSPECTS' && (
-            <MobileCarousel id="suspect-cards-container-mobile">
-              {caseData.suspects.map(s => (
-                <CarouselSnapItem key={s.id}>
-                  <SuspectCard
-                    suspect={s}
-                    width="280px"
-                    height="450px"
-                    variant="default"
-                    onAction={() => {
-                      completeStep(OnboardingStep.SUSPECT_CARDS, true);
-                      onStartInterrogation(s.id);
-                    }}
-                    actionLabel="INTERROGATE"
-                  />
-                </CarouselSnapItem>
-              ))}
-            </MobileCarousel>
-          )}
         </MobileContentArea>
+
+        {/* MOBILE SUSPECT BOTTOM SHEET */}
+        <AnimatePresence>
+          {isSuspectSheetOpen && (
+            <>
+              <BottomSheetBackdrop
+                key="suspect-sheet-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                onClick={() => setIsSuspectSheetOpen(false)}
+              />
+              <BottomSheet
+                key="suspect-sheet"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                drag="y"
+                dragControls={sheetDragControls}
+                dragListener={false}
+                dragConstraints={{ top: 0 }}
+                dragElastic={{ top: 0 }}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.y > 100 || info.velocity.y > 300) {
+                    setIsSuspectSheetOpen(false);
+                  }
+                }}
+              >
+                <BottomSheetHeader
+                  onPointerDown={(e) => sheetDragControls.start(e)}
+                >
+                  <BottomSheetHandle />
+                  <BottomSheetTitle>INTERROGATE SUSPECTS</BottomSheetTitle>
+                </BottomSheetHeader>
+                <BottomSheetContent ref={sheetContentRef}>
+                  <SheetCarousel
+                    id="suspect-cards-container-mobile"
+                    $sidePad={sheetCardSize.pad}
+                    ref={carouselRef}
+                    style={{ cursor: 'grab' }}
+                  >
+                    {caseData.suspects.map(s => (
+                      <SheetCardItem key={s.id}>
+                        <SuspectCard
+                          suspect={s}
+                          width={`${sheetCardSize.w}px`}
+                          height={`${sheetCardSize.h}px`}
+                          variant="default"
+                          disableTouchRotation
+                          onAction={() => {
+                            setIsSuspectSheetOpen(false);
+                            completeStep(OnboardingStep.SUSPECT_CARDS, true);
+                            onStartInterrogation(s.id);
+                          }}
+                          actionLabel="INTERROGATE"
+                        />
+                      </SheetCardItem>
+                    ))}
+                  </SheetCarousel>
+                </BottomSheetContent>
+              </BottomSheet>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* DESKTOP LAYOUT */}
         <BoardSection>
