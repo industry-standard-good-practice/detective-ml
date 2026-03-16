@@ -130,6 +130,10 @@ const InputGroup = styled.div`
       border-color: #888;
       outline: none;
     }
+
+    &::-webkit-calendar-picker-indicator {
+      filter: invert(0.85);
+    }
   }
 
   textarea {
