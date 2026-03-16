@@ -596,12 +596,15 @@ const MobileContentArea = styled.div<{ $noScroll?: boolean }>`
 
 const CarouselCardItem = styled.div`
   scroll-snap-align: center;
-  flex: 0 0 calc(100vw - 80px);
-  max-width: 340px;
+  flex: 0 0 auto;
+  width: auto;
+  height: 100%;
+  max-height: 450px;
+  max-width: 280px;
+  aspect-ratio: 280 / 450;
   display: flex;
   justify-content: center;
   align-items: center;
-  aspect-ratio: 280 / 450;
 `;
 
 // --- MOBILE ACCORDION SYSTEM ---
@@ -722,10 +725,11 @@ const InlineSuspectCarousel = styled.div`
   overflow-x: auto;
   overflow-y: hidden;
   gap: 12px;
-  padding: 15px 40px;
+  padding: 25px 40px;
   align-items: center;
   flex: 1;
   min-height: 0;
+  height: 100%;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   user-select: none;
