@@ -797,8 +797,16 @@ const CaseHub: React.FC<CaseHubProps> = ({
   const inlineCarouselRef = useRef<HTMLDivElement>(null);
   const inlineCarouselDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
 
+  const ACCORDION_ORDER = ['evidence', 'timeline', 'suspects'] as const;
   const toggleAccordion = useCallback((key: string) => {
-    setOpenAccordion(key); // always switch to the clicked panel (never collapse)
+    setOpenAccordion(prev => {
+      if (prev === key) {
+        // Clicking the already-open panel → advance to the next one
+        const idx = ACCORDION_ORDER.indexOf(key as any);
+        return ACCORDION_ORDER[(idx + 1) % ACCORDION_ORDER.length];
+      }
+      return key;
+    });
   }, []);
   const logRef = useRef<HTMLDivElement>(null);
   const { startTour, completeStep, currentStep } = useOnboarding();
