@@ -71,7 +71,7 @@ const Panel = styled.div<{ $mobileHidden?: boolean }>`
   }
 `;
 
-const LeftColumn = styled.div`
+const LeftColumn = styled.div<{ $mobileHidden?: boolean }>`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -79,6 +79,7 @@ const LeftColumn = styled.div`
   gap: 10px;
 
   @media (max-width: 1080px) {
+    display: ${props => props.$mobileHidden ? 'none' : 'flex'};
     flex: 1;
   }
 `;
@@ -1163,7 +1164,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       </MobileTabBar>
 
       {/* LEFT: Case Details */}
-      <LeftColumn>
+      <LeftColumn $mobileHidden={mobileTab !== 'case'}>
       <Panel $mobileHidden={mobileTab !== 'case'}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, color: '#fff' }}>Case Details</h2>
