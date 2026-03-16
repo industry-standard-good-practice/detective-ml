@@ -391,24 +391,27 @@ const HamburgerButton = styled.button<{ $visible?: boolean }>`
 const MobileActionButton = styled.button<{ $active?: boolean }>`
   display: none;
   @media (max-width: 768px) {
-    display: block;
-    background: ${props => props.$active ? '#0f0' : 'transparent'};
-    color: ${props => props.$active ? '#000' : '#0f0'};
-    border: 1px solid #0f0;
-    padding: 5px 10px;
+    display: flex;
+    background: transparent;
+    color: #0f0;
+    border: none;
+    padding: 0 10px;
     font-family: inherit;
-    font-size: var(--type-body);
+    font-size: var(--type-body-lg);
     font-weight: bold;
     text-transform: uppercase;
     position: absolute;
-    right: 15px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
     z-index: 20;
+    align-items: center;
+    flex-shrink: 0;
     
     &:hover {
-      background: ${props => props.$active ? '#0d0' : '#003300'};
+      color: #fff;
+      text-shadow: 0 0 5px #0f0;
     }
   }
 `;
@@ -595,16 +598,16 @@ const Layout: React.FC<LayoutProps> = ({
                   >
                     {(() => {
                       const isMobileCheck = typeof window !== 'undefined' && window.innerWidth <= 768;
-                      if (isMobileCheck && screenState === ScreenState.INTERROGATION) return '[← Back]';
+                      if (isMobileCheck && screenState === ScreenState.INTERROGATION) return '[Back]';
                       return menuOpen ? '[X]' : '[Menu]';
                     })()}
                   </HamburgerButton>
 
                   {/* MOBILE CUSTOM ACTION */}
                   {mobileAction && (
-                    <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
-                      {mobileAction.label}
-                    </MobileActionButton>
+                  <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
+                    [{mobileAction.label}]
+                  </MobileActionButton>
                   )}
 
                   {/* CENTER TITLE */}

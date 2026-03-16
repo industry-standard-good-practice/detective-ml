@@ -1346,7 +1346,7 @@ const App: React.FC = () => {
       isBooting={!hasBooted}
       powerState={powerState}
       mobileAction={gameState.currentScreen === ScreenState.INTERROGATION ? {
-        label: mobileIntelOpen ? 'CLOSE' : 'OPEN INTEL',
+        label: mobileIntelOpen ? 'CLOSE' : 'INTEL',
         onClick: () => setMobileIntelOpen(!mobileIntelOpen),
         active: mobileIntelOpen
       } : undefined}
