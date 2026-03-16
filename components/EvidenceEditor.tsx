@@ -23,15 +23,19 @@ const Header = styled.div`
 `;
 
 const AddButton = styled.button`
-  background: #222;
+  background: transparent;
   color: #0f0;
-  border: 1px dashed #0f0;
+  border: 1px solid #0f0;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 10px;
   font-family: inherit;
   font-size: var(--type-small);
+  font-weight: bold;
+  text-transform: uppercase;
+  border-radius: 4px;
+  transition: all 0.2s;
   
-  &:hover { background: #003300; }
+  &:hover { background: rgba(0, 255, 0, 0.1); }
 `;
 
 const EvidenceCard = styled.div`
@@ -87,13 +91,52 @@ const DeleteButton = styled.button`
   top: 5px;
   right: 5px;
   background: transparent;
-  color: #500;
-  border: none;
+  color: #555;
+  border: 1px solid #333;
   cursor: pointer;
-  font-weight: bold;
   font-family: inherit;
+  font-size: var(--type-body);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 4px;
+  line-height: 0;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
-  &:hover { color: #f00; }
+  &:hover {
+    color: #f55;
+    border-color: #f55;
+    background: rgba(255, 85, 85, 0.15);
+  }
+  
+  @media (max-width: 768px) {
+    color: #f55;
+    border-color: #f55;
+  }
+`;
+
+const XIcon = styled.span`
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  position: relative;
+  flex-shrink: 0;
+  
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  &::before { transform: translate(-50%, -50%) rotate(45deg); }
+  &::after { transform: translate(-50%, -50%) rotate(-45deg); }
 `;
 
 const TitleInput = styled.input`
@@ -163,7 +206,7 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({ label, evidenceList = [
       </Header>
       {evidenceList.map((ev, i) => (
         <EvidenceCard key={ev.id || i}>
-          <DeleteButton onClick={() => handleDelete(i)} title="Remove Item">[x]</DeleteButton>
+          <DeleteButton onClick={() => handleDelete(i)} title="Remove Item"><XIcon /></DeleteButton>
           
           <ImageSlot $src={ev.imageUrl}>
              {onRerollImage && (

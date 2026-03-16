@@ -388,6 +388,85 @@ const SmallButton = styled.button<{ $active?: boolean }>`
   &:hover { background: ${props => props.$active ? '#2563eb' : '#555'}; }
 `;
 
+const DeleteButton = styled.button`
+  background: transparent;
+  color: #555;
+  border: 1px solid #333;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: var(--type-small);
+  font-family: inherit;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  
+  &:hover {
+    color: #f55;
+    border-color: #f55;
+    background: rgba(255, 85, 85, 0.15);
+  }
+  
+  @media (max-width: 768px) {
+    color: #f55;
+    border-color: #f55;
+  }
+`;
+
+const XIcon = styled.span`
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  position: relative;
+  flex-shrink: 0;
+  
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  &::before { transform: translate(-50%, -50%) rotate(45deg); }
+  &::after { transform: translate(-50%, -50%) rotate(-45deg); }
+`;
+
+const ToggleButton = styled.button<{ $active?: boolean }>`
+  background: ${props => props.$active ? 'rgba(255, 85, 85, 0.15)' : 'transparent'};
+  color: ${props => props.$active ? '#f55' : '#555'};
+  border: 1px solid ${props => props.$active ? '#f55' : '#333'};
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: var(--type-small);
+  font-family: inherit;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  font-weight: bold;
+  flex-shrink: 0;
+  line-height: 1;
+  text-align: center;
+  
+  &:hover {
+    color: ${props => props.$active ? '#f55' : '#fff'};
+    border-color: ${props => props.$active ? '#f55' : '#888'};
+    background: ${props => props.$active ? 'rgba(255, 85, 85, 0.15)' : 'rgba(255,255,255,0.1)'};
+  }
+`;
+
 const HeroImageModuleWrapper = styled.div`
   container-type: inline-size;
   margin-bottom: 10px;
@@ -1413,15 +1492,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     }}
                   />
                 </div>
-                <SmallButton
+                <DeleteButton
                   onClick={() => {
                     const newList = (draftCase.initialTimeline || []).filter((_, i) => i !== idx);
                     handleCaseChange('initialTimeline', newList);
                   }}
-                  style={{ height: '100%', marginLeft: '10px', border: '1px solid #500', color: '#f55' }}
+                  style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                  title="Delete timeline event"
                 >
-                  DELETE
-                </SmallButton>
+                  <XIcon />
+                </DeleteButton>
               </ModuleItem>
             ))}
             <SmallButton onClick={() => {
@@ -1510,11 +1590,24 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         {activeSuspect && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ margin: 0, color: '#aaa', fontSize: 'var(--type-h3)' }}>
                 EDITING: {activeSuspect.name} {selectedSuspectId === 'officer' ? '(CHIEF)' : selectedSuspectId === 'partner' ? '(PARTNER)' : ''}
               </h3>
-              {!isSupportChar && <UtilityButton $danger onClick={handleDeleteSuspect}>REMOVE SUSPECT</UtilityButton>}
+              {!isSupportChar && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <ToggleButton
+                    $active={(activeSuspect as Suspect).isGuilty}
+                    onClick={() => handleSuspectChange(activeSuspect.id, 'isGuilty', !(activeSuspect as Suspect).isGuilty)}
+                    data-cursor="pointer"
+                  >
+                    {(activeSuspect as Suspect).isGuilty ? '✓' : <XIcon />} GUILTY
+                  </ToggleButton>
+                  <DeleteButton onClick={handleDeleteSuspect} title="Remove Suspect" data-cursor="pointer">
+                    <XIcon /> REMOVE
+                  </DeleteButton>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -1657,7 +1750,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                       onChange={(e) => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, statement: e.target.value })}
                     />
                   </InputGroup>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
                     <InputGroup style={{ flex: 1 }}>
                       <label>Location</label>
                       <input
@@ -1665,15 +1758,14 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         onChange={(e) => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, location: e.target.value })}
                       />
                     </InputGroup>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', border: '1px solid #444', padding: '0 10px', background: '#222' }}>
-                      <input
-                        type="checkbox"
-                        checked={(activeSuspect as Suspect).alibi?.isTrue || false}
-                        onChange={(e) => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, isTrue: e.target.checked })}
-                        style={{ width: '20px', height: '20px' }}
-                      />
-                      <label>Verified True?</label>
-                    </div>
+                    <ToggleButton
+                      $active={(activeSuspect as Suspect).alibi?.isTrue || false}
+                      onClick={() => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, isTrue: !(activeSuspect as Suspect).alibi?.isTrue })}
+                      data-cursor="pointer"
+                      style={{ height: 'calc(var(--type-body) + 18px)' }}
+                    >
+                      {(activeSuspect as Suspect).alibi?.isTrue ? '✓' : <XIcon />} VERIFIED
+                    </ToggleButton>
                   </div>
                 </Fieldset>
 
@@ -1759,12 +1851,13 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                             onChange={(e) => updateTimeline(i, 'activity', e.target.value)}
                           />
                         </div>
-                        <SmallButton
+                        <DeleteButton
                           onClick={() => removeTimelineEvent(i)}
-                          style={{ height: '100%', marginLeft: '10px', border: '1px solid #500', color: '#f55' }}
+                          style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                          title="Delete timeline event"
                         >
-                          DELETE
-                        </SmallButton>
+                          <XIcon />
+                        </DeleteButton>
                       </ModuleItem>
                     ))}
                     <SmallButton onClick={addTimelineEvent} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
@@ -1782,12 +1875,13 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                           onChange={(e) => updateFact(i, e.target.value)}
                           style={{ flex: 1, minHeight: '50px' }}
                         />
-                        <SmallButton
+                        <DeleteButton
                           onClick={() => removeFact(i)}
-                          style={{ marginLeft: '10px', marginTop: '5px', border: '1px solid #500', color: '#f55' }}
+                          style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                          title="Delete fact"
                         >
-                          X
-                        </SmallButton>
+                          <XIcon />
+                        </DeleteButton>
                       </ModuleItem>
                     ))}
                     <SmallButton onClick={addFact} style={{ padding: '10px', background: '#222' }}>+ ADD FACT</SmallButton>
@@ -1809,31 +1903,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   onRerollImage={(ev) => handleRerollEvidence(ev, 'hidden', activeSuspect.id)}
                 />
 
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <InputGroup style={{ flex: 1 }}>
-                    <label>Base Aggravation (0-100)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={(activeSuspect as Suspect).baseAggravation}
-                      onChange={(e) => handleSuspectChange(activeSuspect.id, 'baseAggravation', parseInt(e.target.value))}
-                    />
-                  </InputGroup>
-
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', background: '#200', padding: '10px', border: '1px solid #500' }} data-cursor="pointer">
-                    <input
-                      type="checkbox"
-                      checked={(activeSuspect as Suspect).isGuilty}
-                      onChange={(e) => handleSuspectChange(activeSuspect.id, 'isGuilty', e.target.checked)}
-                      style={{ width: '20px', height: '20px' }}
-                      data-cursor="pointer"
-                    />
-                    <label style={{ color: '#f55', fontWeight: 'bold', cursor: 'pointer' }} data-cursor="pointer">
-                      GUILTY
-                    </label>
-                  </div>
-                </div>
+                <InputGroup>
+                  <label>Base Aggravation (0-100)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={(activeSuspect as Suspect).baseAggravation}
+                    onChange={(e) => handleSuspectChange(activeSuspect.id, 'baseAggravation', parseInt(e.target.value))}
+                  />
+                </InputGroup>
               </>
             )}
 
