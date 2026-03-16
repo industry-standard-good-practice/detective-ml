@@ -256,6 +256,7 @@ const MobileButtonRow = styled.div`
     align-items: center;
     justify-content: space-between;
     height: 40px;
+    margin-top: 10px;
     
     button {
       height: 100%;
@@ -1677,114 +1678,114 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
             {/* MOBILE-ONLY: Input on top, buttons below */}
             <div id="unified-input-bar-mobile">
-            <MobileInputRow>
-              <PlusButtonWrapper ref={evidenceMenuRef}>
-                <PlusButton
-                  onClick={() => setShowEvidencePicker(!showEvidencePicker)}
-                  $active={selectedEvidence.length > 0}
-                  disabled={isLocked}
-                  title="Present Evidence"
-                >
-                  +
-                </PlusButton>
-                {showEvidencePicker && (
-                  <EvidenceMenu>
-                    {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
-                      <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
-                    )}
-                    {evidenceDiscovered.length > 0 && (
-                      <>
-                        <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
-                        {evidenceDiscovered.map((ev) => {
-                          const selected = isEvidenceSelected(ev);
-                          return (
-                            <EvidenceOption
-                              key={ev.id}
-                              onClick={() => toggleEvidence(ev)}
-                              style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
-                            >
-                              <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {selected && <span>✓</span>}{ev.title}
-                              </div>
-                              <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
-                            </EvidenceOption>
-                          );
-                        })}
-                      </>
-                    )}
-                    {timelineStatementsDiscovered.length > 0 && (
-                      <>
-                        <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
-                        {timelineStatementsDiscovered.map((ts) => {
-                          const selected = isEvidenceSelected(ts);
-                          return (
-                            <TimelineEvidenceOption
-                              key={ts.id}
-                              onClick={() => toggleEvidence(ts)}
-                              style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
-                            >
-                              <div className="header">
-                                {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
-                                <span className="time">{ts.time}</span>
-                                <span className="suspect">BY {ts.suspectName}</span>
-                              </div>
-                              <div className="statement">"{ts.statement}"</div>
-                            </TimelineEvidenceOption>
-                          );
-                        })}
-                      </>
-                    )}
-                  </EvidenceMenu>
-                )}
-              </PlusButtonWrapper>
-              <GhostInput
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={inputPlaceholder}
-                disabled={isLocked || isThinking}
-              />
-            </MobileInputRow>
-            <MobileButtonRow>
-              <TypeButtonWrapper ref={mobileTypeMenuRef}>
-                <TypeButton
-                  onClick={() => !isLocked && !suspect.isDeceased && setShowTypePicker(!showTypePicker)}
-                  $disabled={isLocked || suspect.isDeceased}
-                >
-                  {inputType === 'talk' ? '💬 Talk' : '🫴 Action'}
-                </TypeButton>
-                {showTypePicker && (
-                  <TypeMenu>
-                    <TypeMenuItem
-                      $active={inputType === 'talk'}
-                      onClick={() => { setInputType('talk'); setShowTypePicker(false); }}
-                    >
-                      {inputType === 'talk' && <span>✓</span>}💬 Talk
-                    </TypeMenuItem>
-                    <TypeMenuItem
-                      $active={inputType === 'action'}
-                      onClick={() => { setInputType('action'); setShowTypePicker(false); }}
-                    >
-                      {inputType === 'action' && <span>✓</span>}🫴 Action
-                    </TypeMenuItem>
-                  </TypeMenu>
-                )}
-              </TypeButtonWrapper>
-              <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                <SendActionBtn
-                  onClick={handleSend}
+              <MobileInputRow>
+                <PlusButtonWrapper ref={evidenceMenuRef}>
+                  <PlusButton
+                    onClick={() => setShowEvidencePicker(!showEvidencePicker)}
+                    $active={selectedEvidence.length > 0}
+                    disabled={isLocked}
+                    title="Present Evidence"
+                  >
+                    +
+                  </PlusButton>
+                  {showEvidencePicker && (
+                    <EvidenceMenu>
+                      {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
+                        <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
+                      )}
+                      {evidenceDiscovered.length > 0 && (
+                        <>
+                          <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
+                          {evidenceDiscovered.map((ev) => {
+                            const selected = isEvidenceSelected(ev);
+                            return (
+                              <EvidenceOption
+                                key={ev.id}
+                                onClick={() => toggleEvidence(ev)}
+                                style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
+                              >
+                                <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {selected && <span>✓</span>}{ev.title}
+                                </div>
+                                <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
+                              </EvidenceOption>
+                            );
+                          })}
+                        </>
+                      )}
+                      {timelineStatementsDiscovered.length > 0 && (
+                        <>
+                          <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
+                          {timelineStatementsDiscovered.map((ts) => {
+                            const selected = isEvidenceSelected(ts);
+                            return (
+                              <TimelineEvidenceOption
+                                key={ts.id}
+                                onClick={() => toggleEvidence(ts)}
+                                style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
+                              >
+                                <div className="header">
+                                  {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
+                                  <span className="time">{ts.time}</span>
+                                  <span className="suspect">BY {ts.suspectName}</span>
+                                </div>
+                                <div className="statement">"{ts.statement}"</div>
+                              </TimelineEvidenceOption>
+                            );
+                          })}
+                        </>
+                      )}
+                    </EvidenceMenu>
+                  )}
+                </PlusButtonWrapper>
+                <GhostInput
+                  value={inputVal}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder={inputPlaceholder}
                   disabled={isLocked || isThinking}
-                >
-                  SEND
-                </SendActionBtn>
-                <MicButton $listening={listening} onClick={startListening} title="Voice Input">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                  </svg>
-                </MicButton>
-              </div>
-            </MobileButtonRow>
+                />
+              </MobileInputRow>
+              <MobileButtonRow>
+                <TypeButtonWrapper ref={mobileTypeMenuRef}>
+                  <TypeButton
+                    onClick={() => !isLocked && !suspect.isDeceased && setShowTypePicker(!showTypePicker)}
+                    $disabled={isLocked || suspect.isDeceased}
+                  >
+                    {inputType === 'talk' ? '💬 Talk' : '🫴 Action'}
+                  </TypeButton>
+                  {showTypePicker && (
+                    <TypeMenu>
+                      <TypeMenuItem
+                        $active={inputType === 'talk'}
+                        onClick={() => { setInputType('talk'); setShowTypePicker(false); }}
+                      >
+                        {inputType === 'talk' && <span>✓</span>}💬 Talk
+                      </TypeMenuItem>
+                      <TypeMenuItem
+                        $active={inputType === 'action'}
+                        onClick={() => { setInputType('action'); setShowTypePicker(false); }}
+                      >
+                        {inputType === 'action' && <span>✓</span>}🫴 Action
+                      </TypeMenuItem>
+                    </TypeMenu>
+                  )}
+                </TypeButtonWrapper>
+                <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                  <SendActionBtn
+                    onClick={handleSend}
+                    disabled={isLocked || isThinking}
+                  >
+                    SEND
+                  </SendActionBtn>
+                  <MicButton $listening={listening} onClick={startListening} title="Voice Input">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                    </svg>
+                  </MicButton>
+                </div>
+              </MobileButtonRow>
             </div>
           </InputContainer>
         </ChatPanel>
