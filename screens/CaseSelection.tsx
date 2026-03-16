@@ -160,7 +160,9 @@ const CaseCard = styled.div<{ $isCommunity?: boolean }>`
 `;
 
 const CardTextContent = styled.div`
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  padding-top: 20px;
 
   @media (max-width: 768px) {
     display: flex;
@@ -172,7 +174,6 @@ const CardTextContent = styled.div`
     margin-right: -20px;
     padding-right: 20px;
     padding-bottom: 20px;
-    padding-top: 20px;
     
     &::-webkit-scrollbar { width: 3px; }
     &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
