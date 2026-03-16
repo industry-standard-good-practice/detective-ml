@@ -18,10 +18,7 @@ const Header = styled.div`
   gap: 40px;
   
   @media (max-width: 768px) {
-    padding: 15px;
-    gap: 15px;
-    flex-direction: column;
-    align-items: flex-start;
+    display: none;
   }
 `;
 
@@ -30,9 +27,19 @@ const TabBar = styled.div`
   gap: 20px;
   
   @media (max-width: 768px) {
-    gap: 10px;
-    width: 100%;
-    justify-content: space-between;
+    display: none;
+  }
+`;
+
+const MobileBottomTabBar = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    background: #111;
+    border-top: 1px solid #333;
+    flex-shrink: 0;
+    padding: 0 5px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 `;
 
@@ -53,13 +60,22 @@ const TabButton = styled.button<{ $active: boolean; $color: string }>`
     color: ${props => props.$color};
     text-shadow: 0 0 10px ${props => props.$color};
   }
-  
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 5px 5px;
-    flex: 1;
-    text-align: center;
-  }
+`;
+
+const BottomTabButton = styled.button<{ $active: boolean; $color: string }>`
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-top: 3px solid ${props => props.$active ? props.$color : 'transparent'};
+  color: ${props => props.$active ? props.$color : '#666'};
+  font-family: inherit;
+  font-size: var(--type-body-lg);
+  font-weight: bold;
+  padding: 10px 5px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
 `;
 
 const Carousel = styled.div`
@@ -310,22 +326,7 @@ const StatsLine = styled.div`
   color: #555;
 `;
 
-const SwipeHint = styled.div`
-  display: none;
-  
-  @media (max-width: 768px) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 10px 15px;
-    color: #555;
-    font-size: var(--type-small);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    flex-shrink: 0;
-  }
-`;
+
 
 interface CaseSelectionProps {
   communityCases: CaseData[];
@@ -503,7 +504,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               );
             })}
           </Carousel>
-          <SwipeHint>«  Swipe to view  »</SwipeHint>
+
         </>
       ) : activeTab === 'network' ? (
         <>
@@ -539,7 +540,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               );
             })}
           </NetworkGrid>
-          <SwipeHint>«  Swipe to view  »</SwipeHint>
+
         </>
       ) : (
         /* MY CASES TAB */
@@ -606,9 +607,32 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               );
             })}
           </NetworkGrid>
-          <SwipeHint>«  Swipe to view  »</SwipeHint>
+
         </>
       )}
+      <MobileBottomTabBar>
+        <BottomTabButton
+          $active={activeTab === 'featured'}
+          $color="#0f0"
+          onClick={() => setActiveTab('featured')}
+        >
+          FEATURED
+        </BottomTabButton>
+        <BottomTabButton
+          $active={activeTab === 'network'}
+          $color="#0ff"
+          onClick={() => setActiveTab('network')}
+        >
+          NETWORK
+        </BottomTabButton>
+        <BottomTabButton
+          $active={activeTab === 'mycases'}
+          $color="#fc0"
+          onClick={() => setActiveTab('mycases')}
+        >
+          MY CASES
+        </BottomTabButton>
+      </MobileBottomTabBar>
     </Container>
   );
 };

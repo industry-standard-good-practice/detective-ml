@@ -563,9 +563,10 @@ const MobileTabBar = styled.div`
   @media (max-width: 768px) {
     display: flex;
     background: #111;
-    border-bottom: 1px solid #333;
+    border-top: 1px solid #333;
     padding: 0 5px;
-    flex-shrink: 0; /* Prevent shrinking */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    flex-shrink: 0;
   }
 `;
 
@@ -574,7 +575,7 @@ const TabItem = styled.button<{ $active: boolean }>`
   background: transparent;
   color: ${props => props.$active ? '#fff' : '#666'};
   border: none;
-  border-bottom: 3px solid ${props => props.$active ? '#0f0' : 'transparent'};
+  border-top: 3px solid ${props => props.$active ? '#0f0' : 'transparent'};
   padding: 10px 5px;
   font-family: inherit;
   font-size: var(--type-body-lg);
@@ -797,7 +798,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
     setLightboxEvidence(null);
   };
   const [inputVal, setInputVal] = useState('');
-  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'HQ'>('BOARD');
+  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'HQ'>('HQ');
   // Mobile accordion state — always one panel open, default to evidence
   const [openAccordion, setOpenAccordion] = useState<string>('evidence');
   const inlineCarouselRef = useRef<HTMLDivElement>(null);
@@ -895,12 +896,6 @@ const CaseHub: React.FC<CaseHubProps> = ({
   return (
     <HubContainer>
       <LayoutGroup>
-        {/* MOBILE TABS */}
-        <MobileTabBar id="mobile-tab-bar">
-          <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
-          <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
-        </MobileTabBar>
-
         {/* MOBILE CONTENT RENDERER */}
         <MobileContentArea $noScroll={activeMobileTab === 'BOARD'}>
           {activeMobileTab === 'BOARD' && (
@@ -1076,6 +1071,12 @@ const CaseHub: React.FC<CaseHubProps> = ({
             </div>
           )}
         </MobileContentArea>
+
+        {/* MOBILE TABS - Bottom bar */}
+        <MobileTabBar id="mobile-tab-bar">
+          <TabItem $active={activeMobileTab === 'HQ'} onClick={() => setActiveMobileTab('HQ')}>HQ</TabItem>
+          <TabItem $active={activeMobileTab === 'BOARD'} onClick={() => setActiveMobileTab('BOARD')}>BOARD</TabItem>
+        </MobileTabBar>
 
 
         {/* DESKTOP LAYOUT */}
