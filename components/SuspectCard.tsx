@@ -427,6 +427,7 @@ interface SuspectCardProps {
   onFlip?: (isFlipped: boolean) => void;
   id?: string;
   disableTouchRotation?: boolean;
+  initialFlipped?: boolean;
 }
 
 const SuspectCard: React.FC<SuspectCardProps> = ({ 
@@ -443,9 +444,10 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
   turnId,
   onFlip,
   id,
-  disableTouchRotation = false
+  disableTouchRotation = false,
+  initialFlipped = false
 }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(initialFlipped);
 
   // Determine Dimensions
   let finalWidth = width;

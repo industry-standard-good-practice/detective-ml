@@ -1879,6 +1879,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               width="300px"
               height="450px"
               variant="default"
+              initialFlipped={true}
               onFlip={(flipped) => {
                 if (flipped) {
                   completeStep(OnboardingStep.FLIP_CARD, false);
