@@ -966,8 +966,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       onUpdateDraft(stampedCase);
 
       // Update refs so "unsaved changes" detection resets
+      // NOTE: We intentionally do NOT reset baselineRef here.
+      // baselineRef tracks changes since the last consistency check (or initial load),
+      // so the AI knows what the user changed even across saves.
       initialDraftCase.current = stampedCase;
-      baselineRef.current = JSON.parse(JSON.stringify(stampedCase));
       // Explicitly clear unsaved state (useEffect won't re-run since draftCase didn't change)
       setHasUnsavedChanges(false);
       onHasUnsavedChanges?.(false);

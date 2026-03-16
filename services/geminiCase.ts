@@ -132,7 +132,7 @@ export const formatUserChangeLog = (diff: Record<string, any>, baseline: CaseDat
                 const oldVal = baselineSuspect ? (baselineSuspect as any)[field] : 'unknown';
                 
                 if (field === 'name') {
-                    lines.push(`- Suspect "${oldVal}" was RENAMED to "${value}" — update ALL references to this character everywhere (description, bios, relationships, alibis, evidence, timeline, motives, secrets, witness observations)`);
+                    lines.push(`- Suspect "${oldVal}" was RENAMED to "${value}" — this is the COMPLETE new name. Use "${value}" EXACTLY and COMPLETELY. Do NOT keep any part of the old name "${oldVal}". Update ALL references to this character everywhere (description, bios, relationships, alibis, evidence, timeline, motives, secrets, witness observations).`);
                 } else if (field === 'isGuilty') {
                     lines.push(`- Suspect "${suspectLabel}" guilt status changed to: ${value ? 'GUILTY' : 'INNOCENT'}`);
                 } else if (field === 'isDeceased') {
@@ -842,13 +842,19 @@ export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg
   const userEditsSection = userChangeLog ? `
     **0. USER MANUAL EDITS (HIGHEST PRIORITY — DO NOT REVERT):**
        The user has made the following manual changes to the case since the last save.
-       These changes are IMMUTABLE and MUST be respected as ground truth.
+       These changes are IMMUTABLE and MUST be respected as the EXACT ground truth.
        You MUST propagate these changes throughout the ENTIRE case narrative — update every reference, relationship, description, bio, alibi, motive, secret, timeline entry, evidence description, and witness observation to be consistent with these user-requested changes.
        DO NOT revert any of these. DO NOT suggest reverting them in the report.
+       **CRITICAL: When a field value has been changed, the NEW value is COMPLETE and EXACT. Do NOT merge, blend, or combine parts of the old value with the new value. The new value REPLACES the old value entirely. For example, if a name was changed from "John Smith" to "Marco", the new name is "Marco" — NOT "Marco Smith".**
        
        USER CHANGES:
 ${userChangeLog}
-` : '';
+` : `
+    **0. CURRENT DATA IS AUTHORITATIVE:**
+       The case JSON provided below represents the CURRENT, latest version of the case.
+       All field values in this JSON are the source of truth. Do NOT change field values (names, descriptions, bios, etc.) unless there is an actual narrative inconsistency that must be fixed.
+       Focus on fixing logical/narrative gaps, timeline conflicts, and structural issues — not on rewriting content that is already consistent.
+`;
 
   if (onProgress) onProgress("Initializing Narrative Audit...");
 
@@ -1080,10 +1086,14 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
       **IMPORTANT — USER MANUAL EDITS (DO NOT REVERT):**
       The user has also made the following manual changes to the case.
       These changes are IMMUTABLE. Preserve them and propagate them throughout the narrative.
+      **CRITICAL: When a field value has been changed, the NEW value is COMPLETE and EXACT. Do NOT merge, blend, or combine parts of the old value with the new value. The new value REPLACES the old value entirely.**
       
       USER CHANGES:
 ${userChangeLog}
-` : '';
+` : `
+      **CURRENT DATA IS AUTHORITATIVE:**
+      The case JSON provided below is the latest version. All field values are the source of truth. Only change values that need to change to fulfill the user's request.
+`;
 
     try {
         const result = await ai.models.generateContent({
