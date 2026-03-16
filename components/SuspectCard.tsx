@@ -48,11 +48,8 @@ const CardWrapper = styled.div<CardWrapperProps>`
     width: 100%;
     height: 100%;
     transform-style: preserve-3d !important; 
+    -webkit-transform-style: preserve-3d !important;
     overflow: visible !important; 
-    /* 
-       Atropos layers often catch all pointer events. 
-       We set them to none and re-enable only on the content we want.
-    */
     pointer-events: none;
   }
 
@@ -66,8 +63,11 @@ const FlipContainer = styled.div<{ $flipped: boolean }>`
   height: 100%;
   position: relative;
   transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transform: ${props => props.$flipped ? 'rotateY(180deg)' : 'rotateY(0deg)'};
+  -webkit-transform: ${props => props.$flipped ? 'rotateY(180deg)' : 'rotateY(0deg)'};
 `;
 
 /* 
@@ -86,7 +86,10 @@ const ContentClipper = styled.div<{ $bgColor: string }>`
   overflow: hidden;
   box-shadow: 0 10px 20px rgba(0,0,0,0.5);
   z-index: 1; 
-  pointer-events: auto; /* Enable clicks on the card body */
+  pointer-events: auto;
+  /* Safari fix: backface-visibility on the overflow:hidden element too */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 
   /* Inner Border Line */
   &::after {
@@ -96,7 +99,7 @@ const ContentClipper = styled.div<{ $bgColor: string }>`
     border: 2px solid rgba(255,255,255,0.2);
     border-radius: 10px;
     pointer-events: none;
-    z-index: 5; /* Ensure border sits on top of image */
+    z-index: 5;
   }
 `;
 
@@ -106,14 +109,20 @@ const CardFace = styled.div<{ $active: boolean }>`
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border-radius: 16px;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   pointer-events: ${props => props.$active ? 'auto' : 'none'};
   z-index: ${props => props.$active ? 2 : 1};
+  /* Safari fallback: explicitly hide the non-active face */
+  visibility: ${props => props.$active ? 'visible' : 'hidden'};
+  transition: visibility 0s linear ${props => props.$active ? '0s' : '0.3s'};
 `;
 
 const CardBackFace = styled(CardFace)`
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
 `;
 
 // --- FRONT STYLES ---
