@@ -126,6 +126,7 @@ const InputGroup = styled.div`
     font-family: inherit;
     padding: 8px;
     font-size: var(--type-body);
+    border-radius: 4px;
 
     &:focus {
       border-color: #888;
@@ -135,6 +136,17 @@ const InputGroup = styled.div`
     &::-webkit-calendar-picker-indicator {
       filter: invert(0.85);
     }
+  }
+
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px;
+    padding-right: 30px;
   }
 
   textarea {
@@ -1244,7 +1256,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
                 {heroMode === 'suspect' && (
                   <select
-                    style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
+                    style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
                     onChange={(e) => {
                       const s = draftCase.suspects?.find(x => x.id === e.target.value);
                       if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
@@ -1260,7 +1272,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
                 {heroMode === 'evidence' && (
                   <select
-                    style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px' }}
+                    style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
                     onChange={(e) => {
                       const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
                       if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
@@ -1573,7 +1585,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     <select
                       value={activeSuspect.voice || ''}
                       onChange={(e) => handleSuspectChange(selectedSuspectId!, 'voice', e.target.value)}
-                      style={{ background: '#111', color: '#fff', border: '1px solid #444', padding: '8px', flex: 1 }}
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', flex: 1, WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
                     >
                       {TTS_VOICES.map(v => (
                         <option key={v.name} value={v.name}>
