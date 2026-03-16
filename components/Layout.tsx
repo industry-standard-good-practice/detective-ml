@@ -40,7 +40,7 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    background: #050505;
+    background: #000;
     color: #e0e0e0;
     margin: 0;
     padding: 0;
@@ -126,55 +126,16 @@ const MainContainer = styled.div`
   align-items: center;
   justify-content: center;
   position: relative;
-  background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
-  cursor: auto !important; /* Show OS cursor outside the monitor */
-  
-  @media (max-width: 768px) {
-    background: #000;
-  }
-`;
-
-// The Monitor Frame
-const MonitorBezel = styled.div`
-  width: 95vw;
-  height: 90vh;
-  background: #222;
-  border-radius: 40px;
-  padding: 20px;
-  box-shadow: 
-    inset 0 0 20px #000,
-    0 0 50px rgba(0,0,0,0.8);
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-  cursor: none !important; /* Hide OS cursor inside monitor — custom cursor takes over */
+  background: #000;
+  padding: 40px;
+  cursor: none !important;
   
   &, & * {
     cursor: none !important;
   }
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: 5px; left: 5px; right: 5px; bottom: 5px;
-    border-radius: 35px;
-    background: #111;
-    z-index: -1;
-  }
-
   @media (max-width: 768px) {
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    border-radius: 0;
     padding: 0;
-    box-shadow: none;
-    
-    &::before {
-      display: none;
-    }
   }
 `;
 
@@ -182,13 +143,11 @@ const MonitorBezel = styled.div`
 const Screen = styled.div<{ $powerState: 'on' | 'off' | 'turning-on' | 'turning-off' }>`
   width: 100%;
   height: 100%;
-  background-color: #0a0a0a;
-  border-radius: 20px; /* CRT curve corner */
+  background-color: #000;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
   transform-origin: center center;
 
   /* Apply animations to the whole screen container so it masks the content + overlay */
@@ -204,11 +163,6 @@ const Screen = styled.div<{ $powerState: 'on' | 'off' | 'turning-on' | 'turning-
     opacity: 0;
     transform: scale(0);
   `}
-  
-  @media (max-width: 768px) {
-    border-radius: 0;
-    box-shadow: none;
-  }
   
   /* Subtle generic distortion for DOM elements */
   &::after {
@@ -580,8 +534,7 @@ const Layout: React.FC<LayoutProps> = ({
   return (
     <>
       <GlobalStyle />
-      <MainContainer>
-        <MonitorBezel data-monitor>
+      <MainContainer data-monitor>
           <Screen $powerState={powerState}>
             <CRTOverlay />
             {!isBooting && (
@@ -836,7 +789,6 @@ const Layout: React.FC<LayoutProps> = ({
             />
 
           </Screen>
-        </MonitorBezel>
       </MainContainer>
     </>
   );
