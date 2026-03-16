@@ -15,3 +15,9 @@
     display: none !important;
   }
 }
+
+@media (min-width: 769px) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+}

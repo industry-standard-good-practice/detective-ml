@@ -576,13 +576,18 @@ const PROMPT_RULES = {
 
     /** Rules for timeline entry format — used in generation, consistency, and edit */
     TIMELINE_FORMAT: `**TIMELINE FORMAT (CRITICAL):**
-- Every timeline entry has TWO separate fields: 'time' and 'activity'.
+- Every timeline entry has FOUR separate fields: 'time', 'activity', 'day', and 'dayOffset'.
 - The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "11:30 AM"). Do NOT put the activity description in the time field.
 - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
-- **12-HOUR FORMAT ONLY:** ALL times MUST use 12-hour AM/PM format. NEVER use 24-hour military time (e.g. "20:00", "23:30"). Always write "8:00 PM", not "20:00". Always write "11:30 PM", not "23:30".
-- WRONG: { time: "8:00 PM: Arrived at the lab", activity: "" }
-- WRONG: { time: "20:00", activity: "Arrived at the lab" }
-- CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift" }
+- The 'day' field is a human-readable label for which day this event occurred relative to the crime. Examples: "Day of the Crime", "1 Day Before", "2 Days Before", "1 Week Before", "3 Months Before", "40 Years Before", "1 Day After". Use descriptive labels.
+- The 'dayOffset' field is a NUMBER used for sorting. 0 = day of the crime, -1 = 1 day before, -7 = 1 week before, -365 = 1 year before, +1 = 1 day after. Must be consistent with the 'day' label.
+- **12-HOUR FORMAT ONLY:** ALL times MUST use 12-hour AM/PM format. NEVER use 24-hour military time (e.g. "20:00", "23:30"). Always write "8:00 PM", not "20:00".
+- WRONG: { time: "8:00 PM: Arrived at the lab", activity: "", day: "", dayOffset: 0 }
+- WRONG: { time: "20:00", activity: "Arrived at the lab", day: "Day of the Crime", dayOffset: 0 }
+- CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift", day: "Day of the Crime", dayOffset: 0 }
+- CORRECT: { time: "3:00 PM", activity: "Had a heated argument with the victim", day: "1 Day Before", dayOffset: -1 }
+- CORRECT: { time: "10:00 AM", activity: "Signed the insurance policy", day: "2 Weeks Before", dayOffset: -14 }
+- **MULTI-DAY TIMELINES:** Cases SHOULD span multiple days when it makes narrative sense. Suspects' timelines should include events from before the crime that establish motive, opportunity, and alibi. The initialTimeline should include key events leading up to discovery.
 - This applies to BOTH suspect timelines AND the case-level initialTimeline.`,
 
     /** Rules for keeping initial timeline spoiler-free — used in generation, consistency, and edit */
@@ -632,9 +637,12 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
   *INSTRUCTION*: Descriptions must be detailed (2-3 sentences).
 - KNOWN FACTS: 2-3 specific facts they know about the crime.
 - MOTIVE: A clear reason they might be suspected.
-- TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has TWO fields:
+- TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has FOUR fields:
   * 'time': ONLY the timestamp (e.g. "8:00 PM"). Do NOT include the activity here.
   * 'activity': The description of what happened (e.g. "Arrived at the restaurant for dinner").
+  * 'day': Which day (e.g. "Day of the Crime", "1 Day Before"). Must be a human-readable label.
+  * 'dayOffset': Numeric offset for sorting (0 = day of crime, -1 = day before, etc.).
+  The timeline SHOULD span multiple days when relevant — include events from days before that establish motive or opportunity.
 - PROFESSIONAL BACKGROUND: A valid job or skill set.
 - WITNESS OBSERVATIONS: Something specific they saw or heard.
 - hiddenEvidence: Items they have that prove guilt or secrets. The guilty party MUST have damning hidden evidence.`,
@@ -717,9 +725,11 @@ const CASE_SCHEMA = {
                 type: Type.OBJECT,
                 properties: {
                     time: { type: Type.STRING },
-                    activity: { type: Type.STRING }
+                    activity: { type: Type.STRING },
+                    day: { type: Type.STRING },
+                    dayOffset: { type: Type.NUMBER }
                 },
-                required: ["time", "activity"]
+                required: ["time", "activity", "day", "dayOffset"]
             }
         },
         suspects: { 
@@ -753,8 +763,10 @@ const CASE_SCHEMA = {
                     }, required: ["targetName", "type", "description"]}},
                     timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                         time: { type: Type.STRING },
-                        activity: { type: Type.STRING }
-                    }, required: ["time", "activity"]}},
+                        activity: { type: Type.STRING },
+                        day: { type: Type.STRING },
+                        dayOffset: { type: Type.NUMBER }
+                    }, required: ["time", "activity", "day", "dayOffset"]}},
                     knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
                     professionalBackground: { type: Type.STRING },
                     witnessObservations: { type: Type.STRING },
@@ -1411,8 +1423,10 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
             }, required: ["title", "description"] }},
             initialTimeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                 time: { type: Type.STRING },
-                activity: { type: Type.STRING }
-            }, required: ["time", "activity"] }},
+                activity: { type: Type.STRING },
+                day: { type: Type.STRING },
+                dayOffset: { type: Type.NUMBER }
+            }, required: ["time", "activity", "day", "dayOffset"] }},
             suspects: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                 id: { type: Type.STRING },
                 name: { type: Type.STRING },
@@ -1443,8 +1457,10 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
                 }, required: ["targetName", "type", "description"] }},
                 timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                     time: { type: Type.STRING },
-                    activity: { type: Type.STRING }
-                }, required: ["time", "activity"] }},
+                    activity: { type: Type.STRING },
+                    day: { type: Type.STRING },
+                    dayOffset: { type: Type.NUMBER }
+                }, required: ["time", "activity", "day", "dayOffset"] }},
                 knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
                 hiddenEvidence: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
                     id: { type: Type.STRING },

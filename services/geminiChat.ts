@@ -18,7 +18,7 @@ export const getSuspectResponse = async (
   emotion: Emotion;
   aggravationDelta: number;
   revealedEvidence: string | null;
-  revealedTimelineStatement: { time: string; statement: string } | null;
+  revealedTimelineStatement: { time: string; statement: string; day: string; dayOffset: number } | null;
   hints: string[]
 }> => {
 
@@ -33,7 +33,7 @@ export const getSuspectResponse = async (
   const alibiStr = suspect.alibi ? `"${suspect.alibi.statement}" (Loc: ${suspect.alibi.location}, Verified: ${suspect.alibi.isTrue})` : "None";
   const relsStr = (suspect.relationships || []).map(r => `${r.targetName} (${r.type}): ${r.description}`).join('; ');
   const factsStr = (suspect.knownFacts || []).join('; ');
-  const timelineStr = (suspect.timeline || []).map(t => `[${t.time}] ${t.activity}`).join(' -> ');
+  const timelineStr = (suspect.timeline || []).map(t => `[${t.day || 'Day of the Crime'}, ${t.time}] ${t.activity}`).join(' -> ');
 
   // Separation of Evidence: Revealed vs Unrevealed
   const discoveredTitles = new Set(discoveredEvidence.map(e => e.title.toLowerCase()));
@@ -181,9 +181,10 @@ export const getSuspectResponse = async (
            - ONLY set 'revealedTimelineStatement' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
            - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal a timeline entry.
            - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
-           - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity.
+           - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity, 'day' = the day label from your TIMELINE (e.g. "Day of the Crime", "1 Day Before"), 'dayOffset' = the numeric offset from your TIMELINE.
            - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
            - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
+           - **DAY CONTEXT (CRITICAL):** When mentioning events from days other than the day of the crime, you MUST reference which day it was (e.g. "The day before, around 3:00 PM, I..."). The 'day' and 'dayOffset' fields in the revealedTimelineStatement MUST match your TIMELINE data.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
@@ -220,7 +221,9 @@ export const getSuspectResponse = async (
             nullable: true,
             properties: {
               time: { type: Type.STRING },
-              statement: { type: Type.STRING }
+              statement: { type: Type.STRING },
+              day: { type: Type.STRING },
+              dayOffset: { type: Type.NUMBER }
             }
           },
           hints: { type: Type.ARRAY, items: { type: Type.STRING } }
@@ -262,7 +265,7 @@ export const generateCaseSummary = async (
   ).join("\n");
 
   const mergedTimelines = caseData.suspects.map(s =>
-    `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.time}] ${t.activity}`).join('\n')}`
+    `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.day || 'Day of the Crime'}, ${t.time}] ${t.activity}`).join('\n')}`
   ).join('\n\n');
 
   const prompt = `

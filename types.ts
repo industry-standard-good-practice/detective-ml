@@ -50,6 +50,8 @@ export interface Relationship {
 export interface TimelineEvent {
   time: string; // e.g. "8:00 PM"
   activity: string; // "I was eating dinner"
+  day: string; // e.g. "Day of the Crime", "1 Day Before", "40 Years Before"
+  dayOffset: number; // 0 = day of crime, -1 = day before, +1 = day after
 }
 
 export interface Suspect {
@@ -147,6 +149,8 @@ export interface TimelineStatement {
   suspectPortrait?: string;
   time: string;
   statement: string;
+  day: string; // e.g. "Day of the Crime", "1 Day Before"
+  dayOffset: number; // 0 = day of crime, -1 = day before, +1 = day after
 }
 
 export interface GameState {

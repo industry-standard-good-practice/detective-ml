@@ -115,8 +115,8 @@ const textHasNumericalTime = (text: string): boolean => /\d{1,2}:\d{2}/.test(tex
 
 const extractTimelineFromText = (
   text: string,
-  suspectTimeline: { time: string; activity: string }[]
-): { time: string; statement: string } | null => {
+  suspectTimeline: { time: string; activity: string; day: string; dayOffset: number }[]
+): { time: string; statement: string; day: string; dayOffset: number } | null => {
   if (!text || !suspectTimeline || suspectTimeline.length === 0) return null;
   
   // CRITICAL: Only extract timeline if the text actually contains a numerical time reference
@@ -129,12 +129,12 @@ const extractTimelineFromText = (
     if (!timeStr) continue;
 
     if (lowerText.includes(timeStr.toLowerCase())) {
-      return { time: timeStr, statement: entry.activity };
+      return { time: timeStr, statement: entry.activity, day: entry.day, dayOffset: entry.dayOffset };
     }
 
     const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
     if (numericMatch && lowerText.includes(numericMatch[1])) {
-      return { time: timeStr, statement: entry.activity };
+      return { time: timeStr, statement: entry.activity, day: entry.day, dayOffset: entry.dayOffset };
     }
   }
 
@@ -361,7 +361,9 @@ const App: React.FC = () => {
         suspectId: 'system',
         suspectName: 'POLICE REPORT',
         time: t.time,
-        statement: t.activity || (t as any).statement || ''
+        statement: t.activity || (t as any).statement || '',
+        day: t.day || 'Day of the Crime',
+        dayOffset: t.dayOffset ?? 0
       })),
       chatHistory: initialHistory,
       officerHistory: [{ sender: 'officer', text: officerGreeting, timestamp: formatTime(caseStartTime) }],
@@ -637,7 +639,9 @@ const App: React.FC = () => {
                   suspectName: suspect.name,
                   suspectPortrait: suspect.portraits?.[Emotion.NEUTRAL] || undefined,
                   time: timelineEntry.time,
-                  statement: timelineEntry.statement
+                  statement: timelineEntry.statement,
+                  day: timelineEntry.day || 'Day of the Crime',
+                  dayOffset: timelineEntry.dayOffset ?? 0
                 });
               }
             }
@@ -794,7 +798,9 @@ const App: React.FC = () => {
               suspectName: currentSuspect.name,
               suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
               time: timelineEntry.time,
-              statement: timelineEntry.statement
+              statement: timelineEntry.statement,
+              day: timelineEntry.day || 'Day of the Crime',
+              dayOffset: timelineEntry.dayOffset ?? 0
             });
           }
         }

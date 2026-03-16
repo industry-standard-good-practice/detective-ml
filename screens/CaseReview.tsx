@@ -661,7 +661,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const addTimelineEvent = () => {
     if (!activeSuspect || isSupportChar) return;
     const currentSuspect = activeSuspect as Suspect;
-    handleSuspectChange(activeSuspect.id, 'timeline', [...currentSuspect.timeline, { time: "12:00 PM", activity: "Doing something" }]);
+    handleSuspectChange(activeSuspect.id, 'timeline', [...currentSuspect.timeline, { time: "12:00 PM", activity: "Doing something", day: "Day of the Crime", dayOffset: 0 }]);
   };
 
   const removeTimelineEvent = (index: number) => {
@@ -1361,6 +1361,29 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             {(draftCase.initialTimeline || []).map((event, idx) => (
               <ModuleItem key={`initial-timeline-${idx}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <StyledInput
+                      placeholder="Day (e.g. Day of the Crime)"
+                      value={event.day || ''}
+                      onChange={(e) => {
+                        const newList = [...(draftCase.initialTimeline || [])];
+                        newList[idx] = { ...newList[idx], day: e.target.value };
+                        handleCaseChange('initialTimeline', newList);
+                      }}
+                      style={{ flex: 2 }}
+                    />
+                    <StyledInput
+                      placeholder="Offset"
+                      type="number"
+                      value={event.dayOffset ?? 0}
+                      onChange={(e) => {
+                        const newList = [...(draftCase.initialTimeline || [])];
+                        newList[idx] = { ...newList[idx], dayOffset: parseInt(e.target.value) || 0 };
+                        handleCaseChange('initialTimeline', newList);
+                      }}
+                      style={{ flex: 0, width: '70px' }}
+                    />
+                  </div>
                   <StyledInput
                     placeholder="Time (e.g. 10:00 PM)"
                     value={event.time}
@@ -1392,7 +1415,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               </ModuleItem>
             ))}
             <SmallButton onClick={() => {
-              const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '' }];
+              const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Day of the Crime', dayOffset: 0 }];
               handleCaseChange('initialTimeline', newList);
             }} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
           </ModuleContainer>
@@ -1400,21 +1423,13 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
         <MobileOnly>
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-            <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
+            <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#fff', border: 'none' }}>CLOSE</SaveButton>
             <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-            <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
+            <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
           </div>
           <StartButton onClick={onStart}>CASE HUB</StartButton>
         </MobileOnly>
       </Panel>
-      <DesktopOnly>
-        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-          <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
-          <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-          <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
-        </div>
-        <StartButton onClick={onStart}>CASE HUB</StartButton>
-      </DesktopOnly>
       </LeftColumn>
 
       {/* RIGHT: Suspect Editor */}
@@ -1702,6 +1717,27 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     {(activeSuspect as Suspect)?.timeline?.map((t, i) => (
                       <ModuleItem key={`${activeSuspect.id}-timeline-${i}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <StyledInput
+                              placeholder="Day (e.g. Day of the Crime)"
+                              value={t.day || ''}
+                              onChange={(e) => updateTimeline(i, 'day' as any, e.target.value)}
+                              style={{ flex: 2 }}
+                            />
+                            <StyledInput
+                              placeholder="Offset"
+                              type="number"
+                              value={t.dayOffset ?? 0}
+                              onChange={(e) => {
+                                if (!activeSuspect || isSupportChar) return;
+                                const currentSuspect = activeSuspect as Suspect;
+                                const newTime = [...currentSuspect.timeline];
+                                newTime[i] = { ...newTime[i], dayOffset: parseInt(e.target.value) || 0 };
+                                handleSuspectChange(activeSuspect.id, 'timeline', newTime);
+                              }}
+                              style={{ flex: 0, width: '70px' }}
+                            />
+                          </div>
                           <StyledInput
                             placeholder="Time (e.g. 8:00 PM)"
                             value={t.time}

@@ -305,6 +305,43 @@ const parseTimeToMinutes = (t: string): number => {
   return -1;
 };
 
+const DayDivider = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px 30px 10px;
+  z-index: 4;
+
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #0f0;
+    opacity: 0.3;
+  }
+
+  @media (max-width: 600px) {
+    padding: 15px 10px 8px 40px;
+    &::before { display: none; }
+  }
+`;
+
+const DayLabel = styled.div`
+  font-family: 'VT323', monospace;
+  color: #0f0;
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+
+  @media (max-width: 600px) {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+`;
+
 const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose, inline = false }) => {
   // Combine discovered statements with initial timeline events
   const allEvents = [
@@ -314,7 +351,9 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
       text: s.statement,
       suspectId: s.suspectId,
       suspectName: s.suspectName,
-      isInitial: false
+      isInitial: false,
+      day: s.day || 'Day of the Crime',
+      dayOffset: s.dayOffset ?? 0
     })),
     ...initialTimeline.map((e, idx) => ({
       id: `initial-${idx}`,
@@ -322,12 +361,17 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
       text: e.statement,
       suspectId: null as string | null,
       suspectName: null as string | null,
-      isInitial: true
+      isInitial: true,
+      day: e.day || 'Day of the Crime',
+      dayOffset: e.dayOffset ?? 0
     }))
   ];
 
-  // Sort all events chronologically
+  // Sort all events by day offset first, then by time within each day
   const sortedEvents = [...allEvents].sort((a, b) => {
+    // Sort by dayOffset first (ascending: earliest day first)
+    if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
+    // Within same day, sort by time
     const aMin = parseTimeToMinutes(a.time);
     const bMin = parseTimeToMinutes(b.time);
     if (aMin !== bMin) return aMin - bMin;
@@ -337,14 +381,23 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
     return 0;
   });
 
-  // Group events by their time string (normalized)
-  const groups: { time: string; minutes: number; events: typeof sortedEvents }[] = [];
+  // Group events by day, then by time within each day
+  type TimeGroup = { time: string; minutes: number; events: typeof sortedEvents };
+  type DayGroup = { day: string; dayOffset: number; timeGroups: TimeGroup[] };
+
+  const dayGroups: DayGroup[] = [];
   sortedEvents.forEach(e => {
-    const lastGroup = groups[groups.length - 1];
-    if (lastGroup && lastGroup.time === e.time) {
-      lastGroup.events.push(e);
+    let currentDay = dayGroups[dayGroups.length - 1];
+    if (!currentDay || currentDay.dayOffset !== e.dayOffset) {
+      currentDay = { day: e.day, dayOffset: e.dayOffset, timeGroups: [] };
+      dayGroups.push(currentDay);
+    }
+
+    const lastTimeGroup = currentDay.timeGroups[currentDay.timeGroups.length - 1];
+    if (lastTimeGroup && lastTimeGroup.time === e.time) {
+      lastTimeGroup.events.push(e);
     } else {
-      groups.push({ time: e.time, minutes: parseTimeToMinutes(e.time), events: [e] });
+      currentDay.timeGroups.push({ time: e.time, minutes: parseTimeToMinutes(e.time), events: [e] });
     }
   });
 
@@ -373,9 +426,12 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
     );
   };
 
+  let globalGroupIdx = 0;
+  const hasMultipleDays = dayGroups.length > 1;
+
   const timelineContent = (
     <ScrollContent>
-      {groups.length === 0 ? (
+      {dayGroups.length === 0 ? (
         <EmptyState>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
@@ -384,46 +440,57 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
           <p>No timeline events discovered yet.<br />Interrogate suspects or examine evidence to reveal the sequence of events.</p>
         </EmptyState>
       ) : (
-        groups.map((group, groupIdx) => {
-          const leftItems = group.events.filter(e => e.isInitial || !e.suspectId);
-          const rightItems = group.events.filter(e => !e.isInitial && e.suspectId);
-          const allLeft = rightItems.length === 0;
-          const allRight = leftItems.length === 0;
+        dayGroups.map((dayGroup, dayIdx) => (
+          <React.Fragment key={`day-${dayGroup.dayOffset}-${dayIdx}`}>
+            {/* Day divider — always shown if multiple days, or if the single day isn't the default */}
+            {(hasMultipleDays || dayGroup.day !== 'Day of the Crime') && (
+              <DayDivider>
+                <DayLabel>{dayGroup.day}</DayLabel>
+              </DayDivider>
+            )}
+            {dayGroup.timeGroups.map((group) => {
+              const idx = globalGroupIdx++;
+              const leftItems = group.events.filter(e => e.isInitial || !e.suspectId);
+              const rightItems = group.events.filter(e => !e.isInitial && e.suspectId);
+              const allLeft = rightItems.length === 0;
+              const allRight = leftItems.length === 0;
 
-          return (
-            <TimeGroup key={group.time + '-' + groupIdx} style={{ animationDelay: `${groupIdx * 0.05}s` }}>
-              <TimeGroupLabel>
-                <TimeBadge>{group.time}</TimeBadge>
-                <TimeGroupDot />
-              </TimeGroupLabel>
-              <EventsRow>
-                {allRight ? (
-                  <>
-                    {groupIdx % 2 === 0 ? <Spacer /> : null}
-                    <RightEvents>
-                      {rightItems.map(renderEvent)}
-                    </RightEvents>
-                    {groupIdx % 2 !== 0 ? <Spacer /> : null}
-                  </>
-                ) : allLeft ? (
-                  <>
-                    {groupIdx % 2 === 0 ? (
-                      <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
-                    ) : <Spacer />}
-                    {groupIdx % 2 !== 0 ? (
-                      <RightEvents>{leftItems.map(renderEvent)}</RightEvents>
-                    ) : <Spacer />}
-                  </>
-                ) : (
-                  <>
-                    <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
-                    <RightEvents>{rightItems.map(renderEvent)}</RightEvents>
-                  </>
-                )}
-              </EventsRow>
-            </TimeGroup>
-          );
-        })
+              return (
+                <TimeGroup key={group.time + '-' + idx} style={{ animationDelay: `${idx * 0.05}s` }}>
+                  <TimeGroupLabel>
+                    <TimeBadge>{group.time}</TimeBadge>
+                    <TimeGroupDot />
+                  </TimeGroupLabel>
+                  <EventsRow>
+                    {allRight ? (
+                      <>
+                        {idx % 2 === 0 ? <Spacer /> : null}
+                        <RightEvents>
+                          {rightItems.map(renderEvent)}
+                        </RightEvents>
+                        {idx % 2 !== 0 ? <Spacer /> : null}
+                      </>
+                    ) : allLeft ? (
+                      <>
+                        {idx % 2 === 0 ? (
+                          <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                        ) : <Spacer />}
+                        {idx % 2 !== 0 ? (
+                          <RightEvents>{leftItems.map(renderEvent)}</RightEvents>
+                        ) : <Spacer />}
+                      </>
+                    ) : (
+                      <>
+                        <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                        <RightEvents>{rightItems.map(renderEvent)}</RightEvents>
+                      </>
+                    )}
+                  </EventsRow>
+                </TimeGroup>
+              );
+            })}
+          </React.Fragment>
+        ))
       )}
     </ScrollContent>
   );

@@ -1547,7 +1547,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
             {selectedEvidence.length > 0 && (
               <AttachmentChipsRow>
                 {selectedEvidence.map((ev, i) => {
-                  const label = 'title' in ev ? ev.title : `Timeline: ${(ev as TimelineStatement).time}`;
+                  const label = 'title' in ev ? ev.title : `Timeline: ${(ev as TimelineStatement).day && (ev as TimelineStatement).day !== 'Day of the Crime' ? (ev as TimelineStatement).day + ' — ' : ''}${(ev as TimelineStatement).time}`;
                   return (
                     <AttachmentChip key={i}>
                       <span>📎 {label}</span>
@@ -1633,7 +1633,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                             >
                               <div className="header">
                                 {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
-                                <span className="time">{ts.time}</span>
+                                <span className="time">{ts.day && ts.day !== 'Day of the Crime' ? `${ts.day} — ` : ''}{ts.time}</span>
                                 <span className="suspect">BY {ts.suspectName}</span>
                               </div>
                               <div className="statement">"{ts.statement}"</div>
@@ -1726,7 +1726,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                               >
                                 <div className="header">
                                   {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
-                                  <span className="time">{ts.time}</span>
+                                  <span className="time">{ts.day && ts.day !== 'Day of the Crime' ? `${ts.day} — ` : ''}{ts.time}</span>
                                   <span className="suspect">BY {ts.suspectName}</span>
                                 </div>
                                 <div className="statement">"{ts.statement}"</div>

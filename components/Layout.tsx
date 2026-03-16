@@ -583,25 +583,54 @@ const Layout: React.FC<LayoutProps> = ({
             {!isBooting && (
               <>
                 <TopBar>
-                  {/* HAMBURGER — on mobile interrogation, show Back button instead */}
-                  <HamburgerButton
-                    id="hamburger-button"
-                    $visible
-                    onClick={() => {
-                      const isMobile = window.innerWidth <= 768;
-                      if (isMobile && screenState === ScreenState.INTERROGATION) {
-                        onNavigate(ScreenState.CASE_HUB);
-                      } else {
-                        toggleMenu();
-                      }
-                    }}
-                  >
-                    {(() => {
-                      const isMobileCheck = typeof window !== 'undefined' && window.innerWidth <= 768;
-                      if (isMobileCheck && screenState === ScreenState.INTERROGATION) return '[Back]';
-                      return menuOpen ? '[X]' : '[Menu]';
-                    })()}
-                  </HamburgerButton>
+                  {/* LEFT SIDE — hamburger or case-review desktop buttons */}
+                  <NavGroup style={{ justifyContent: 'flex-start', minWidth: 'auto' }}>
+                    {/* Desktop CaseReview: show Close + Check Consistency inline */}
+                    {isCaseReview ? (
+                      <>
+                        <HamburgerButton
+                          id="hamburger-button"
+                          $visible
+                          onClick={() => {
+                            const isMobile = window.innerWidth <= 768;
+                            if (isMobile) {
+                              toggleMenu();
+                            } else if (onCloseCase) {
+                              onCloseCase();
+                            }
+                          }}
+                        >
+                          {(() => {
+                            const isMobileCheck = typeof window !== 'undefined' && window.innerWidth <= 768;
+                            if (isMobileCheck) return menuOpen ? '[X]' : '[Menu]';
+                            return '[Close Case]';
+                          })()}
+                        </HamburgerButton>
+                        {onCheckConsistency && (
+                          <NavButton className="hide-on-mobile" onClick={onCheckConsistency}>[Check Consistency]</NavButton>
+                        )}
+                      </>
+                    ) : (
+                      <HamburgerButton
+                        id="hamburger-button"
+                        $visible
+                        onClick={() => {
+                          const isMobile = window.innerWidth <= 768;
+                          if (isMobile && screenState === ScreenState.INTERROGATION) {
+                            onNavigate(ScreenState.CASE_HUB);
+                          } else {
+                            toggleMenu();
+                          }
+                        }}
+                      >
+                        {(() => {
+                          const isMobileCheck = typeof window !== 'undefined' && window.innerWidth <= 768;
+                          if (isMobileCheck && screenState === ScreenState.INTERROGATION) return '[Back]';
+                          return menuOpen ? '[X]' : '[Menu]';
+                        })()}
+                      </HamburgerButton>
+                    )}
+                  </NavGroup>
 
                   {/* MOBILE CUSTOM ACTION */}
                   {mobileAction && (
@@ -633,6 +662,17 @@ const Layout: React.FC<LayoutProps> = ({
                     {isGameplay && screenState !== ScreenState.ENDGAME && (
                       <NavButton id="hub-button" className="hide-on-mobile" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
                     )}
+                    {/* Desktop CaseReview: Case Hub + Save on right */}
+                    {isCaseReview && (
+                      <>
+                        {onTestInvestigation && (
+                          <NavButton className="hide-on-mobile" onClick={onTestInvestigation} style={{ color: '#0f0' }}>[Play Case]</NavButton>
+                        )}
+                        {onSaveCase && (
+                          <NavButton className="hide-on-mobile" onClick={onSaveCase} style={{ color: '#0f0', fontWeight: 'bold' }}>[Save]</NavButton>
+                        )}
+                      </>
+                    )}
                   </NavGroup>
                 </TopBar>
 
@@ -657,7 +697,7 @@ const Layout: React.FC<LayoutProps> = ({
                   )}
 
                   {isGameplay && screenState !== ScreenState.ENDGAME && (
-                    <NavButton id="hub-button-mobile" onClick={() => handleMenuNav(() => onNavigate(ScreenState.CASE_HUB))}>
+                    <NavButton id="hub-button-mobile" className="hide-on-desktop" onClick={() => handleMenuNav(() => onNavigate(ScreenState.CASE_HUB))}>
                       [Return to Case Hub]
                     </NavButton>
                   )}
