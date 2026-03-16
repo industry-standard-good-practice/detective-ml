@@ -1,20 +1,28 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useCallback } from 'react';
 
 /**
  * A hook that adds horizontal drag-to-scroll behavior on a scrollable container.
- * Returns a ref to attach to the scrollable element.
+ * Returns a callback ref to attach to the scrollable element.
  * While dragging, the cursor shows 'grabbing'. At rest, the cursor shows 'grab'.
  * Prevents accidental clicks on children after a drag gesture.
+ *
+ * Uses a callback ref so that listeners are re-attached whenever the element
+ * mounts (e.g. after a tab switch that unmounts/remounts the container).
  */
 export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
-  const ref = useRef<T>(null);
   const isDragging = useRef(false);
   const hasDragged = useRef(false);
   const startX = useRef(0);
-  const scrollLeft = useRef(0);
+  const scrollLeftVal = useRef(0);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    const el = ref.current;
+  const ref = useCallback((el: T | null) => {
+    // Clean up previous element's listeners if any
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+
     if (!el) return;
 
     el.style.cursor = 'grab';
@@ -32,7 +40,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
       isDragging.current = true;
       hasDragged.current = false;
       startX.current = e.pageX;
-      scrollLeft.current = el.scrollLeft;
+      scrollLeftVal.current = el.scrollLeft;
       el.style.cursor = 'grabbing';
       el.style.userSelect = 'none';
       document.body.style.userSelect = 'none';
@@ -43,7 +51,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
       e.preventDefault();
       const dx = e.pageX - startX.current;
       if (Math.abs(dx) > 3) hasDragged.current = true;
-      el.scrollLeft = scrollLeft.current - dx * 1.5;
+      el.scrollLeft = scrollLeftVal.current - dx * 1.5;
     };
 
     const onMouseUp = () => {
@@ -70,7 +78,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     el.addEventListener('mouseup', onMouseUp);
     el.addEventListener('mouseleave', onMouseLeave);
 
-    return () => {
+    cleanupRef.current = () => {
       el.removeEventListener('mousedown', onMouseDown);
       el.removeEventListener('mousemove', onMouseMove);
       el.removeEventListener('mouseup', onMouseUp);
