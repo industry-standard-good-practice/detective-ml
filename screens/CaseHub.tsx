@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence, LayoutGroup, useDragControls } from 'framer-motion';
 import { CaseData, ScreenState, ChatMessage, Evidence, Emotion, TimelineStatement } from '../types';
@@ -355,7 +355,7 @@ const AccuseButton = styled.button`
 
 const TimelineButton = styled.button`
   background: #1b263b;
-  color: #0f0;
+  color: #4af;
   border: 2px solid #415a77;
   padding: 12px;
   font-family: inherit;
@@ -372,7 +372,7 @@ const TimelineButton = styled.button`
   
   &:hover {
     background: #253855;
-    border-color: #0f0;
+    border-color: #4af;
   }
 
   svg {
@@ -582,14 +582,13 @@ const TabItem = styled.button<{ $active: boolean }>`
   text-transform: uppercase;
 `;
 
-const MobileContentArea = styled.div<{ $noPadding?: boolean; $noScroll?: boolean }>`
+const MobileContentArea = styled.div<{ $noScroll?: boolean }>`
   display: none;
   @media (max-width: 768px) {
     display: flex;
     flex: 1;
     flex-direction: column;
     overflow-y: ${props => props.$noScroll ? 'hidden' : 'auto'};
-    padding: ${props => props.$noPadding ? '0' : '10px'};
     gap: ${props => props.$noScroll ? '0' : '15px'};
     min-height: 0; /* CRITICAL: Enables proper scrolling in flex child */
   }
@@ -759,6 +758,141 @@ const InterrogateSheetButton = styled.button`
   }
 `;
 
+// --- MOBILE ACCORDION SYSTEM ---
+
+const AccordionContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`;
+
+const AccordionButton = styled.button<{ $color: string; $isOpen: boolean }>`
+  background: ${props => {
+    const c = props.$color;
+    if (c === 'green') return 'linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%)';
+    if (c === 'orange') return 'linear-gradient(180deg, #2a1f0a 0%, #1a1200 100%)';
+    return 'linear-gradient(180deg, #1b263b 0%, #0d1520 100%)';
+  }};
+  color: ${props => {
+    const c = props.$color;
+    if (c === 'green') return '#0f0';
+    if (c === 'orange') return '#f90';
+    return '#4af';
+  }};
+  border: 2px solid ${props => {
+    const c = props.$color;
+    if (c === 'green') return props.$isOpen ? '#0f0' : '#1a3a1a';
+    if (c === 'orange') return props.$isOpen ? '#f90' : '#3a2a0a';
+    return props.$isOpen ? '#4af' : '#1a3a3a';
+  }};
+  padding: 14px;
+  font-family: inherit;
+  font-size: var(--type-body-lg);
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const AccordionChevron = styled(motion.span)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  font-size: 1.2rem;
+  line-height: 1;
+`;
+
+const AccordionPanel = styled.div<{ $isOpen: boolean }>`
+  display: grid;
+  grid-template-rows: ${props => props.$isOpen ? '1fr' : '0fr'};
+  transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              flex-grow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease;
+  flex: ${props => props.$isOpen ? '1' : '0'};
+  min-height: 0;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  overflow: hidden;
+`;
+
+const AccordionPanelContent = styled.div`
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.3);
+`;
+
+const AccordionInner = styled.div`
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+/* Inline timeline for mobile accordion */
+const InlineTimelineWrap = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+`;
+
+/* Inline suspect carousel for mobile accordion */
+const InlineSuspectCarousel = styled.div<{ $sidePad?: number }>`
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 20px;
+  padding: 15px ${props => props.$sidePad ?? 40}px;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  user-select: none;
+  width: 100%;
+  box-sizing: border-box;
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+  }
+`;
+
+const InlineEvidenceWrap = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 15px;
+  
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+`;
+
 interface CaseHubProps {
   caseData: CaseData;
   evidenceDiscovered: Evidence[];
@@ -805,6 +939,14 @@ const CaseHub: React.FC<CaseHubProps> = ({
   const [isSuspectSheetOpen, setIsSuspectSheetOpen] = useState(false);
   const sheetContentRef = useRef<HTMLDivElement>(null);
   const [sheetCardSize, setSheetCardSize] = useState({ w: 280, h: 450, pad: 40 });
+  // Mobile accordion state — always one panel open, default to evidence
+  const [openAccordion, setOpenAccordion] = useState<string>('evidence');
+  const inlineCarouselRef = useRef<HTMLDivElement>(null);
+  const inlineCarouselDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+
+  const toggleAccordion = useCallback((key: string) => {
+    setOpenAccordion(key); // always switch to the clicked panel (never collapse)
+  }, []);
   const sheetDragControls = useDragControls();
   const carouselRef = useRef<HTMLDivElement>(null);
   const carouselDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
@@ -906,6 +1048,56 @@ const CaseHub: React.FC<CaseHubProps> = ({
     };
   }, [isSuspectSheetOpen]);
 
+  // Mouse-drag scrolling for the inline accordion carousel (desktop mouse only)
+  useEffect(() => {
+    const el = inlineCarouselRef.current;
+    if (!el || openAccordion !== 'suspects') return;
+
+    const state = inlineCarouselDrag.current;
+    const onDragStart = (e: DragEvent) => e.preventDefault();
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      state.isDown = true;
+      state.startX = e.pageX;
+      state.scrollLeft = el.scrollLeft;
+      (state as any).didDrag = false;
+      el.style.cursor = 'grabbing';
+      el.style.scrollSnapType = 'none';
+      el.style.scrollBehavior = 'auto';
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!state.isDown) return;
+      if (Math.abs(e.pageX - state.startX) > 5) (state as any).didDrag = true;
+      el.scrollLeft = state.scrollLeft - (e.pageX - state.startX) * 1.5;
+    };
+    const onUp = () => {
+      if (!state.isDown) return;
+      state.isDown = false;
+      el.style.cursor = 'grab';
+      requestAnimationFrame(() => {
+        el.style.scrollBehavior = 'smooth';
+        el.style.scrollSnapType = 'x mandatory';
+      });
+      setTimeout(() => { (state as any).didDrag = false; }, 0);
+    };
+    const onClick = (e: MouseEvent) => {
+      if ((state as any).didDrag) { e.stopPropagation(); e.preventDefault(); }
+    };
+
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('pointerdown', onDown, { capture: true });
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    el.addEventListener('click', onClick, { capture: true });
+    return () => {
+      el.removeEventListener('dragstart', onDragStart);
+      el.removeEventListener('pointerdown', onDown, { capture: true });
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      el.removeEventListener('click', onClick, { capture: true });
+    };
+  }, [openAccordion]);
+
   const handleSend = () => {
     if (!inputVal.trim() || isThinking || officerHintsRemaining <= 0) return;
     onSendOfficerMessage(inputVal);
@@ -934,41 +1126,96 @@ const CaseHub: React.FC<CaseHubProps> = ({
         {/* MOBILE CONTENT RENDERER */}
         <MobileContentArea $noScroll={activeMobileTab === 'BOARD'}>
           {activeMobileTab === 'BOARD' && (
-            <>
-              <EvidenceBoard id="evidence-board-mobile">
-                <h2 style={{ color: '#aaa', borderBottom: '1px dashed #444', paddingBottom: '10px' }}>
-                  EVIDENCE BOARD
-                </h2>
-                <EvidenceGrid>
-                  {evidenceDiscovered.map((ev, i) => (
-                    <EvidenceItemBase key={ev.id || i}>
-                      <PolaroidImage $src={ev.imageUrl}>
-                        {!ev.imageUrl && 'No IMG'}
-                      </PolaroidImage>
-                      <PolaroidText>
-                        <strong>{ev.title}</strong>
-                        <span>{ev.description}</span>
-                      </PolaroidText>
-                    </EvidenceItemBase>
-                  ))}
-                  {Object.entries(notes).flatMap(([sId, noteList]) =>
-                    (noteList as string[]).map((n, i) => (
-                      <NoteItem key={`note-${sId}-${i}`}>
-                        <strong>{caseData.suspects.find(s => s.id === sId)?.name}</strong>
-                        {n}
-                      </NoteItem>
-                    ))
-                  )}
-                </EvidenceGrid>
-              </EvidenceBoard>
-              <TimelineButton id="timeline-button-mobile-board" onClick={() => setIsTimelineOpen(true)} style={{ flexShrink: 0 }}>
+            <AccordionContainer>
+              {/* EVIDENCE ACCORDION */}
+              <AccordionButton
+                $color="orange"
+                $isOpen={openAccordion === 'evidence'}
+                onClick={() => toggleAccordion('evidence')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="3" width="20" height="18" rx="2" />
+                  <path d="M2 8h20" />
+                  <path d="M8 8v13" />
+                </svg>
+                EVIDENCE ({evidenceDiscovered.length})
+                <AccordionChevron
+                  animate={{ rotate: openAccordion === 'evidence' ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  ▾
+                </AccordionChevron>
+              </AccordionButton>
+              <AccordionPanel $isOpen={openAccordion === 'evidence'}>
+                <AccordionPanelContent>
+                  <AccordionInner>
+                    <InlineEvidenceWrap>
+                      <EvidenceGrid>
+                        {evidenceDiscovered.map((ev, i) => (
+                          <EvidenceItemBase key={ev.id || i}>
+                            <PolaroidImage $src={ev.imageUrl}>
+                              {!ev.imageUrl && 'No IMG'}
+                            </PolaroidImage>
+                            <PolaroidText>
+                              <strong>{ev.title}</strong>
+                              <span>{ev.description}</span>
+                            </PolaroidText>
+                          </EvidenceItemBase>
+                        ))}
+                        {Object.entries(notes).flatMap(([sId, noteList]) =>
+                          (noteList as string[]).map((n, i) => (
+                            <NoteItem key={`note-${sId}-${i}`}>
+                              <strong>{caseData.suspects.find(s => s.id === sId)?.name}</strong>
+                              {n}
+                            </NoteItem>
+                          ))
+                        )}
+                      </EvidenceGrid>
+                    </InlineEvidenceWrap>
+                  </AccordionInner>
+                </AccordionPanelContent>
+              </AccordionPanel>
+
+              {/* TIMELINE ACCORDION */}
+              <AccordionButton
+                $color="blue"
+                $isOpen={openAccordion === 'timeline'}
+                onClick={() => toggleAccordion('timeline')}
+                id="timeline-button-mobile-board"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 TIMELINE ({timelineStatements.length})
-              </TimelineButton>
-              <InterrogateSheetButton onClick={() => setIsSuspectSheetOpen(true)}>
+                <AccordionChevron
+                  animate={{ rotate: openAccordion === 'timeline' ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  ▾
+                </AccordionChevron>
+              </AccordionButton>
+              <AccordionPanel $isOpen={openAccordion === 'timeline'}>
+                <AccordionPanelContent>
+                  <AccordionInner>
+                    <InlineTimelineWrap>
+                      <TimelineModal
+                        statements={timelineStatements}
+                        suspects={caseData.suspects}
+                        onClose={() => setOpenAccordion('evidence')}
+                        inline
+                      />
+                    </InlineTimelineWrap>
+                  </AccordionInner>
+                </AccordionPanelContent>
+              </AccordionPanel>
+
+              {/* INTERROGATE SUSPECTS ACCORDION */}
+              <AccordionButton
+                $color="green"
+                $isOpen={openAccordion === 'suspects'}
+                onClick={() => toggleAccordion('suspects')}
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
@@ -976,8 +1223,42 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
                 INTERROGATE SUSPECTS ({caseData.suspects.filter(s => !s.isDeceased).length})
-              </InterrogateSheetButton>
-            </>
+                <AccordionChevron
+                  animate={{ rotate: openAccordion === 'suspects' ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  ▾
+                </AccordionChevron>
+              </AccordionButton>
+              <AccordionPanel $isOpen={openAccordion === 'suspects'}>
+                <AccordionPanelContent>
+                  <AccordionInner>
+                    <InlineSuspectCarousel
+                      ref={inlineCarouselRef}
+                      $sidePad={Math.max(20, (window.innerWidth - 280) / 2)}
+                      style={{ cursor: 'grab' }}
+                    >
+                      {caseData.suspects.map(s => (
+                        <SheetCardItem key={s.id}>
+                          <SuspectCard
+                            suspect={s}
+                            width="280px"
+                            height="450px"
+                            variant="default"
+                            disableTouchRotation
+                            onAction={() => {
+                              completeStep(OnboardingStep.SUSPECT_CARDS, true);
+                              onStartInterrogation(s.id);
+                            }}
+                            actionLabel="INTERROGATE"
+                          />
+                        </SheetCardItem>
+                      ))}
+                    </InlineSuspectCarousel>
+                  </AccordionInner>
+                </AccordionPanelContent>
+              </AccordionPanel>
+            </AccordionContainer>
           )}
 
           {activeMobileTab === 'HQ' && (

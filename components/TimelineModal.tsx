@@ -268,6 +268,7 @@ interface TimelineModalProps {
   initialTimeline?: TimelineStatement[];
   suspects: Suspect[];
   onClose: () => void;
+  inline?: boolean;
 }
 
 /**
@@ -300,7 +301,7 @@ const parseTimeToMinutes = (t: string): number => {
   return -1;
 };
 
-const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose }) => {
+const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose, inline = false }) => {
   // Combine discovered statements with initial timeline events
   const allEvents = [
     ...statements.map(s => ({
@@ -368,6 +369,69 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
     );
   };
 
+  const timelineContent = (
+    <ScrollContent>
+      {groups.length === 0 ? (
+        <EmptyState>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <p>No timeline events discovered yet.<br />Interrogate suspects or examine evidence to reveal the sequence of events.</p>
+        </EmptyState>
+      ) : (
+        groups.map((group, groupIdx) => {
+          const leftItems = group.events.filter(e => e.isInitial || !e.suspectId);
+          const rightItems = group.events.filter(e => !e.isInitial && e.suspectId);
+          const allLeft = rightItems.length === 0;
+          const allRight = leftItems.length === 0;
+
+          return (
+            <TimeGroup key={group.time + '-' + groupIdx} style={{ animationDelay: `${groupIdx * 0.05}s` }}>
+              <TimeGroupLabel>
+                <TimeBadge>{group.time}</TimeBadge>
+                <TimeGroupDot />
+              </TimeGroupLabel>
+              <EventsRow>
+                {allRight ? (
+                  <>
+                    {groupIdx % 2 === 0 ? <Spacer /> : null}
+                    <RightEvents>
+                      {rightItems.map(renderEvent)}
+                    </RightEvents>
+                    {groupIdx % 2 !== 0 ? <Spacer /> : null}
+                  </>
+                ) : allLeft ? (
+                  <>
+                    {groupIdx % 2 === 0 ? (
+                      <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                    ) : <Spacer />}
+                    {groupIdx % 2 !== 0 ? (
+                      <RightEvents>{leftItems.map(renderEvent)}</RightEvents>
+                    ) : <Spacer />}
+                  </>
+                ) : (
+                  <>
+                    <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
+                    <RightEvents>{rightItems.map(renderEvent)}</RightEvents>
+                  </>
+                )}
+              </EventsRow>
+            </TimeGroup>
+          );
+        })
+      )}
+    </ScrollContent>
+  );
+
+  if (inline) {
+    return (
+      <TimelineContainer>
+        {timelineContent}
+      </TimelineContainer>
+    );
+  }
+
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={e => e.stopPropagation()}>
@@ -377,61 +441,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
         </ModalHeader>
 
         <TimelineContainer>
-          <ScrollContent>
-            {groups.length === 0 ? (
-              <EmptyState>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <p>No timeline events discovered yet.<br />Interrogate suspects or examine evidence to reveal the sequence of events.</p>
-              </EmptyState>
-            ) : (
-              groups.map((group, groupIdx) => {
-                // Split events: initial/no-suspect go left, suspect statements go right
-                const leftItems = group.events.filter(e => e.isInitial || !e.suspectId);
-                const rightItems = group.events.filter(e => !e.isInitial && e.suspectId);
-
-                // If all items are one side, alternate sides by group index for visual balance
-                const allLeft = rightItems.length === 0;
-                const allRight = leftItems.length === 0;
-
-                return (
-                  <TimeGroup key={group.time + '-' + groupIdx} style={{ animationDelay: `${groupIdx * 0.05}s` }}>
-                    <TimeGroupLabel>
-                      <TimeBadge>{group.time}</TimeBadge>
-                      <TimeGroupDot />
-                    </TimeGroupLabel>
-                    <EventsRow>
-                      {allRight ? (
-                        <>
-                          {groupIdx % 2 === 0 ? <Spacer /> : null}
-                          <RightEvents>
-                            {rightItems.map(renderEvent)}
-                          </RightEvents>
-                          {groupIdx % 2 !== 0 ? <Spacer /> : null}
-                        </>
-                      ) : allLeft ? (
-                        <>
-                          {groupIdx % 2 === 0 ? (
-                            <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
-                          ) : <Spacer />}
-                          {groupIdx % 2 !== 0 ? (
-                            <RightEvents>{leftItems.map(renderEvent)}</RightEvents>
-                          ) : <Spacer />}
-                        </>
-                      ) : (
-                        <>
-                          <LeftEvents>{leftItems.map(renderEvent)}</LeftEvents>
-                          <RightEvents>{rightItems.map(renderEvent)}</RightEvents>
-                        </>
-                      )}
-                    </EventsRow>
-                  </TimeGroup>
-                );
-              })
-            )}
-          </ScrollContent>
+          {timelineContent}
         </TimelineContainer>
       </ModalContent>
     </ModalOverlay>
