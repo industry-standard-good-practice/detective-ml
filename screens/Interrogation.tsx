@@ -1834,7 +1834,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 <>
                   <ActionButton
                     $type="neutral"
-                    onClick={() => onPartnerAction('examine')}
+                    onClick={() => { onPartnerAction('examine'); onCloseMobileIntel?.(); }}
                     disabled={partnerCharges <= 0 || initialExamDone}
                     title="Perform Initial Examination (Once)"
                   >
@@ -1845,7 +1845,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 <>
                   <ActionButton
                     $type="good"
-                    onClick={() => onPartnerAction('goodCop')}
+                    onClick={() => { onPartnerAction('goodCop'); onCloseMobileIntel?.(); }}
                     disabled={partnerCharges <= 0 || isLocked}
                     title="Calm Suspect (-50% Aggravation)"
                   >
@@ -1853,7 +1853,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   </ActionButton>
                   <ActionButton
                     $type="bad"
-                    onClick={() => onPartnerAction('badCop')}
+                    onClick={() => { onPartnerAction('badCop'); onCloseMobileIntel?.(); }}
                     disabled={partnerCharges <= 0 || isLocked}
                     title="Force Evidence (+Aggravation)"
                   >
