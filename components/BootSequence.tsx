@@ -23,6 +23,8 @@ const Container = styled.div`
   flex-direction: column;
   justify-content: flex-start;
   cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
 `;
 
 const Line = styled.div`

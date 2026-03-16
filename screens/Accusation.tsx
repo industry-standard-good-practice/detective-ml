@@ -19,6 +19,10 @@ const Container = styled.div`
   gap: 20px;
   background: radial-gradient(circle, #220000 0%, #000000 80%);
   padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 20px 0;
+  }
 `;
 
 const Title = styled.h2`
@@ -27,12 +31,22 @@ const Title = styled.h2`
   text-shadow: 0 0 10px #ff0000;
   text-transform: uppercase;
   margin: 0;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 0 20px;
+  }
 `;
 
 const SubTitle = styled.p`
   color: #aaa;
   margin-top: -10px;
   font-size: var(--type-body);
+  text-align: center;
+
+  @media (max-width: 768px) {
+    padding: 0 20px;
+  }
 `;
 
 const ScrollContainer = styled.div`
@@ -65,6 +79,11 @@ const ScrollInner = styled.div`
   gap: 40px;
   margin: 0 auto;
   align-items: center;
+
+  @media (max-width: 768px) {
+    gap: 20px;
+    padding: 0 20px;
+  }
 `;
 
 const SuspectItem = styled.div`
