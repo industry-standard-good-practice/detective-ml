@@ -13,28 +13,28 @@ export const getSuspectResponse = async (
   currentAggravation: number,
   isFirstTurn: boolean,
   discoveredEvidence: Evidence[] = []
-): Promise<{ 
-  text: string; 
-  emotion: Emotion; 
-  aggravationDelta: number; 
-  revealedEvidence: string | null; 
+): Promise<{
+  text: string;
+  emotion: Emotion;
+  aggravationDelta: number;
+  revealedEvidence: string | null;
   revealedTimelineStatement: { time: string; statement: string } | null;
-  hints: string[] 
+  hints: string[]
 }> => {
-  
+
   console.log(`[DEBUG] getSuspectResponse: ${suspect.name} | Input: "${userInput}" | Type: ${type} | Agg: ${currentAggravation}`);
 
   const isDeceased = suspect.isDeceased;
   const isBadCop = userInput.includes('[PARTNER INTERVENTION (BAD COP)]');
   const partnerName = caseData.partner?.name || "The Partner";
   const deceasedSuspect = (caseData.suspects || []).find(s => s.isDeceased);
-  
+
   // Robust Knowledge Injection
   const alibiStr = suspect.alibi ? `"${suspect.alibi.statement}" (Loc: ${suspect.alibi.location}, Verified: ${suspect.alibi.isTrue})` : "None";
   const relsStr = (suspect.relationships || []).map(r => `${r.targetName} (${r.type}): ${r.description}`).join('; ');
   const factsStr = (suspect.knownFacts || []).join('; ');
   const timelineStr = (suspect.timeline || []).map(t => `[${t.time}] ${t.activity}`).join(' -> ');
-  
+
   // Separation of Evidence: Revealed vs Unrevealed
   const discoveredTitles = new Set(discoveredEvidence.map(e => e.title.toLowerCase()));
   const unrevealedItems = (suspect.hiddenEvidence || []).filter(e => !discoveredTitles.has(e.title.toLowerCase()));
@@ -49,19 +49,19 @@ export const getSuspectResponse = async (
   const allSuspectNames = (caseData.suspects || []).map(s => s.name);
   const relationshipNames = (suspect.relationships || []).map(r => r.targetName);
   const supportNames = [caseData.officer?.name, caseData.partner?.name].filter(n => n);
-  
+
   const validNamesSet = new Set([
     ...allSuspectNames,
     ...relationshipNames,
     ...supportNames
   ]);
-  
+
   const validNamesList = Array.from(validNamesSet).filter(Boolean).join(', ');
 
   let systemPrompt = "";
 
   if (isDeceased) {
-      systemPrompt = `
+    systemPrompt = `
       You are the narrator / Game Master.
       The user is examining the corpse of ${suspect.name} (${suspect.role}).
       
@@ -85,7 +85,7 @@ export const getSuspectResponse = async (
       4. Hints: Return an EMPTY ARRAY []. Do not give suggestion chips for a corpse.
       `;
   } else {
-      systemPrompt = `
+    systemPrompt = `
         You are an NPC in a noir detective game.
         Character: ${suspect.name}, ${suspect.role}.
         Bio: ${suspect.bio}.
@@ -183,6 +183,7 @@ export const getSuspectResponse = async (
            - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
            - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity.
            - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
+           - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in numerical format (e.g. "11:00 PM", "8:30 AM", "20:15"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
@@ -230,7 +231,7 @@ export const getSuspectResponse = async (
 
   const data = JSON.parse(response.text!);
   console.log(`[DEBUG] getSuspectResponse: AI Output`, data);
-  
+
   return {
     text: data.text,
     emotion: (data.emotion as Emotion) || Emotion.NEUTRAL,
@@ -242,29 +243,29 @@ export const getSuspectResponse = async (
 };
 
 export const generateCaseSummary = async (
-    caseData: CaseData,
-    accusedId: string | null,
-    gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE',
-    evidenceDiscovered: Evidence[]
+  caseData: CaseData,
+  accusedId: string | null,
+  gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE',
+  evidenceDiscovered: Evidence[]
 ): Promise<string> => {
-    if (!accusedId) return "No accusation was made.";
+  if (!accusedId) return "No accusation was made.";
 
-    const suspect = caseData.suspects.find(s => s.id === accusedId);
-    const guiltySuspect = caseData.suspects.find(s => s.isGuilty);
-    
-    // Safeguard map over hiddenEvidence
-    const hiddenStatus = caseData.suspects.flatMap(s => 
-        (s.hiddenEvidence || []).map(e => {
-            const isFound = evidenceDiscovered.map(d => d.title).includes(e.title);
-            return `- "${e.title}": ${isFound ? "FOUND" : `MISSED (Held by ${s.name})`}`;
-        })
-    ).join("\n");
+  const suspect = caseData.suspects.find(s => s.id === accusedId);
+  const guiltySuspect = caseData.suspects.find(s => s.isGuilty);
 
-    const mergedTimelines = caseData.suspects.map(s => 
-        `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.time}] ${t.activity}`).join('\n')}`
-    ).join('\n\n');
+  // Safeguard map over hiddenEvidence
+  const hiddenStatus = caseData.suspects.flatMap(s =>
+    (s.hiddenEvidence || []).map(e => {
+      const isFound = evidenceDiscovered.map(d => d.title).includes(e.title);
+      return `- "${e.title}": ${isFound ? "FOUND" : `MISSED (Held by ${s.name})`}`;
+    })
+  ).join("\n");
 
-    const prompt = `
+  const mergedTimelines = caseData.suspects.map(s =>
+    `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.time}] ${t.activity}`).join('\n')}`
+  ).join('\n\n');
+
+  const prompt = `
         System: DetectiveOS Case Report Generator.
         Status: Case Closed.
         
@@ -308,15 +309,15 @@ export const generateCaseSummary = async (
         Style: Noir, Clinical, Police Report.
     `;
 
-    try {
-        const res = await ai.models.generateContent({
-            model: GEMINI_MODELS.CHAT,
-            contents: prompt
-        });
-        return res.text!;
-    } catch (e) {
-        return "The case file is sealed. (Error generating summary).";
-    }
+  try {
+    const res = await ai.models.generateContent({
+      model: GEMINI_MODELS.CHAT,
+      contents: prompt
+    });
+    return res.text!;
+  } catch (e) {
+    return "The case file is sealed. (Error generating summary).";
+  }
 };
 
 export const getOfficerChatResponse = async (
@@ -342,7 +343,7 @@ export const getOfficerChatResponse = async (
     Provide a helpful hint, but stay in character. If they are stuck, suggest a suspect to talk to or evidence to look for.
     Keep it under 30 words.
   `;
-  
+
   const res = await ai.models.generateContent({
     model: GEMINI_MODELS.CHAT,
     contents: prompt
@@ -351,20 +352,20 @@ export const getOfficerChatResponse = async (
 };
 
 export const getPartnerIntervention = async (
-    type: 'goodCop' | 'badCop' | 'examine' | 'hint', 
-    suspect: Suspect, 
-    caseData: CaseData,
-    history: ChatMessage[]
+  type: 'goodCop' | 'badCop' | 'examine' | 'hint',
+  suspect: Suspect,
+  caseData: CaseData,
+  history: ChatMessage[]
 ): Promise<string> => {
   console.log(`[DEBUG] getPartnerIntervention: ${type} on ${suspect.name}`);
   const lastMsg = history[history.length - 1]?.text || "Hello.";
   const partnerName = caseData.partner?.name || "Partner";
   const partnerRole = caseData.partner?.role || "Detective";
   const partnerPersonality = caseData.partner?.personality || "Helpful";
-  
+
   let prompt = "";
   if (type === 'examine') {
-      prompt = `
+    prompt = `
         You are ${partnerName}, the ${partnerRole}.
         Action: Perform an initial visual examination of the victim's body (${suspect.name}).
         Victim Bio: ${suspect.bio}.
@@ -374,7 +375,7 @@ export const getPartnerIntervention = async (
         Tone: Professional, grim. Speak in first person.
       `;
   } else if (type === 'hint') {
-      prompt = `
+    prompt = `
         You are ${partnerName}, the ${partnerRole}.
         Action: Suggest where the detective should look on the victim's body (${suspect.name}).
         Hidden Evidence they have: ${(suspect.hiddenEvidence || []).map(e => e.title).join(', ')}.
@@ -383,7 +384,7 @@ export const getPartnerIntervention = async (
         Speak in first person.
       `;
   } else {
-      prompt = `
+    prompt = `
         You are ${partnerName}, the ${partnerRole}.
         Personality: ${partnerPersonality}.
         Role: You are the partner.
