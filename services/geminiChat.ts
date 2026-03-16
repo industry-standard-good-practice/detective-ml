@@ -125,6 +125,7 @@ export const getSuspectResponse = async (
            - DON'T repeat yourself. If you already covered your alibi, don't keep restating times unprompted.
            - Match your personality, mood, and the current aggravation level.
            - Vary your sentence structure and tone from turn to turn.
+           - **INVESTIGATION CONTEXT:** You are being questioned about a CRIME. You KNOW the detective needs to reconstruct events and establish timelines. NEVER act confused or ask "why do you want to know my schedule?" or "why does that matter?" when asked about your whereabouts or timeline. Everyone in an investigation understands this is standard procedure. Your MOTIVE and GUILT determine HOW you answer (evasive, honest, lying, deflecting to others), but never WHETHER it makes sense to be asked.
 
         2. **NEGATIVE CONSTRAINT:** Do NOT invent new locations, people, time events, or facts. 
            - ONLY refer to your Alibi, Relationships, Timeline, and Known Facts. 
@@ -181,6 +182,11 @@ export const getSuspectResponse = async (
            - ONLY set 'revealedTimelineStatement' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
            - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal a timeline entry.
            - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
+           - **NATURAL TIMELINE RESPONSES:** When asked about your timeline, respond naturally based on your character:
+             - If INNOCENT and COOPERATIVE: Share your timeline willingly. You have nothing to hide.
+             - If INNOCENT but GUARDED: Share reluctantly but honestly. You're annoyed but understand why they're asking.
+             - If GUILTY or EVASIVE: Deflect, provide vague answers, lie about specifics, or try to redirect the conversation — but NEVER question why the detective is asking. You know exactly why.
+             - NEVER say things like "Why do you need to know my schedule?" or "Why does my timeline matter?" — this is a murder investigation and everyone knows the drill.
            - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity, 'day' = the day label from your TIMELINE (e.g. "Day of the Crime", "1 Day Before"), 'dayOffset' = the numeric offset from your TIMELINE.
            - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
            - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
