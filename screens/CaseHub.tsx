@@ -735,7 +735,6 @@ const InlineSuspectCarousel = styled.div`
   overflow-x: auto;
   overflow-y: hidden;
   gap: 12px;
-  padding: 25px calc(50% - 140px);
   align-items: center;
   flex: 1;
   min-height: 0;
@@ -743,8 +742,13 @@ const InlineSuspectCarousel = styled.div`
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   user-select: none;
+  -webkit-user-select: none;
   width: 100%;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  /* Generous padding so first/last items can reach center.
+     Using 50vw ensures consistent behavior on iOS Safari. */
+  padding: 25px 50vw 25px 50vw;
   
   &::-webkit-scrollbar {
     height: 4px;
