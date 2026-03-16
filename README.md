@@ -79,7 +79,8 @@ DetectiveML includes a full case editor where you can:
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start the development server |
+| `npm run dev` | Start the dev server + localtunnel (for mobile PWA testing) |
+| `npm run dev:local` | Start the dev server only (no tunnel) |
 | `npm run build` | Build for production |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | Type-check with TypeScript |
@@ -106,14 +107,13 @@ DetectiveML is an installable PWA. To test PWA installation on a mobile device d
 ### Automatic Tunnel
 
 A [localtunnel](https://theboroer.github.io/localtunnel-www/) starts automatically when you run `npm run dev`, giving you a public HTTPS URL at `https://detectiveml.loca.lt`. The tunnel:
-- Starts after the HTTP server is ready
-- Auto-reconnects if the connection drops
-- Retries up to 5 times on initial connection failure
-- Survives Vite hot reloads (only the tunnel process restarts if the server itself restarts)
+- Starts inline with the dev server and auto-reconnects if the connection drops
+- Restarts automatically whenever the server restarts
+- Uses the same subdomain (`detectiveml`) for a consistent URL
 
-To disable the tunnel (e.g. if you're only working locally):
+To run without the tunnel:
 ```bash
-npx tsx server.ts --no-tunnel
+npm run dev:local
 ```
 
 ### Testing on Mobile
@@ -145,7 +145,7 @@ For Google Sign-In to work through the tunnel, you must add the tunnel domain to
 | Issue | Solution |
 |-------|----------|
 | "Blocked request" / host not allowed | Already handled — `vite.config.ts` has `allowedHosts: true` |
-| 503 tunnel unavailable | The tunnel will auto-retry; if persistent, restart `npm run dev` |
+| 503 tunnel unavailable | The tunnel auto-retries every 3 seconds |
 | App opens in Chrome with address bar | Uninstall, clear site data, re-install via the green banner |
 | Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold) |
 | Tunnel gets wrong subdomain | The subdomain `detectiveml` may be taken — wait a minute and retry |

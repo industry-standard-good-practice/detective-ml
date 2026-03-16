@@ -7,33 +7,30 @@ import selfsigned from "selfsigned";
 import localtunnel from "localtunnel";
 
 const TUNNEL_SUBDOMAIN = "detectiveml";
-const TUNNEL_ENABLED = !process.argv.includes("--no-tunnel");
 
-async function startTunnel(port: number, retries = 5): Promise<void> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
+async function startTunnel(port: number) {
+  while (true) {
     try {
       const tunnel = await localtunnel({ port, subdomain: TUNNEL_SUBDOMAIN });
       console.log(`\n🌐 Tunnel active: ${tunnel.url}`);
       console.log(`   → Open this URL on your phone for PWA testing\n`);
 
-      tunnel.on("close", () => {
-        console.warn("⚠ Tunnel closed. Reconnecting...");
-        setTimeout(() => startTunnel(port, retries), 2000);
+      await new Promise<void>((resolve) => {
+        tunnel.on("close", () => {
+          console.warn("⚠ Tunnel closed. Reconnecting in 3s...");
+          resolve();
+        });
+        tunnel.on("error", (err: Error) => {
+          console.error("Tunnel error:", err.message);
+          tunnel.close();
+          resolve();
+        });
       });
-
-      tunnel.on("error", (err: Error) => {
-        console.error("Tunnel error:", err.message);
-      });
-
-      return;
     } catch (err: any) {
-      console.warn(`Tunnel attempt ${attempt}/${retries} failed: ${err.message}`);
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 2000));
-      }
+      console.warn(`Tunnel connect failed: ${err.message}`);
     }
+    await new Promise(r => setTimeout(r, 3000));
   }
-  console.error("❌ Could not establish tunnel after all retries. Run without tunnel or retry manually.");
 }
 
 async function startServer() {
@@ -86,8 +83,8 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP server running on http://0.0.0.0:${PORT}`);
 
-    // Start tunnel after HTTP server is ready
-    if (TUNNEL_ENABLED) {
+    // Start tunnel inline (reconnects automatically)
+    if (!process.argv.includes("--no-tunnel")) {
       startTunnel(PORT);
     }
   });
