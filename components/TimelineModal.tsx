@@ -310,8 +310,9 @@ const DayDivider = styled.div`
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 20px 30px 10px;
+  padding: 30px 30px;
   z-index: 4;
+  background: #050a10;
 
   &::before, &::after {
     content: '';
@@ -322,7 +323,7 @@ const DayDivider = styled.div`
   }
 
   @media (max-width: 600px) {
-    padding: 15px 10px 8px 40px;
+    padding: 25px 10px 25px 40px;
     &::before { display: none; }
   }
 `;
