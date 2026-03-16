@@ -13,8 +13,6 @@
  * 3. To play: convert PCM → WAV data URL, set src on unlocked element, play()
  */
 
-import toast from 'react-hot-toast';
-
 // ---- Raw PCM Cache ----
 interface PcmEntry {
   pcmData: Int16Array;
@@ -140,7 +138,6 @@ export async function playAudioFromUrl(blobUrl: string, volume: number = 1): Pro
   // Strategy 1: Use cached PCM data + warm Audio element (iOS Safari compatible)
   const cached = pcmCache.get(blobUrl);
   if (cached) {
-    toast(`🎵 PCM cache hit, unlocked: ${audioUnlocked}`, { duration: 2000 });
     
     const dataUrl = pcmToWavDataUrl(cached.pcmData, cached.sampleRate);
     
@@ -153,16 +150,13 @@ export async function playAudioFromUrl(blobUrl: string, volume: number = 1): Pro
       audio.onended = () => resolve();
       audio.onerror = (e) => {
         console.error('[Audio] playback error:', e);
-        toast.error(`Audio error: ${JSON.stringify(e)}`);
         resolve();
       };
     });
 
     try {
       await audio.play();
-      toast('▶️ Playing!', { duration: 1500 });
     } catch (e: any) {
-      toast.error(`play() failed: ${e?.message || e}`);
       console.error('[Audio] play() failed:', e);
     }
 
@@ -174,7 +168,7 @@ export async function playAudioFromUrl(blobUrl: string, volume: number = 1): Pro
   }
 
   // Strategy 2: Direct blob URL with HTMLAudioElement (non-Safari browsers)
-  toast(`⚠️ No PCM cache for this URL`, { duration: 2000 });
+  console.warn('[Audio] No PCM cache, using HTMLAudioElement fallback');
   const audio = new Audio(blobUrl);
   audio.volume = volume;
 

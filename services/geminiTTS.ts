@@ -2,7 +2,6 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { GEMINI_MODELS } from "./geminiModels";
 import { registerPcmData } from "./audioPlayer";
-import toast from 'react-hot-toast';
 
 export const generateTTS = async (text: string, voiceName: string): Promise<string | null> => {
   // Skip TTS if no voice selected, voice is "None", or no API key
@@ -30,7 +29,6 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (base64Audio) {
       // Gemini TTS returns raw PCM 16-bit, 24kHz, Mono.
-      toast(`🔊 TTS: got ${base64Audio.length} bytes`, { duration: 2000 });
       const binaryString = atob(base64Audio);
       const len = binaryString.length;
       const pcmBytes = new Uint8Array(len);
@@ -84,9 +82,8 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
       return blobUrl;
     }
     return null;
-  } catch (error: any) {
+  } catch (error) {
     console.error("TTS Generation Error:", error);
-    toast.error(`TTS Error: ${error?.message || error}`);
     return null;
   }
 };
