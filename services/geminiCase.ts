@@ -895,7 +895,13 @@ ${userChangeLog}
     
     8. ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
     
-    9. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+    9. **START TIME VALIDATION:**
+       - The 'startTime' field is an ISO datetime string (e.g. "2030-09-12T23:30") representing when the player begins their investigation.
+       - Ensure the startTime makes narrative sense for the case. A gritty noir murder should start late at night, not at 9:00 AM.
+       - The startTime should be AFTER the crime has occurred but close enough that the trail is still warm.
+       - If the current startTime doesn't fit the narrative, update it to something appropriate.
+    
+    10. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
     
     CASE DATA:
     ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -940,7 +946,7 @@ ${userChangeLog}
     hydratedCase.authorId = caseData.authorId;
     hydratedCase.version = caseData.version;
     hydratedCase.isUploaded = caseData.isUploaded;
-    if (caseData.startTime) hydratedCase.startTime = caseData.startTime;
+    if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
     if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
 
     // Ensure we don't lose non-narrative fields
@@ -1145,7 +1151,7 @@ ${userChangeLog}
         hydratedCase.authorId = caseData.authorId;
         hydratedCase.version = caseData.version;
         hydratedCase.isUploaded = caseData.isUploaded;
-        if (caseData.startTime) hydratedCase.startTime = caseData.startTime;
+        if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
 
         const themeChanged = hydratedCase.type !== caseData.type;
         if (themeChanged) {

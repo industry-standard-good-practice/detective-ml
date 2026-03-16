@@ -763,8 +763,8 @@ const Layout: React.FC<LayoutProps> = ({
               position="bottom-right"
               containerStyle={{
                 position: 'absolute',
-                bottom: 0,
-                right: 0,
+                bottom: 30,
+                right: 30,
                 zIndex: 50,
               }}
               toastOptions={{
