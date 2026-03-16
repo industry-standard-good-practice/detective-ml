@@ -229,7 +229,12 @@ const UnifiedInputBar = styled.div<{ $disabled: boolean }>`
   }
 `;
 
-const TypeSelect = styled.select`
+const TypeButtonWrapper = styled.div`
+  position: relative;
+  height: 100%;
+`;
+
+const TypeButton = styled.button<{ $disabled: boolean }>`
   background-color: transparent;
   color: #888;
   border: none;
@@ -240,32 +245,74 @@ const TypeSelect = styled.select`
   font-size: var(--type-body);
   cursor: pointer;
   text-transform: uppercase;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath fill='%23888' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 5px center;
-  background-size: 20px;
-  
-  &:focus { 
-    outline: none; 
-    background-color: #111; 
-    color: #fff; 
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath fill='%23fff' d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  position: relative;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #888;
   }
-  option { background: #000; }
-  
-  &:disabled {
+
+  &:hover {
+    color: #fff;
+    background: #111;
+    &::after { border-top-color: #fff; }
+  }
+
+  ${props => props.$disabled && `
     cursor: not-allowed;
     opacity: 0.5;
-  }
-  
+    &:hover { color: #888; background: transparent; &::after { border-top-color: #888; } }
+  `}
+
   @media (max-width: 768px) {
-    padding: 0 20px 0 5px;
-    background-position: right 0px center;
+    padding: 0 25px 0 8px;
     font-size: 1rem;
-    width: 70px;
+    &::after { right: 5px; }
+  }
+`;
+
+const TypeMenu = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 0;
+  background: #050505;
+  border: 1px solid #555;
+  width: 140px;
+  z-index: 50;
+  box-shadow: 0 0 20px #000;
+  display: flex;
+  flex-direction: column;
+`;
+
+const TypeMenuItem = styled.button<{ $active: boolean }>`
+  background: ${props => props.$active ? '#222' : 'transparent'};
+  color: ${props => props.$active ? '#fff' : '#ccc'};
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--type-body);
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover {
+    background: #222;
+    color: #fff;
   }
 `;
 
@@ -877,6 +924,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
   const [selectedEvidence, setSelectedEvidence] = useState<(Evidence | TimelineStatement)[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
   const [celebratingItem, setCelebratingItem] = useState<{ index: number, name: string, suspectId: string } | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [listening, setListening] = useState(false);
@@ -972,6 +1020,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const evidenceMenuRef = useRef<HTMLDivElement>(null);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
 
   // Determine if initial exam is done based on chat history
   useEffect(() => {
@@ -1083,6 +1132,22 @@ const Interrogation: React.FC<InterrogationProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showEvidencePicker]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (typeMenuRef.current && !typeMenuRef.current.contains(event.target as Node)) {
+        setShowTypePicker(false);
+      }
+    }
+
+    if (showTypePicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showTypePicker]);
 
   const handleSend = () => {
     if (inputVal.trim() && !isThinking) {
@@ -1412,14 +1477,30 @@ const Interrogation: React.FC<InterrogationProps> = ({
             )}
 
             <UnifiedInputBar $disabled={isLocked || isThinking} id="unified-input-bar">
-              <TypeSelect
-                value={inputType}
-                onChange={(e) => setInputType(e.target.value as 'talk' | 'action')}
-                disabled={isLocked || suspect.isDeceased}
-              >
-                <option value="talk">Talk</option>
-                <option value="action">Action</option>
-              </TypeSelect>
+              <TypeButtonWrapper ref={typeMenuRef}>
+                <TypeButton
+                  onClick={() => !isLocked && !suspect.isDeceased && setShowTypePicker(!showTypePicker)}
+                  $disabled={isLocked || suspect.isDeceased}
+                >
+                  {inputType === 'talk' ? '💬 Talk' : '🫴 Action'}
+                </TypeButton>
+                {showTypePicker && (
+                  <TypeMenu>
+                    <TypeMenuItem
+                      $active={inputType === 'talk'}
+                      onClick={() => { setInputType('talk'); setShowTypePicker(false); }}
+                    >
+                      {inputType === 'talk' && <span>✓</span>}💬 Talk
+                    </TypeMenuItem>
+                    <TypeMenuItem
+                      $active={inputType === 'action'}
+                      onClick={() => { setInputType('action'); setShowTypePicker(false); }}
+                    >
+                      {inputType === 'action' && <span>✓</span>}🫴 Action
+                    </TypeMenuItem>
+                  </TypeMenu>
+                )}
+              </TypeButtonWrapper>
 
               <PlusButtonWrapper ref={evidenceMenuRef}>
                 <PlusButton
@@ -1491,7 +1572,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   ? "Suspect has requested a lawyer."
                   : suspect.isDeceased
                     ? "Perform action..."
-                    : inputType === 'talk' ? "Ask question..." : "Action..."
+                    : inputType === 'talk' ? "Ask a question..." : "Slam the table, get a glass of water, etc..."
                 }
                 disabled={isLocked || isThinking}
               />
