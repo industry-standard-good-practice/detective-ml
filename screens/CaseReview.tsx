@@ -6,6 +6,7 @@ import Markdown from 'react-markdown';
 import { CaseData, Suspect, Emotion, Evidence, Relationship, TimelineEvent } from '../types';
 import { TTS_VOICES, getRandomVoice } from '../constants';
 import { generateTTS } from '../services/geminiTTS';
+import { playAudioFromUrl } from '../services/audioPlayer';
 import { pregenerateCaseImages, generateEvidenceImage, regenerateSingleSuspect, checkCaseConsistency, editCaseWithPrompt, generateSuspectFromUpload, calculateDifficulty, editImageWithPrompt, generateEmotionalVariantsFromBase } from '../services/geminiService';
 import EvidenceEditor from '@/components/EvidenceEditor';
 import SuspectPortrait from '@/components/SuspectPortrait';
@@ -1073,13 +1074,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
         setVoicePreviewUrl(audioUrl);
 
-        const audio = new Audio(audioUrl);
-        audio.oncanplaythrough = () => {
-          audio.play().catch(e => console.error("Preview playback failed", e));
-        };
-        audio.onerror = (e) => {
-          console.error("Audio element error:", e);
-        };
+        const audio = await playAudioFromUrl(audioUrl);
+        // Audio is already playing after await resolves
       } else {
         console.error("TTS generation returned no URL");
       }

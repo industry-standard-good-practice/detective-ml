@@ -1,6 +1,8 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 import { GEMINI_MODELS } from "./geminiModels";
+import { registerPcmData } from "./audioPlayer";
+import toast from 'react-hot-toast';
 
 export const generateTTS = async (text: string, voiceName: string): Promise<string | null> => {
   // Skip TTS if no voice selected, voice is "None", or no API key
@@ -28,12 +30,12 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (base64Audio) {
       // Gemini TTS returns raw PCM 16-bit, 24kHz, Mono.
-      // We need to add a WAV header for browser playback.
+      toast(`🔊 TTS: got ${base64Audio.length} bytes`, { duration: 2000 });
       const binaryString = atob(base64Audio);
       const len = binaryString.length;
-      const pcmData = new Uint8Array(len);
+      const pcmBytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) {
-        pcmData[i] = binaryString.charCodeAt(i);
+        pcmBytes[i] = binaryString.charCodeAt(i);
       }
       
       const sampleRate = 24000;
@@ -41,8 +43,9 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
       const bitsPerSample = 16;
       const byteRate = sampleRate * numChannels * bitsPerSample / 8;
       const blockAlign = numChannels * bitsPerSample / 8;
-      const dataSize = pcmData.length;
+      const dataSize = pcmBytes.length;
       
+      // Build WAV for blob URL (used as reference key)
       const wavHeader = new Uint8Array(44);
       const view = new DataView(wavHeader.buffer);
       
@@ -68,14 +71,22 @@ export const generateTTS = async (text: string, voiceName: string): Promise<stri
       
       const wavData = new Uint8Array(44 + dataSize);
       wavData.set(wavHeader);
-      wavData.set(pcmData, 44);
+      wavData.set(pcmBytes, 44);
       
       const blob = new Blob([wavData], { type: 'audio/wav' });
-      return URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Cache raw PCM as Int16Array for direct AudioBuffer creation.
+      // This bypasses Safari's broken fetch() + decodeAudioData pipeline entirely.
+      const pcmInt16 = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, pcmBytes.byteLength / 2);
+      registerPcmData(blobUrl, pcmInt16, sampleRate);
+      
+      return blobUrl;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("TTS Generation Error:", error);
+    toast.error(`TTS Error: ${error?.message || error}`);
     return null;
   }
 };

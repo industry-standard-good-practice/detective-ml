@@ -8,6 +8,7 @@ import SuspectCardDock from '../components/SuspectCardDock';
 import AsciiCelebration from '../components/AsciiCelebration';
 import SuspectPortrait from '../components/SuspectPortrait';
 import { generateTTS } from '../services/geminiTTS';
+import { playAudioFromUrl, AudioPlayback } from '../services/audioPlayer';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
 
 const Container = styled.div`
@@ -1065,7 +1066,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const isCreator = userId === activeCase.authorId;
   const canDebug = isAdmin || isCreator;
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<AudioPlayback | null>(null);
   const voiceRef = useRef<string | null>(null);
   const volumeRef = useRef(volume);
   const [lastPlayedAudioUrl, setLastPlayedAudioUrl] = useState<string | null>(null);
@@ -1078,7 +1079,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   useEffect(() => {
     volumeRef.current = volume;
     if (audioRef.current) {
-      audioRef.current.volume = volume;
+      audioRef.current.setVolume(volume);
     }
   }, [volume]);
 
@@ -1134,14 +1135,13 @@ const Interrogation: React.FC<InterrogationProps> = ({
         setLastPlayedAudioUrl(lastMsg.audioUrl);
 
         if (audioRef.current) {
-          audioRef.current.pause();
+          audioRef.current.stop();
           audioRef.current = null;
         }
 
-        const audio = new Audio(lastMsg.audioUrl);
-        audio.volume = volumeRef.current;
-        audioRef.current = audio;
-        audio.play().catch(e => console.error("Audio playback failed", e));
+        playAudioFromUrl(lastMsg.audioUrl, volumeRef.current)
+          .then(playback => { audioRef.current = playback; })
+          .catch(e => console.error("Audio playback failed", e));
 
         // Clear the unread flag after playing
         onClearUnread?.(suspect.id);
@@ -1173,14 +1173,13 @@ const Interrogation: React.FC<InterrogationProps> = ({
       setLastPlayedAudioUrl(lastMsg.audioUrl);
 
       if (audioRef.current) {
-        audioRef.current.pause();
+        audioRef.current.stop();
         audioRef.current = null;
       }
 
-      const audio = new Audio(lastMsg.audioUrl);
-      audio.volume = volumeRef.current;
-      audioRef.current = audio;
-      audio.play().catch(e => console.error("Audio playback failed", e));
+      playAudioFromUrl(lastMsg.audioUrl, volumeRef.current)
+        .then(playback => { audioRef.current = playback; })
+        .catch(e => console.error("Audio playback failed", e));
     }
   }, [chatHistory, soundEnabled, suspect.id, lastPlayedAudioUrl, unreadSuspectIds, onClearUnread]);
 
