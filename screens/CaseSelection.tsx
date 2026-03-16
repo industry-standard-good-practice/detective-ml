@@ -87,8 +87,10 @@ const Carousel = styled.div`
 
   @media (max-width: 768px) {
     padding: 15px;
+    scroll-snap-type: x mandatory;
     & > div {
       flex: 0 0 90%;
+      scroll-snap-align: center;
     }
   }
 `;
@@ -413,16 +415,16 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 {renderCaseCardContent(c, false)}
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {(isAdmin || c.authorId === userId) && onEditCase && (
-                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>[ EDIT {c.version ? `v${c.version}` : ''} ]</AdminButton>
+                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
                   )}
                   {isAdmin && onToggleFeatured && (
-                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>[ {c.isFeatured ? 'UNFEATURE' : 'FEATURE'} ]</AdminButton>
+                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
                   )}
                   {c.authorId === userId && onUnpublish && (
-                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>[ UNPUBLISH ]</AdminButton>
+                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
                   )}
                   {isAdmin && onDeleteCase && (
-                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>[ DELETE ]</AdminButton>
+                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
                   )}
                 </AdminControls>
               </CaseCard>
@@ -446,16 +448,16 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 {renderCaseCardContent(c, true)}
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {(isAdmin || c.authorId === userId) && onEditCase && (
-                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>[ EDIT {c.version ? `v${c.version}` : ''} ]</AdminButton>
+                    <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
                   )}
                   {isAdmin && onToggleFeatured && (
-                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>[ {c.isFeatured ? 'UNFEATURE' : 'FEATURE'} ]</AdminButton>
+                    <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
                   )}
                   {c.authorId === userId && onUnpublish && (
-                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>[ UNPUBLISH ]</AdminButton>
+                    <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
                   )}
                   {isAdmin && onDeleteCase && (
-                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>[ DELETE ]</AdminButton>
+                    <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
                   )}
                 </AdminControls>
               </CaseCard>
@@ -505,19 +507,19 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 )}
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {onEditCase && (
-                    <AdminButton onClick={() => onEditCase(c.id)}>[ EDIT ]</AdminButton>
+                    <AdminButton onClick={() => onEditCase(c.id)}>EDIT</AdminButton>
                   )}
                   {isPublished && onUnpublish && (
-                    <AdminButton $variant="delete" onClick={() => onUnpublish(c.id)}>[ UNPUBLISH ]</AdminButton>
+                    <AdminButton $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
                   )}
                   {!isPublished && onPublishDraft && (
-                    <AdminButton $variant="publish" onClick={() => onPublishDraft(c.id)}>[ PUBLISH ]</AdminButton>
+                    <AdminButton $variant="publish" onClick={() => onPublishDraft(c.id)}>PUBLISH</AdminButton>
                   )}
                   {!isPublished && onDeleteDraft && (
-                    <AdminButton $variant="delete" onClick={() => onDeleteDraft(c.id)}>[ DELETE ]</AdminButton>
+                    <AdminButton $variant="delete" onClick={() => onDeleteDraft(c.id)}>DELETE</AdminButton>
                   )}
                   {isPublished && onDeleteMyCase && (
-                    <AdminButton $variant="delete" onClick={() => onDeleteMyCase(c.id)}>[ DELETE ]</AdminButton>
+                    <AdminButton $variant="delete" onClick={() => onDeleteMyCase(c.id)}>DELETE</AdminButton>
                   )}
                 </AdminControls>
               </DraftCard>

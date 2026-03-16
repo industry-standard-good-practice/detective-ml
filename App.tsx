@@ -1346,7 +1346,7 @@ const App: React.FC = () => {
       isBooting={!hasBooted}
       powerState={powerState}
       mobileAction={gameState.currentScreen === ScreenState.INTERROGATION ? {
-        label: mobileIntelOpen ? 'CLOSE' : 'INTEL',
+        label: mobileIntelOpen ? 'CLOSE' : 'PARTNER',
         onClick: () => setMobileIntelOpen(!mobileIntelOpen),
         active: mobileIntelOpen
       } : undefined}
@@ -1469,6 +1469,7 @@ const App: React.FC = () => {
               onForceEvidence={handleForceEvidence}
               onPartnerAction={handlePartnerAction}
               mobileIntelOpen={mobileIntelOpen}
+              onCloseMobileIntel={() => setMobileIntelOpen(false)}
               isAdmin={isAdmin}
               userId={user?.uid}
               unreadSuspectIds={unreadSuspects}

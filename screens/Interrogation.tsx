@@ -227,6 +227,40 @@ const UnifiedInputBar = styled.div<{ $disabled: boolean }>`
     border-color: #fff;
     box-shadow: 0 0 10px rgba(255,255,255,0.1);
   }
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const MobileInputRow = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    border: 1px solid #444;
+    background: #050505;
+    height: 56px;
+    
+    &:focus-within {
+      border-color: #fff;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+  }
+`;
+
+const MobileButtonRow = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    
+    button {
+      height: 100%;
+    }
+  }
 `;
 
 const TypeButtonWrapper = styled.div`
@@ -275,6 +309,9 @@ const TypeButton = styled.button<{ $disabled: boolean }>`
   @media (max-width: 768px) {
     padding: 0 25px 0 8px;
     font-size: 1rem;
+    background: #222;
+    border: none;
+    border-right: none;
     &::after { right: 5px; }
   }
 `;
@@ -500,7 +537,8 @@ const SendActionBtn = styled.button`
   }
   
   @media (max-width: 768px) {
-    padding: 0 15px;
+    padding: 0 20px;
+    order: 2;
   }
 `;
 
@@ -556,6 +594,21 @@ const SuggestionChips = styled.div`
   &::-webkit-scrollbar-track {
     background: transparent; 
   }
+  
+  @media (max-width: 768px) {
+    margin-left: -10px;
+    margin-right: -10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-bottom: 0px;
+    width: calc(100% + 20px);
+    max-width: calc(100% + 20px);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 const Chip = styled.button`
@@ -591,7 +644,7 @@ const RightPanel = styled.div<{ $mobileOpen: boolean }>`
     top: 0;
     right: 0;
     bottom: 0;
-    width: 280px;
+    width: calc(100% - 24px);
     background: #0a0a0a;
     z-index: 100;
     padding: 20px;
@@ -600,6 +653,24 @@ const RightPanel = styled.div<{ $mobileOpen: boolean }>`
     transform: translateX(${props => props.$mobileOpen ? '0' : '100%'});
     flex: none;
     min-width: 0;
+    overflow-y: auto;
+  }
+`;
+
+const IntelOverlay = styled.div<{ $visible: boolean }>`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 99;
+    opacity: ${props => props.$visible ? 1 : 0};
+    pointer-events: ${props => props.$visible ? 'auto' : 'none'};
+    transition: opacity 0.3s ease;
   }
 `;
 
@@ -821,12 +892,12 @@ const MobileHeader = styled.div`
   display: none;
   @media (max-width: 768px) {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 10px;
     background: #111;
     border-bottom: 1px solid #333;
     flex-shrink: 0;
+    gap: 12px;
   }
 `;
 
@@ -883,6 +954,7 @@ interface InterrogationProps {
   onForceEvidence: (suspectId: string, evidenceTitle: string) => void;
   onPartnerAction: (type: 'goodCop' | 'badCop' | 'examine' | 'hint') => void;
   mobileIntelOpen?: boolean;
+  onCloseMobileIntel?: () => void;
   soundEnabled?: boolean;
   volume?: number;
   isAdmin: boolean;
@@ -912,6 +984,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   onForceEvidence,
   onPartnerAction,
   mobileIntelOpen = false,
+  onCloseMobileIntel,
   soundEnabled = true,
   volume = 0.7,
   isAdmin,
@@ -1021,6 +1094,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const evidenceMenuRef = useRef<HTMLDivElement>(null);
   const typeMenuRef = useRef<HTMLDivElement>(null);
+  const mobileTypeMenuRef = useRef<HTMLDivElement>(null);
 
   // Determine if initial exam is done based on chat history
   useEffect(() => {
@@ -1135,7 +1209,8 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (typeMenuRef.current && !typeMenuRef.current.contains(event.target as Node)) {
+      if (typeMenuRef.current && !typeMenuRef.current.contains(event.target as Node) &&
+        (!mobileTypeMenuRef.current || !mobileTypeMenuRef.current.contains(event.target as Node))) {
         setShowTypePicker(false);
       }
     }
@@ -1340,6 +1415,12 @@ const Interrogation: React.FC<InterrogationProps> = ({
     })
     : "10:05 PM September 12, 2030";
 
+  const inputPlaceholder = isLocked
+    ? "Suspect has requested a lawyer."
+    : suspect.isDeceased
+      ? "Perform action..."
+      : inputType === 'talk' ? "Ask a question..." : "Slam the table, get a glass of water, etc...";
+
   return (
     <Container ref={containerRef}>
 
@@ -1366,24 +1447,24 @@ const Interrogation: React.FC<InterrogationProps> = ({
         <ChatPanel>
           {/* NEW MOBILE HEADER */}
           <MobileHeader>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, overflow: 'hidden' }}>
+            <div onClick={() => setShowMobileProfile(true)} style={{ cursor: 'pointer', flexShrink: 0 }}>
               <SuspectPortrait
                 suspect={suspect}
                 emotion={emotion}
                 aggravation={aggravationLevel}
-                size={60}
-                style={{ border: '1px solid #333', flexShrink: 0 }}
+                size={120}
+                style={{ border: '1px solid #333' }}
               />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{suspect.name}</div>
-                {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
-              </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)}>PROFILE</MobileProfileBtn>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+              <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>{suspect.name}</div>
+              {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch', flexShrink: 0 }}>
+              <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)} style={{ width: '100%', textAlign: 'center' }}>PROFILE</MobileProfileBtn>
               <div style={{ display: 'flex' }}>
-                <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none' }}>&lt;</MobileNavBtn>
-                <MobileNavBtn onClick={() => cycleSuspect('next')}>&gt;</MobileNavBtn>
+                <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none', flex: 1 }}>&lt;</MobileNavBtn>
+                <MobileNavBtn onClick={() => cycleSuspect('next')} style={{ flex: 1 }}>&gt;</MobileNavBtn>
               </div>
             </div>
           </MobileHeader>
@@ -1568,12 +1649,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={isLocked
-                  ? "Suspect has requested a lawyer."
-                  : suspect.isDeceased
-                    ? "Perform action..."
-                    : inputType === 'talk' ? "Ask a question..." : "Slam the table, get a glass of water, etc..."
-                }
+                placeholder={inputPlaceholder}
                 disabled={isLocked || isThinking}
               />
 
@@ -1598,9 +1674,122 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 )}
               </MicButton>
             </UnifiedInputBar>
+
+            {/* MOBILE-ONLY: Input on top, buttons below */}
+            <div id="unified-input-bar-mobile">
+            <MobileInputRow>
+              <PlusButtonWrapper ref={evidenceMenuRef}>
+                <PlusButton
+                  onClick={() => setShowEvidencePicker(!showEvidencePicker)}
+                  $active={selectedEvidence.length > 0}
+                  disabled={isLocked}
+                  title="Present Evidence"
+                >
+                  +
+                </PlusButton>
+                {showEvidencePicker && (
+                  <EvidenceMenu>
+                    {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
+                      <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
+                    )}
+                    {evidenceDiscovered.length > 0 && (
+                      <>
+                        <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
+                        {evidenceDiscovered.map((ev) => {
+                          const selected = isEvidenceSelected(ev);
+                          return (
+                            <EvidenceOption
+                              key={ev.id}
+                              onClick={() => toggleEvidence(ev)}
+                              style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
+                            >
+                              <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {selected && <span>✓</span>}{ev.title}
+                              </div>
+                              <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
+                            </EvidenceOption>
+                          );
+                        })}
+                      </>
+                    )}
+                    {timelineStatementsDiscovered.length > 0 && (
+                      <>
+                        <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
+                        {timelineStatementsDiscovered.map((ts) => {
+                          const selected = isEvidenceSelected(ts);
+                          return (
+                            <TimelineEvidenceOption
+                              key={ts.id}
+                              onClick={() => toggleEvidence(ts)}
+                              style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
+                            >
+                              <div className="header">
+                                {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
+                                <span className="time">{ts.time}</span>
+                                <span className="suspect">BY {ts.suspectName}</span>
+                              </div>
+                              <div className="statement">"{ts.statement}"</div>
+                            </TimelineEvidenceOption>
+                          );
+                        })}
+                      </>
+                    )}
+                  </EvidenceMenu>
+                )}
+              </PlusButtonWrapper>
+              <GhostInput
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder={inputPlaceholder}
+                disabled={isLocked || isThinking}
+              />
+            </MobileInputRow>
+            <MobileButtonRow>
+              <TypeButtonWrapper ref={mobileTypeMenuRef}>
+                <TypeButton
+                  onClick={() => !isLocked && !suspect.isDeceased && setShowTypePicker(!showTypePicker)}
+                  $disabled={isLocked || suspect.isDeceased}
+                >
+                  {inputType === 'talk' ? '💬 Talk' : '🫴 Action'}
+                </TypeButton>
+                {showTypePicker && (
+                  <TypeMenu>
+                    <TypeMenuItem
+                      $active={inputType === 'talk'}
+                      onClick={() => { setInputType('talk'); setShowTypePicker(false); }}
+                    >
+                      {inputType === 'talk' && <span>✓</span>}💬 Talk
+                    </TypeMenuItem>
+                    <TypeMenuItem
+                      $active={inputType === 'action'}
+                      onClick={() => { setInputType('action'); setShowTypePicker(false); }}
+                    >
+                      {inputType === 'action' && <span>✓</span>}🫴 Action
+                    </TypeMenuItem>
+                  </TypeMenu>
+                )}
+              </TypeButtonWrapper>
+              <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                <SendActionBtn
+                  onClick={handleSend}
+                  disabled={isLocked || isThinking}
+                >
+                  SEND
+                </SendActionBtn>
+                <MicButton $listening={listening} onClick={startListening} title="Voice Input">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                </MicButton>
+              </div>
+            </MobileButtonRow>
+            </div>
           </InputContainer>
         </ChatPanel>
 
+        <IntelOverlay $visible={mobileIntelOpen} onClick={() => onCloseMobileIntel?.()} />
         <RightPanel id="right-panel" $mobileOpen={mobileIntelOpen}>
           <AggravationMeter id="aggravation-meter">
             <h3>{suspect.isDeceased ? "Status" : "Aggravation"}</h3>

@@ -25,6 +25,16 @@ const Highlight = styled(motion.div)`
   z-index: 10001;
 `;
 
+const CenteredBackdrop = styled(motion.div)`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+`;
+
 const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right'; $hideTail?: boolean }>`
   position: absolute;
   background: #111;
@@ -477,6 +487,13 @@ export const OnboardingTour: React.FC = () => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
+        {step.centered && (
+          <CenteredBackdrop
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+        )}
         {rect && !step.centered && (
           <Highlight
             initial={false}

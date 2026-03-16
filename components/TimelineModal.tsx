@@ -74,21 +74,7 @@ const TimelineContainer = styled.div`
   overflow-y: auto;
   position: relative;
   background: rgba(0, 0, 0, 0.2);
-`;
-
-const ScrollContent = styled.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-height: 100%;
-  padding: 30px 20px;
-  box-sizing: border-box;
-
-  @media (max-width: 600px) {
-    padding: 20px 10px 80px 10px;
-  }
-
+  
   &::before {
     content: '';
     position: absolute;
@@ -106,12 +92,30 @@ const ScrollContent = styled.div`
   }
 `;
 
+const ScrollContent = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 100%;
+  padding: 30px 20px;
+  box-sizing: border-box;
+
+  @media (max-width: 600px) {
+    padding: 20px 10px;
+  }
+`;
+
 /* --- Time group: a cluster of events that share the same timestamp --- */
 
 const TimeGroup = styled.div`
   position: relative;
   margin-bottom: 30px;
   animation: ${fadeIn} 0.3s ease-out both;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 const TimeGroupLabel = styled.div`

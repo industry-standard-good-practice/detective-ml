@@ -697,6 +697,18 @@ const InlineTimelineWrap = styled.div`
   min-height: 0;
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.2);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #415a77;
+    z-index: 0;
+  }
   
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -1020,8 +1032,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
           )}
 
           {activeMobileTab === 'HQ' && (
-            <>
-              <BriefingWidget>
+            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <BriefingWidget style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <div id="mission-briefing-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <h3>Mission Briefing</h3>
                   <div className="tags">
@@ -1031,7 +1043,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <p>{caseData.description}</p>
                 </div>
               </BriefingWidget>
-              <ChiefWidget>
+              <ChiefWidget style={{ flexShrink: 0 }}>
                 <ChiefStatus>
                   <img src={officerPortrait} alt={officerName} />
                   <div>
@@ -1045,10 +1057,10 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   [SECURE LINE]
                 </SecureLineButton>
               </ChiefWidget>
-              <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>
+              <AccuseButton style={{ flexShrink: 0 }} onClick={() => onNavigate(ScreenState.ACCUSATION)}>
                 MAKE ACCUSATION
               </AccuseButton>
-            </>
+            </div>
           )}
         </MobileContentArea>
 
