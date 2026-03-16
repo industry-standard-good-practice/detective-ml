@@ -596,10 +596,12 @@ const MobileContentArea = styled.div<{ $noScroll?: boolean }>`
 
 const CarouselCardItem = styled.div`
   scroll-snap-align: center;
-  flex: 0 0 auto;
+  flex: 0 0 calc(100vw - 80px);
+  max-width: 340px;
   display: flex;
   justify-content: center;
   align-items: center;
+  aspect-ratio: 280 / 450;
 `;
 
 // --- MOBILE ACCORDION SYSTEM ---
@@ -715,12 +717,12 @@ const InlineTimelineWrap = styled.div`
 `;
 
 /* Inline suspect carousel for mobile accordion */
-const InlineSuspectCarousel = styled.div<{ $sidePad?: number }>`
+const InlineSuspectCarousel = styled.div`
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  gap: 20px;
-  padding: 15px ${props => props.$sidePad ?? 40}px;
+  gap: 12px;
+  padding: 15px 40px;
   align-items: center;
   flex: 1;
   min-height: 0;
@@ -1013,15 +1015,14 @@ const CaseHub: React.FC<CaseHubProps> = ({
                     <InlineSuspectCarousel
                       id="suspect-cards-container-mobile"
                       ref={inlineCarouselRef}
-                      $sidePad={Math.max(20, (window.innerWidth - 280) / 2)}
                       style={{ cursor: 'grab' }}
                     >
                       {caseData.suspects.map(s => (
                         <CarouselCardItem key={s.id}>
                           <SuspectCard
                             suspect={s}
-                            width="280px"
-                            height="450px"
+                            width="100%"
+                            height="100%"
                             variant="default"
                             disableTouchRotation
                             onAction={() => {

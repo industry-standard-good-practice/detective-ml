@@ -15,8 +15,8 @@ interface CardWrapperProps {
 const CardWrapper = styled.div<CardWrapperProps>`
   width: ${props => props.$width};
   height: ${props => props.$height};
-  min-height: ${props => props.$height};
-  flex-shrink: 0;
+  ${props => props.$height.endsWith('px') ? `min-height: ${props.$height};` : ''}
+  ${props => props.$height.endsWith('px') ? 'flex-shrink: 0;' : ''}
   perspective: 1000px;
   cursor: pointer;
   position: relative;
