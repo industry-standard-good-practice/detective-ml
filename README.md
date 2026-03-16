@@ -107,8 +107,12 @@ DetectiveML is an installable PWA on both Android and iOS. Both platforms open i
 
 You'll need this for iOS testing. Run in a terminal:
 ```bash
+# Windows
 ipconfig
 # Look for "IPv4 Address" under your active adapter (e.g. 192.168.86.244)
+
+# macOS
+ipconfig getifaddr en0
 ```
 
 ### Android (Chrome USB Port Forwarding)
@@ -119,7 +123,11 @@ Chrome on Android requires a secure context (`localhost` or HTTPS) for standalon
 
 1. **Install ADB** (one-time — required for Chrome to communicate with your phone):
    ```bash
+   # Windows
    winget install Google.PlatformTools
+
+   # macOS
+   brew install android-platform-tools
    ```
 
 2. **Enable Developer Mode on your Android phone:**
@@ -140,7 +148,7 @@ Chrome on Android requires a secure context (`localhost` or HTTPS) for standalon
    - Verify with `adb devices` — your device should show as `device` (not `unauthorized`)
 
 3. **Set up port forwarding:**
-   - On your PC, open Chrome → `chrome://inspect/#devices`
+   - On your computer, open Chrome → `chrome://inspect/#devices`
    - Your phone should appear (with a green dot if port forwarding is active)
    - Click **"Port forwarding..."** → add rule: `3000` → `localhost:3000`
    - Check **"Enable port forwarding"** → **Done**
@@ -165,7 +173,7 @@ Safari respects the `apple-mobile-web-app-capable` meta tag over HTTP, so you ca
    npm run dev
    ```
 
-2. **On your iPhone/iPad** (same WiFi network as your PC):
+2. **On your iPhone/iPad** (same WiFi network as your computer):
    - Open **Safari** → go to `http://<your-lan-ip>:3000` (e.g. `http://192.168.86.244:3000`)
    - Tap **Share** (square with arrow) → **"Add to Home Screen"** → **Add**
    - The app opens in **standalone mode** (no Safari UI) ✅
@@ -186,7 +194,7 @@ Safari respects the `apple-mobile-web-app-capable` meta tag over HTTP, so you ca
 | **Android:** Phone shows "Offline" in `chrome://inspect` | Revoke USB debugging authorizations in Developer options, reconnect |
 | **Android:** Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold). Ensure manifest and service worker are valid |
 | **Android:** Port forwarding indicator isn't green | Make sure the dev server is running on port 3000 |
-| **iOS:** Can't reach `http://<ip>:3000` | Ensure phone and PC are on the same network. Check Windows Firewall allows Node.js |
+| **iOS:** Can't reach `http://<ip>:3000` | Ensure phone and computer are on the same network. Check your firewall allows Node.js (Windows Firewall / macOS firewall in System Settings → Network) |
 | **iOS:** App opens in Safari instead of standalone | Delete the shortcut, clear Safari cache (`Settings → Safari → Clear History`), re-add |
 | **Both:** App opens with browser UI after install | Uninstall/remove the app, clear site data, re-install |
 
