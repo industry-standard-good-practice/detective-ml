@@ -726,7 +726,7 @@ const InlineSuspectCarousel = styled.div`
   overflow-x: auto;
   overflow-y: hidden;
   gap: 12px;
-  padding: 25px 40px;
+  padding: 25px calc(50% - 140px);
   align-items: center;
   flex: 1;
   min-height: 0;
