@@ -1199,6 +1199,15 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         </InputGroup>
 
         <InputGroup>
+          <label>Investigation Start Time</label>
+          <input
+            type="datetime-local"
+            value={draftCase.startTime || '2030-09-12T23:30'}
+            onChange={(e) => handleCaseChange('startTime', e.target.value)}
+          />
+        </InputGroup>
+
+        <InputGroup>
           <label>Hero Image (Case Card)</label>
           <HeroImageModuleWrapper>
             <HeroImageModuleInner>

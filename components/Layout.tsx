@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import { ScreenState } from '../types';
 import CRTOverlay from './CRTOverlay';
@@ -757,6 +758,35 @@ const Layout: React.FC<LayoutProps> = ({
             <ScreenContent>
               {children}
             </ScreenContent>
+
+            <Toaster
+              position="bottom-right"
+              containerStyle={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                zIndex: 50,
+              }}
+              toastOptions={{
+                style: {
+                  background: '#111',
+                  color: '#0f0',
+                  border: '1px solid #333',
+                  fontFamily: "'VT323', monospace",
+                  fontSize: '1rem',
+                  boxShadow: '0 0 15px rgba(0,255,0,0.1)',
+                },
+                success: {
+                  iconTheme: { primary: '#0f0', secondary: '#111' },
+                  duration: 3000,
+                },
+                error: {
+                  style: { color: '#f55', borderColor: '#500' },
+                  iconTheme: { primary: '#f55', secondary: '#111' },
+                  duration: 6000,
+                },
+              }}
+            />
 
           </Screen>
         </MonitorBezel>

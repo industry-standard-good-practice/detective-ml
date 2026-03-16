@@ -1336,9 +1336,9 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const formattedTime = gameTime
     ? new Date(gameTime).toLocaleString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric',
-      hour: 'numeric', minute: '2-digit'
+      hour: 'numeric', minute: '2-digit', hour12: true
     })
-    : "10:05am September 12, 2030";
+    : "10:05 PM September 12, 2030";
 
   return (
     <Container ref={containerRef}>

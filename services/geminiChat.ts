@@ -183,7 +183,7 @@ export const getSuspectResponse = async (
            - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
            - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity.
            - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
-           - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in numerical format (e.g. "11:00 PM", "8:30 AM", "20:15"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
+           - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `

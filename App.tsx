@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { GameState, ScreenState, ChatMessage, Emotion, CaseData, Evidence } from './types';
 import { getSuspectResponse, getOfficerChatResponse, generateCaseFromPrompt, getBadCopHint, getPartnerIntervention, pregenerateCaseImages, calculateDifficulty } from './services/geminiService';
 import { generateTTS } from './services/geminiTTS';
@@ -90,7 +90,11 @@ const ModalButton = styled.button<{ $variant: 'cancel' | 'confirm' }>`
 
 const TIME_INCREMENT_MS = 5 * 60 * 1000; // 5 minutes per action
 const WAIT_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes before they get mad
-const INITIAL_TIME_MS = new Date('2030-09-12T09:00:00').getTime();
+const INITIAL_TIME_MS = new Date('2030-09-12T23:30:00').getTime(); // Default fallback
+
+/** Formats a timestamp in 12-hour AM/PM format (never military time) */
+const formatTime = (ms: number): string =>
+  new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
 /** Formats "Noah Semus" → "Noah S." */
 const formatAuthorName = (displayName: string | null | undefined): string => {
@@ -232,7 +236,7 @@ const App: React.FC = () => {
       case: gameState.selectedCaseId,
       suspect: gameState.currentSuspectId,
       aggravation: gameState.aggravationLevels,
-      time: new Date(gameState.gameTime).toLocaleTimeString()
+      time: formatTime(gameState.gameTime)
     });
   }, [gameState.currentScreen, gameState.selectedCaseId, gameState.currentSuspectId, gameState.aggravationLevels, gameState.gameTime]);
 
@@ -340,6 +344,10 @@ const App: React.FC = () => {
     const officerName = selectedCase.officer?.name || "The Chief";
     const officerGreeting = `This is ${officerName}. I'm busy, so make it quick. What do you have?`;
 
+    const caseStartTime = selectedCase.startTime
+      ? new Date(selectedCase.startTime).getTime()
+      : INITIAL_TIME_MS;
+
     setGameState(prev => ({
       ...prev,
       currentScreen: ScreenState.CASE_HUB,
@@ -356,7 +364,7 @@ const App: React.FC = () => {
         statement: t.activity || (t as any).statement || ''
       })),
       chatHistory: initialHistory,
-      officerHistory: [{ sender: 'officer', text: officerGreeting, timestamp: new Date(INITIAL_TIME_MS).toLocaleTimeString() }],
+      officerHistory: [{ sender: 'officer', text: officerGreeting, timestamp: formatTime(caseStartTime) }],
       suspectEmotions: initialEmotions,
       partnerEmotion: Emotion.NEUTRAL,
       suspectTurnIds: initialTurnIds,
@@ -366,7 +374,7 @@ const App: React.FC = () => {
       partnerCharges: 3,
       winner: null,
       accusedSuspectId: null,
-      gameTime: INITIAL_TIME_MS,
+      gameTime: caseStartTime,
       lastInteractionTimes: initialInteractionTimes,
       suspectSuggestions: {} // Reset suggestions for new case
     }));
@@ -404,7 +412,7 @@ const App: React.FC = () => {
                 newHistory = [...newHistory, {
                     sender: 'system',
                     text: `[SYSTEM] Subject is annoyed. You kept them waiting for ${timeStr}. (+${penalty}% Aggravation)`,
-                    timestamp: new Date(gameTime).toLocaleTimeString()
+                    timestamp: formatTime(gameTime)
                 }];
             }
             // Update interaction time to NOW since we are back with them
@@ -486,7 +494,7 @@ const App: React.FC = () => {
         const partnerMsg: ChatMessage = {
             sender: 'partner',
             text: partnerDialogue,
-            timestamp: new Date(newGameTime).toLocaleTimeString(),
+            timestamp: formatTime(newGameTime),
             type: action === 'badCop' ? 'action' : 'talk',
             audioUrl: partnerAudioUrl
         };
@@ -526,7 +534,7 @@ const App: React.FC = () => {
             const narratorMsg: ChatMessage = {
                 sender: 'suspect',
                 text: examResponse.text,
-                timestamp: new Date(newGameTime).toLocaleTimeString(),
+                timestamp: formatTime(newGameTime),
                 evidence: examResponse.revealedEvidence,
                 isEvidenceCollected: false,
                 audioUrl: examAudioUrl
@@ -575,7 +583,7 @@ const App: React.FC = () => {
         const suspectMsg: ChatMessage = {
             sender: 'suspect',
             text: finalAgg >= 100 ? "That's it! I want my lawyer!" : response.text,
-            timestamp: new Date(newGameTime).toLocaleTimeString(),
+            timestamp: formatTime(newGameTime),
             evidence: response.revealedEvidence,
             isEvidenceCollected: false,
             audioUrl: audioUrl
@@ -657,7 +665,7 @@ const App: React.FC = () => {
             ...prev.chatHistory,
             [currentSuspectId]: [
                ...(prev.chatHistory[currentSuspectId] || []),
-               { sender: 'system', text: "[ERROR] Connection Interrupted. Please retry.", timestamp: new Date(newGameTime).toLocaleTimeString() }
+               { sender: 'system', text: "[ERROR] Connection Interrupted. Please retry.", timestamp: formatTime(newGameTime) }
             ]
           }
         }));
@@ -707,7 +715,7 @@ const App: React.FC = () => {
       text: finalText, 
       type: type,
       attachment: attachment || null,
-      timestamp: new Date(newGameTime).toLocaleTimeString() 
+      timestamp: formatTime(newGameTime) 
     };
 
     setGameState(prev => ({
@@ -748,7 +756,7 @@ const App: React.FC = () => {
       const suspectMsg: ChatMessage = { 
           sender: 'suspect', 
           text: finalMsgText, 
-          timestamp: new Date(newGameTime).toLocaleTimeString(),
+          timestamp: formatTime(newGameTime),
           evidence: newAgg >= 100 ? null : response.revealedEvidence, 
           isEvidenceCollected: false,
           audioUrl: audioUrl
@@ -815,7 +823,7 @@ const App: React.FC = () => {
            ...prev.chatHistory,
            [currentSuspectId]: [
              ...(prev.chatHistory[currentSuspectId] || []),
-             { sender: 'system', text: "[ERROR] Uplink Interrupted. Please retransmit.", timestamp: new Date(newGameTime).toLocaleTimeString() }
+             { sender: 'system', text: "[ERROR] Uplink Interrupted. Please retransmit.", timestamp: formatTime(newGameTime) }
            ]
         }
       }));
@@ -830,7 +838,7 @@ const App: React.FC = () => {
     // Officer chat also advances time, though maybe less? Let's stick to consistent 5 mins for simplicity
     const newGameTime = gameState.gameTime + TIME_INCREMENT_MS;
 
-    const userMsg: ChatMessage = { sender: 'player', text, timestamp: new Date(newGameTime).toLocaleTimeString() };
+    const userMsg: ChatMessage = { sender: 'player', text, timestamp: formatTime(newGameTime) };
     setGameState(prev => ({
       ...prev,
       gameTime: newGameTime,
@@ -853,7 +861,7 @@ const App: React.FC = () => {
       
 
       
-      const officerMsg: ChatMessage = { sender: 'officer', text: responseText, timestamp: new Date(newGameTime).toLocaleTimeString() };
+      const officerMsg: ChatMessage = { sender: 'officer', text: responseText, timestamp: formatTime(newGameTime) };
       
       setGameState(prev => ({
         ...prev,
@@ -863,7 +871,7 @@ const App: React.FC = () => {
       console.error("Officer Chat Error:", e);
       setGameState(prev => ({
         ...prev,
-        officerHistory: [...prev.officerHistory, { sender: 'system', text: "[SECURE LINE DISCONNECTED]", timestamp: new Date(newGameTime).toLocaleTimeString() }]
+        officerHistory: [...prev.officerHistory, { sender: 'system', text: "[SECURE LINE DISCONNECTED]", timestamp: formatTime(newGameTime) }]
       }));
     } finally {
       setThinkingSuspectId(null);
@@ -1097,7 +1105,7 @@ const App: React.FC = () => {
     const msg: ChatMessage = {
       sender: 'suspect',
       text: "[DEBUG FORCE] Okay, fine! I'll tell you about this.",
-      timestamp: new Date(gameState.gameTime).toLocaleTimeString(),
+      timestamp: formatTime(gameState.gameTime),
       evidence: evidenceTitle,
       isEvidenceCollected: false
     };
@@ -1580,28 +1588,6 @@ const App: React.FC = () => {
       )}
       <OnboardingTour />
     </Layout>
-    <Toaster
-      position="bottom-right"
-      toastOptions={{
-        style: {
-          background: '#111',
-          color: '#0f0',
-          border: '1px solid #333',
-          fontFamily: "'VT323', monospace",
-          fontSize: '1rem',
-          boxShadow: '0 0 15px rgba(0,255,0,0.1)',
-        },
-        success: {
-          iconTheme: { primary: '#0f0', secondary: '#111' },
-          duration: 3000,
-        },
-        error: {
-          style: { color: '#f55', borderColor: '#500' },
-          iconTheme: { primary: '#f55', secondary: '#111' },
-          duration: 6000,
-        },
-      }}
-    />
     </>
   );
 };

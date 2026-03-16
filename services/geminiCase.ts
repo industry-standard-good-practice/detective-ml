@@ -577,9 +577,11 @@ const PROMPT_RULES = {
     /** Rules for timeline entry format — used in generation, consistency, and edit */
     TIMELINE_FORMAT: `**TIMELINE FORMAT (CRITICAL):**
 - Every timeline entry has TWO separate fields: 'time' and 'activity'.
-- The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "20:00 GTS"). Do NOT put the activity description in the time field.
+- The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "11:30 AM"). Do NOT put the activity description in the time field.
 - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
+- **12-HOUR FORMAT ONLY:** ALL times MUST use 12-hour AM/PM format. NEVER use 24-hour military time (e.g. "20:00", "23:30"). Always write "8:00 PM", not "20:00". Always write "11:30 PM", not "23:30".
 - WRONG: { time: "8:00 PM: Arrived at the lab", activity: "" }
+- WRONG: { time: "20:00", activity: "Arrived at the lab" }
 - CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift" }
 - This applies to BOTH suspect timelines AND the case-level initialTimeline.`,
 
@@ -620,7 +622,7 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
     /** Suspect profile requirements — used in generation and consistency */
     SUSPECT_PROFILES: `**SUSPECT PROFILE REQUIREMENTS:**
 - GENDER: Explicitly state Male, Female, or Non-binary.
-- BIO: **PUBLIC KNOWLEDGE ONLY**.
+- BIO: **PUBLIC PROFILE ONLY — SPOILER-FREE** (see BIO SPOILER PROTECTION rules below).
 - SECRET: The hidden truth they are trying to hide.
 - ALIBI: Where they were, who with, and is it true?
 - RELATIONSHIPS: **MANDATORY**:
@@ -648,6 +650,25 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - You must return a JSON object with two fields:
   - 'updatedCase': The complete CaseData object.
   - 'report': A structured object containing 'issuesFound', 'changesMade' (array of {description, evidenceId}), and 'conclusion'.`,
+
+    /** Bio spoiler protection — used in generation, consistency, and edit */
+    BIO_SPOILER_PROTECTION: `**BIO / PUBLIC PROFILE — SPOILER PROTECTION (CRITICAL):**
+- The 'bio' field is displayed prominently on the BACK of each suspect's card. It is the FIRST thing the player reads about a suspect BEFORE any interrogation.
+- It must read like a PUBLIC DOSSIER — what a detective would know from a background check, NOT from the investigation.
+- **ABSOLUTELY FORBIDDEN in bio:**
+  * Any statement that the suspect committed the crime (e.g. "she chose to end her abuse permanently")
+  * Explicit references to the suspect's guilt, confessions, or incriminating actions
+  * Descriptions of the suspect's motive phrased as fact (e.g. "driven to kill by jealousy")
+  * Any language that makes the solution obvious before investigation begins
+  * Phrases like "seized the opportunity", "snapped", "took matters into their own hands", "decided to act", "couldn't take it anymore and..."
+- **REQUIRED in bio:**
+  * Their public background (job, social standing, reputation)
+  * Their known connection to the victim or the location
+  * General personality traits observable by others
+  * Optionally, subtle hints about tension or conflict — but NEVER revealing who did it
+- EXAMPLE BAD BIO: "A talented performer who was cornered by Thomas. When threatened, she chose to seize the opportunity to end her abuse permanently."
+- EXAMPLE GOOD BIO: "A talented jazz singer and regular performer at The Blue Note. Known for her captivating stage presence and sharp wit, she has been a fixture of the local music scene for five years. Recently rumored to be in a dispute with the club's management over her contract."
+- This rule applies to ALL suspects — both guilty and innocent. Bios must be indistinguishable in tone between guilty and innocent suspects.`,
 } as const;
 
 // --- SCHEMAS ---
@@ -659,6 +680,7 @@ const CASE_SCHEMA = {
         title: { type: Type.STRING },
         type: { type: Type.STRING },
         description: { type: Type.STRING },
+        startTime: { type: Type.STRING },
         officer: { 
             type: Type.OBJECT, 
             properties: { 
@@ -871,7 +893,9 @@ ${userChangeLog}
         
     7. ${PROMPT_RULES.DATA_COMPLETENESS}
     
-    8. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+    8. ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
+    
+    9. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
     
     CASE DATA:
     ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -916,6 +940,7 @@ ${userChangeLog}
     hydratedCase.authorId = caseData.authorId;
     hydratedCase.version = caseData.version;
     hydratedCase.isUploaded = caseData.isUploaded;
+    if (caseData.startTime) hydratedCase.startTime = caseData.startTime;
     if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
 
     // Ensure we don't lose non-narrative fields
@@ -1081,8 +1106,10 @@ ${userChangeLog}
       8. ${PROMPT_RULES.NAMING_RULES}
 
       9. ${PROMPT_RULES.DATA_COMPLETENESS}
+
+      10. ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
            
-      10. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+      11. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
       
       CASE DATA:
       ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -1118,6 +1145,7 @@ ${userChangeLog}
         hydratedCase.authorId = caseData.authorId;
         hydratedCase.version = caseData.version;
         hydratedCase.isUploaded = caseData.isUploaded;
+        if (caseData.startTime) hydratedCase.startTime = caseData.startTime;
 
         const themeChanged = hydratedCase.type !== caseData.type;
         if (themeChanged) {
@@ -1334,6 +1362,12 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     
     ${PROMPT_RULES.DATA_COMPLETENESS}
     
+    ${PROMPT_RULES.BIO_SPOILER_PROTECTION}
+    
+    CRITICAL INSTRUCTION - START TIME:
+    - Generate a 'startTime' field as an ISO datetime string (e.g. "2030-09-12T23:30").
+    - Choose a time that fits the case's atmosphere and theme. Noir cases should be late night, daytime crimes can start in the morning, etc.
+    
     Output JSON structure matching CaseData interface.
   `;
   
@@ -1349,6 +1383,7 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
             title: { type: Type.STRING },
             type: { type: Type.STRING },
             description: { type: Type.STRING },
+            startTime: { type: Type.STRING },
             officer: { type: Type.OBJECT, properties: {
                 id: { type: Type.STRING },
                 name: { type: Type.STRING },
@@ -1428,6 +1463,7 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
   // Robustness for Support Characters
   data.initialTimeline = data.initialTimeline || [];
   data.difficulty = calculateDifficulty(data);
+  if (!data.startTime) data.startTime = '2030-09-12T23:30';
   if (!data.officer) data.officer = { id: 'officer', name: "Chief", gender: "Male", role: "Police Chief", personality: "Gruff" };
   data.officer.id = 'officer';
   data.officer.avatarSeed = Math.floor(Math.random() * 100000);

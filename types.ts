@@ -103,6 +103,7 @@ export interface CaseData {
   initialTimeline: TimelineEvent[]; // Known facts about the timeline at start
   officer: SupportCharacter; // The hint giver
   partner: SupportCharacter; // The intervention character
+  startTime?: string; // ISO datetime string for investigation start (e.g. "2030-09-12T23:30")
   isUploaded?: boolean; // Tracks if this custom case has been published
   isFeatured?: boolean; // New: Tracks if this case is featured by admin
   heroImageUrl?: string; // New: Image for the case card
