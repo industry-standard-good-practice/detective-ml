@@ -116,9 +116,24 @@ const NetworkGrid = styled.div`
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 768px) {
+    display: flex;
     padding: 15px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    
+    &::-webkit-scrollbar { display: none; }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    & > div {
+      flex: 0 0 90%;
+      scroll-snap-align: center;
+      max-height: none;
+      height: 100%;
+      overflow-y: hidden;
+    }
   }
 `;
 
@@ -156,6 +171,8 @@ const CardTextContent = styled.div`
     -webkit-overflow-scrolling: touch;
     margin-right: -20px;
     padding-right: 20px;
+    padding-bottom: 20px;
+    padding-top: 20px;
     
     &::-webkit-scrollbar { width: 3px; }
     &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -172,7 +189,6 @@ const CaseImage = styled.div<{ $src?: string }>`
   background-size: cover;
   background-position: center;
   border: 1px solid #333;
-  margin-bottom: 15px;
   image-rendering: pixelated;
   display: flex;
   align-items: center;
@@ -363,7 +379,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     const publishedByMe = communityCases.filter(c => c.authorId === userId);
     const publishedMap = new Map<string, CaseData>();
     publishedByMe.forEach(c => publishedMap.set(c.id, c));
-    
+
     const merged = new Map<string, CaseData>();
     // Add drafts first, but merge heroImageUrl from published version if local is missing
     localDrafts.forEach(d => {
@@ -522,26 +538,28 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
                   {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
                 </CaseImage>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                  {isPublished 
-                    ? <span style={{ background: '#0a5', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
-                    : <DraftBadge>DRAFT</DraftBadge>
-                  }
-                  <h3 style={{ color: isPublished ? '#0f0' : '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-                  <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-                  {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-                </div>
-                <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-                {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
-                  <StatsLine>
-                    <span>▶ {caseStats[c.id].plays} plays</span>
-                    <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-                    <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-                  </StatsLine>
-                )}
+                <CardTextContent>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                    {isPublished
+                      ? <span style={{ background: '#0a5', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
+                      : <DraftBadge>DRAFT</DraftBadge>
+                    }
+                    <h3 style={{ color: isPublished ? '#0f0' : '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
+                  </div>
+                  <div style={{ marginBottom: '10px' }}>
+                    <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
+                    <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+                    {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
+                  </div>
+                  <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
+                  {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
+                    <StatsLine>
+                      <span>▶ {caseStats[c.id].plays} plays</span>
+                      <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
+                      <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
+                    </StatsLine>
+                  )}
+                </CardTextContent>
                 <AdminControls onClick={(e) => e.stopPropagation()}>
                   {onEditCase && (
                     <AdminButton onClick={() => onEditCase(c.id)}>EDIT</AdminButton>
