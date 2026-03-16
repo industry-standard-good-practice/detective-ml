@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { CaseData, CaseStats } from '../types';
 import { useDragScroll } from '../hooks/useDragScroll';
@@ -291,6 +291,18 @@ const SortBar = styled.div`
   }
 `;
 
+const MobileSortBar = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 5vw 0;
+    flex-shrink: 0;
+  }
+`;
+
 const SortButton = styled.button<{ $active: boolean }>`
   background: ${props => props.$active ? 'rgba(0, 255, 255, 0.15)' : 'transparent'};
   border: 1px solid ${props => props.$active ? '#0ff' : '#333'};
@@ -376,6 +388,13 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
   };
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
   const carouselDragRef = useDragScroll<HTMLDivElement>();
+  const networkGridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (networkGridRef.current) {
+      networkGridRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  }, [sortMode]);
 
   const featuredCases = communityCases.filter(c => c.isFeatured && c.isUploaded === true);
 
@@ -508,7 +527,12 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
         </>
       ) : activeTab === 'network' ? (
         <>
-          <NetworkGrid>
+          <MobileSortBar>
+            <span style={{ color: '#555', fontSize: 'var(--type-small)', textTransform: 'uppercase' }}>Sort:</span>
+            <SortButton $active={sortMode === 'popular'} onClick={() => setSortMode('popular')}>Popular</SortButton>
+            <SortButton $active={sortMode === 'recent'} onClick={() => setSortMode('recent')}>Recent</SortButton>
+          </MobileSortBar>
+          <NetworkGrid ref={networkGridRef}>
             {isLoadingCommunity && (
               <div key="loading-network" style={{ color: '#0ff', padding: '20px' }}>Accessing secure network...</div>
             )}
