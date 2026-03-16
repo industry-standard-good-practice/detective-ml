@@ -884,6 +884,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 $color="orange"
                 $isOpen={openAccordion === 'evidence'}
                 onClick={() => toggleAccordion('evidence')}
+                id="accordion-evidence"
+                data-open={openAccordion === 'evidence' ? 'true' : 'false'}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="2" y="3" width="20" height="18" rx="2" />
@@ -900,7 +902,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
               </AccordionButton>
               <AccordionPanel $isOpen={openAccordion === 'evidence'}>
                 <AccordionPanelContent>
-                  <AccordionInner>
+                  <AccordionInner id="evidence-board-mobile">
                     <InlineEvidenceWrap>
                       <EvidenceGrid>
                         {evidenceDiscovered.map((ev, i) => (
@@ -933,7 +935,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 $color="blue"
                 $isOpen={openAccordion === 'timeline'}
                 onClick={() => toggleAccordion('timeline')}
-                id="timeline-button-mobile-board"
+                id="accordion-timeline"
+                data-open={openAccordion === 'timeline' ? 'true' : 'false'}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
@@ -949,7 +952,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
               </AccordionButton>
               <AccordionPanel $isOpen={openAccordion === 'timeline'}>
                 <AccordionPanelContent>
-                  <AccordionInner>
+                  <AccordionInner id="timeline-button-mobile">
                     <InlineTimelineWrap>
                       <TimelineModal
                         statements={timelineStatements}
@@ -967,6 +970,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 $color="green"
                 $isOpen={openAccordion === 'suspects'}
                 onClick={() => toggleAccordion('suspects')}
+                id="accordion-suspects"
+                data-open={openAccordion === 'suspects' ? 'true' : 'false'}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -986,6 +991,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 <AccordionPanelContent>
                   <AccordionInner>
                     <InlineSuspectCarousel
+                      id="suspect-cards-container-mobile"
                       ref={inlineCarouselRef}
                       $sidePad={Math.max(20, (window.innerWidth - 280) / 2)}
                       style={{ cursor: 'grab' }}

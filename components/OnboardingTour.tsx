@@ -124,6 +124,7 @@ interface StepConfig {
   mobilePosition?: 'top' | 'bottom' | 'left' | 'right';
   requiresAction?: boolean;
   mobileTab?: 'BOARD' | 'HQ';
+  mobileAccordion?: 'evidence' | 'timeline' | 'suspects';
   requiresMenu?: boolean;
   requiresProfile?: boolean;
   requiresIntel?: boolean;
@@ -150,14 +151,16 @@ const STEPS: Record<number, StepConfig> = {
     description: "As you interrogate suspects and find clues, they will appear here. You can click on evidence to review details at any time.",
     targetId: "evidence-board",
     position: "bottom",
-    mobileTab: "BOARD"
+    mobileTab: "BOARD",
+    mobileAccordion: "evidence"
   },
   [OnboardingStep.TIMELINE]: {
     title: "The Timeline",
     description: "Keep track of everyone's movements. The timeline shows confirmed events and contradictions. Use it to spot lies and build your case.",
     targetId: "timeline-button",
     position: "bottom",
-    mobileTab: "BOARD"
+    mobileTab: "BOARD",
+    mobileAccordion: "timeline"
   },
   [OnboardingStep.SUSPECT_CARDS]: {
     title: "Suspect Profiles",
@@ -165,7 +168,8 @@ const STEPS: Record<number, StepConfig> = {
     targetId: "suspect-cards-container",
     position: "top",
     requiresAction: true,
-    mobileTab: "BOARD"
+    mobileTab: "BOARD",
+    mobileAccordion: "suspects"
   },
   [OnboardingStep.FLIP_CARD]: {
     title: "Deep Dive",
@@ -248,6 +252,20 @@ export const OnboardingTour: React.FC = () => {
               console.log("[DEBUG] Switching to mobile tab:", step.mobileTab);
               (tabBtn as HTMLElement).click();
             }
+          }
+        }
+      }
+
+      // Auto-open the correct accordion panel on mobile if needed
+      if (isMobile && step.mobileAccordion) {
+        const accordionBtn = document.getElementById(`accordion-${step.mobileAccordion}`);
+        if (accordionBtn) {
+          const isOpen = accordionBtn.getAttribute('data-open') === 'true';
+          if (!isOpen) {
+            console.log("[DEBUG] Opening mobile accordion:", step.mobileAccordion);
+            accordionBtn.click();
+            // Give the accordion time to animate open before measuring
+            return;
           }
         }
       }
