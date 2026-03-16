@@ -124,7 +124,7 @@ const TimeGroupLabel = styled.div`
 
   @media (max-width: 600px) {
     align-items: flex-start;
-    padding-left: 10px;
+    padding-left: 40px;
   }
 `;
 
@@ -144,17 +144,7 @@ const TimeBadge = styled.div`
   @media (max-width: 600px) {
     font-size: 1.1rem;
     padding: 3px 12px;
-  }
-`;
-
-const TimeStem = styled.div`
-  width: 2px;
-  height: 14px;
-  background: #0f0;
-  opacity: 0.5;
-
-  @media (max-width: 600px) {
-    display: none;
+    margin-top: 8px;
   }
 `;
 
@@ -169,9 +159,9 @@ const TimeGroupDot = styled.div`
 
   @media (max-width: 600px) {
     position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    left: 10px;
+    top: 0px;
+    transform: translateX(-50%) translateY(100%);
   }
 `;
 
@@ -385,7 +375,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
           <h2>CASE TIMELINE</h2>
           <CloseButton onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
-        
+
         <TimelineContainer>
           <ScrollContent>
             {groups.length === 0 ? (
@@ -394,7 +384,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                <p>No timeline events discovered yet.<br/>Interrogate suspects or examine evidence to reveal the sequence of events.</p>
+                <p>No timeline events discovered yet.<br />Interrogate suspects or examine evidence to reveal the sequence of events.</p>
               </EmptyState>
             ) : (
               groups.map((group, groupIdx) => {
@@ -410,7 +400,6 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
                   <TimeGroup key={group.time + '-' + groupIdx} style={{ animationDelay: `${groupIdx * 0.05}s` }}>
                     <TimeGroupLabel>
                       <TimeBadge>{group.time}</TimeBadge>
-                      <TimeStem />
                       <TimeGroupDot />
                     </TimeGroupLabel>
                     <EventsRow>
