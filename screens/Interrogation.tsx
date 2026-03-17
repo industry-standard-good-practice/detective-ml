@@ -10,6 +10,7 @@ import SuspectPortrait from '../components/SuspectPortrait';
 import { generateTTS } from '../services/geminiTTS';
 import { playAudioFromUrl, AudioPlayback } from '../services/audioPlayer';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
+import { hasNativeSpeechRecognition, hasMediaRecorderFallback, startFallbackListening, stopFallbackListening } from '../services/geminiSTT';
 
 const Container = styled.div`
   display: flex;
@@ -31,7 +32,7 @@ const MainContent = styled.div`
   display: flex;
   flex: 1;
   overflow: hidden;
-  padding: 20px 20px 40px 20px;
+  padding: 20px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
   gap: 20px;
   position: relative;
   z-index: 1;
@@ -39,7 +40,7 @@ const MainContent = styled.div`
 
   @media (max-width: 1280px) {
     gap: 15px;
-    padding: 15px 15px 50px 15px;
+    padding: 15px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
   }
   
   @media (max-width: 768px) {
@@ -211,8 +212,8 @@ const InputContainer = styled.div`
   border-top: 1px solid #333;
   
   @media (max-width: 768px) {
-    padding: 10px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 10px var(--screen-edge-horizontal);
+    padding-bottom: calc(var(--screen-edge-bottom) + 15px);
   }
 `;
 
@@ -381,11 +382,16 @@ const PlusButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-const MicButton = styled.button<{ $listening: boolean }>`
-  background: ${props => props.$listening ? '#f00' : '#222'};
+const micPulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+`;
+
+const MicButton = styled.button<{ $listening: boolean; $transcribing?: boolean }>`
+  background: ${props => props.$transcribing ? '#b86e00' : props.$listening ? '#f00' : '#222'};
   border: none;
   border-left: 1px solid #333;
-  color: ${props => props.$listening ? '#fff' : '#666'};
+  color: ${props => (props.$listening || props.$transcribing) ? '#fff' : '#666'};
   width: 50px;
   height: 100%;
   cursor: pointer;
@@ -393,9 +399,10 @@ const MicButton = styled.button<{ $listening: boolean }>`
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  ${props => props.$transcribing && `animation: ${micPulse} 1s ease-in-out infinite;`}
   
   &:hover {
-    background: ${props => props.$listening ? '#d00' : '#333'};
+    background: ${props => props.$transcribing ? '#a06000' : props.$listening ? '#d00' : '#333'};
     color: #fff;
   }
   
@@ -896,7 +903,7 @@ const MobileHeader = styled.div`
   @media (max-width: 768px) {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 10px var(--screen-edge-horizontal);
     background: #111;
     border-bottom: 1px solid #333;
     flex-shrink: 0;
@@ -1004,6 +1011,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   const [celebratingItem, setCelebratingItem] = useState<{ index: number, name: string, suspectId: string } | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [initialExamDone, setInitialExamDone] = useState(false);
   const [showMobileProfile, setShowMobileProfile] = useState(false);
   const leftPanelRef = useRef<HTMLDivElement>(null);
@@ -1263,30 +1271,60 @@ const Interrogation: React.FC<InterrogationProps> = ({
   };
 
   const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error('Speech recognition is not supported in this browser.');
+    if (listening || transcribing) return;
+
+    // Try native SpeechRecognition first (works on desktop Chrome, etc.)
+    if (hasNativeSpeechRecognition()) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => setListening(true);
+      recognition.onend = () => setListening(false);
+      recognition.onerror = () => setListening(false);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        if (transcript) {
+          setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
+        }
+      };
+
+      recognition.start();
       return;
     }
 
-    if (listening) return;
+    // Fallback: MediaRecorder + Gemini transcription (iOS Safari, PWA mode)
+    if (hasMediaRecorderFallback()) {
+      startFallbackListening(
+        () => setListening(true),
+        () => { setListening(false); setTranscribing(false); },
+        (transcript) => {
+          setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
+        },
+        (errorMsg) => toast.error(errorMsg)
+      );
+      return;
+    }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    // If we get here, nothing works
+    if (!window.isSecureContext) {
+      toast.error('Microphone requires HTTPS. Access via localhost or enable HTTPS.');
+    } else {
+      toast.error('Speech recognition is not supported in this browser.');
+    }
+  };
 
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      if (transcript) {
-        setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
-      }
-    };
-
-    recognition.start();
+  const toggleListening = () => {
+    if (listening) {
+      // Stop recording — this triggers transcription in the fallback path
+      stopFallbackListening();
+      setTranscribing(true);
+      // Note: for native SpeechRecognition, onend fires automatically
+    } else {
+      startListening();
+    }
   };
 
   const getShortEvidenceTitle = (ev: string | null | undefined) => {
@@ -1661,11 +1699,12 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 SEND
               </SendActionBtn>
 
-              <MicButton $listening={listening} onClick={startListening} title="Voice Input">
-                {listening ? (
+              <MicButton $listening={listening} $transcribing={transcribing} onClick={toggleListening} title={transcribing ? 'Transcribing...' : listening ? 'Tap to stop' : 'Voice Input'}>
+                {transcribing ? (
                   <svg viewBox="0 0 24 24">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
                   </svg>
                 ) : (
                   <svg viewBox="0 0 24 24">
@@ -1778,11 +1817,19 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   >
                     SEND
                   </SendActionBtn>
-                  <MicButton $listening={listening} onClick={startListening} title="Voice Input">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                    </svg>
+                  <MicButton $listening={listening} $transcribing={transcribing} onClick={toggleListening} title={transcribing ? 'Transcribing...' : listening ? 'Tap to stop' : 'Voice Input'}>
+                    {transcribing ? (
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3" />
+                        <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                      </svg>
+                    )}
                   </MicButton>
                 </div>
               </MobileButtonRow>

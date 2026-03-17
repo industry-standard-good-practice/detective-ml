@@ -24,7 +24,7 @@ const ActiveCardOverlay = styled.div`
 /* Visual layer: renders cards, captures NO events */
 const DockRowVisual = styled.div`
   position: absolute;
-  bottom: 0;
+  bottom: var(--screen-edge-bottom);
   left: 0;
   width: 100%;
   height: 50px;
@@ -42,7 +42,7 @@ const DockRowVisual = styled.div`
 /* Hit-test layer: captures events only within its clipped area */
 const DockRowHitArea = styled.div`
   position: absolute;
-  bottom: 0;
+  bottom: var(--screen-edge-bottom);
   left: 0;
   width: 100%;
   height: 50px;
@@ -63,7 +63,7 @@ const DockRowInner = styled.div`
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  padding: 0 60px;
+  padding: 0 var(--screen-edge-horizontal);
   width: max-content;
   min-width: 100%;
   flex-shrink: 0;

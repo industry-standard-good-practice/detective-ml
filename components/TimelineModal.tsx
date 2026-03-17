@@ -69,12 +69,14 @@ const CloseButton = styled.button`
   &:hover { color: #fff; }
 `;
 
-const TimelineContainer = styled.div`
-  flex: 1;
-  overflow-y: auto;
+/* Non-scrolling wrapper: holds the vertical spine line absolutely positioned */
+const TimelineLineWrapper = styled.div`
   position: relative;
-  background: rgba(0, 0, 0, 0.2);
-  
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
   &::before {
     content: '';
     position: absolute;
@@ -85,11 +87,19 @@ const TimelineContainer = styled.div`
     background: #415a77;
     transform: translateX(-50%);
     z-index: 0;
+    pointer-events: none;
     
     @media (max-width: 600px) {
       left: 20px;
     }
   }
+`;
+
+const TimelineContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  background: rgba(0, 0, 0, 0.2);
 `;
 
 const ScrollContent = styled.div`
@@ -499,9 +509,11 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
 
   if (inline) {
     return (
-      <TimelineContainer>
-        {timelineContent}
-      </TimelineContainer>
+      <TimelineLineWrapper>
+        <TimelineContainer>
+          {timelineContent}
+        </TimelineContainer>
+      </TimelineLineWrapper>
     );
   }
 
@@ -513,9 +525,11 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
           <CloseButton onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
 
-        <TimelineContainer>
-          {timelineContent}
-        </TimelineContainer>
+        <TimelineLineWrapper>
+          <TimelineContainer>
+            {timelineContent}
+          </TimelineContainer>
+        </TimelineLineWrapper>
       </ModalContent>
     </ModalOverlay>
   );

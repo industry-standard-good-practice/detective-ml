@@ -13,6 +13,11 @@ const GlobalStyle = createGlobalStyle`
   :root {
     --font-main: 'VT323', monospace;
     
+    /* CRT Screen Edge Padding — controls how far content sits from the curved CRT border */
+    --screen-edge-top: 50px;
+    --screen-edge-bottom: 30px;
+    --screen-edge-horizontal: 60px;
+    
     /* Typographic Scale */
     --type-h1: 3rem;
     --type-h2: 2rem;
@@ -24,6 +29,10 @@ const GlobalStyle = createGlobalStyle`
 
   @media (max-width: 768px) {
     :root {
+      --screen-edge-top: 20px;
+      --screen-edge-bottom: 10px;
+      --screen-edge-horizontal: 15px;
+      
       --type-h1: 2.2rem;
       --type-h2: 1.8rem;
       --type-h3: 1.5rem;
@@ -127,7 +136,7 @@ const MainContainer = styled.div`
   justify-content: center;
   position: relative;
   background: #000;
-  padding: 40px;
+  padding: 15px;
   cursor: none !important;
   
   &, & * {
@@ -180,19 +189,22 @@ const Screen = styled.div<{ $powerState: 'on' | 'off' | 'turning-on' | 'turning-
 const TopBar = styled.div`
   display: flex;
   align-items: center;
-  padding: 10px 30px;
+  padding: var(--screen-edge-top) var(--screen-edge-horizontal) 10px var(--screen-edge-horizontal);
   font-size: var(--type-body-lg);
   border-bottom: 2px solid #333;
   background: #0f0f0f;
   z-index: 5;
-  height: 70px;
+  min-height: 70px;
   position: relative;
   justify-content: space-between;
 
   @media (max-width: 768px) {
-    padding: 5px 15px;
-    height: 60px;
-    justify-content: center; /* Center the title on mobile */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: 1fr;
+    align-items: center;
+    padding: var(--screen-edge-top) var(--screen-edge-horizontal) 10px var(--screen-edge-horizontal);
+    min-height: 60px;
   }
 `;
 
@@ -211,7 +223,11 @@ const TitleContainer = styled.div`
     position: static;
     transform: none;
     width: auto;
-    max-width: 50%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    grid-column: 2;
+    grid-row: 1;
   }
 `;
 
@@ -305,6 +321,16 @@ const ScreenContent = styled.div`
   overflow-y: auto;
 `;
 
+const ContentInset = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1;
+`;
+
 const NavGroup = styled.div`
   display: flex; 
   gap: 20px; 
@@ -314,6 +340,9 @@ const NavGroup = styled.div`
   @media (max-width: 768px) {
     min-width: auto;
     gap: 10px;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
   }
 `;
 
@@ -339,10 +368,6 @@ const HamburgerButton = styled.button<{ $visible?: boolean }>`
   
   @media (max-width: 768px) {
     display: flex;
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
   }
 `;
 
@@ -358,14 +383,13 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
     font-size: var(--type-body-lg);
     font-weight: bold;
     text-transform: uppercase;
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
     cursor: pointer;
     z-index: 20;
     align-items: center;
     flex-shrink: 0;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
     
     &:hover {
       color: #fff;
@@ -385,6 +409,8 @@ const SlideMenu = styled.div<{ $isOpen: boolean }>`
   display: flex;
   flex-direction: column;
   padding: 20px;
+  padding-left: var(--screen-edge-horizontal);
+  padding-bottom: var(--screen-edge-bottom);
   gap: 10px;
   z-index: 100;
   transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-110%)'};
@@ -415,6 +441,8 @@ const SlideMenu = styled.div<{ $isOpen: boolean }>`
     max-height: calc(100% - 60px);
     border-right: none;
     border-bottom: 2px solid #0f0;
+    padding-left: var(--screen-edge-horizontal);
+    padding-right: var(--screen-edge-horizontal);
     transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(calc(-100% - 60px))'};
     box-shadow: ${props => props.$isOpen ? '0 10px 30px rgba(0,0,0,0.9)' : 'none'};
   }
@@ -535,8 +563,9 @@ const Layout: React.FC<LayoutProps> = ({
     <>
       <GlobalStyle />
       <MainContainer data-monitor>
-          <Screen $powerState={powerState}>
-            <CRTOverlay />
+        <Screen $powerState={powerState}>
+          <CRTOverlay />
+          <ContentInset>
             {!isBooting && (
               <>
                 <TopBar>
@@ -591,9 +620,9 @@ const Layout: React.FC<LayoutProps> = ({
 
                   {/* MOBILE CUSTOM ACTION */}
                   {mobileAction && (
-                  <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
-                    [{mobileAction.label}]
-                  </MobileActionButton>
+                    <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
+                      [{mobileAction.label}]
+                    </MobileActionButton>
                   )}
 
                   {/* CENTER TITLE */}
@@ -605,7 +634,7 @@ const Layout: React.FC<LayoutProps> = ({
                   </TitleContainer>
 
                   {/* RIGHT — always-visible key items */}
-                  <NavGroup style={{ justifyContent: 'flex-end', minWidth: 'auto', position: 'absolute', right: '15px' }}>
+                  <NavGroup className="hide-on-mobile" style={{ justifyContent: 'flex-end', minWidth: 'auto', position: 'absolute', right: 'var(--screen-edge-horizontal)' }}>
                     {hasUnsavedChanges && (
                       <span style={{
                         color: '#fa0', fontSize: '0.75rem',
@@ -788,7 +817,8 @@ const Layout: React.FC<LayoutProps> = ({
               }}
             />
 
-          </Screen>
+          </ContentInset>
+        </Screen>
       </MainContainer>
     </>
   );

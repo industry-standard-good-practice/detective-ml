@@ -24,6 +24,7 @@
     "react-dom": "^19.2.3",
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
+    "selfsigned": "^5.5.0",
     "styled-components": "^6.1.19",
     "three": "^0.182.0",
     "tsx": "^4.21.0"

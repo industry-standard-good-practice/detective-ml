@@ -26,3 +26,6 @@ dist-ssr
 # Tunnel
 .tunnel.pid
 .tunnel.url
+
+# Dev SSL certs
+.certs/

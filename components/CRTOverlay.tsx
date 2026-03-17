@@ -24,7 +24,7 @@ const CRTOverlay: React.FC = () => {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
-    
+
     // Initial Size
     const { clientWidth, clientHeight } = mountRef.current;
     renderer.setSize(clientWidth, clientHeight);
@@ -72,10 +72,14 @@ const CRTOverlay: React.FC = () => {
           vec2 uv = vUv;
 
           // 1. Curvature (Fish-eye effect)
-          // Reduced curvature to match CSS border-radius better
+          // Scale up before distortion to push curved border closer to edges
+          // while preserving the same curve shape
           vec2 crtUV = uv * 2.0 - 1.0;
-          vec2 offset = crtUV.yx / vec2(12.0, 10.0); // Was 6.0, 4.0 - increased to flatten curve
-          crtUV = crtUV + crtUV * offset * offset;
+          float edgeScale = 1.01; // >1 = thinner border band
+          vec2 scaledUV = crtUV * edgeScale;
+          vec2 offset = scaledUV.yx / vec2(6.0, 6.0);
+          scaledUV = scaledUV + scaledUV * offset * offset;
+          crtUV = scaledUV / edgeScale;
           uv = crtUV * 0.5 + 0.5;
 
           // Black out edges outside the curve (fully opaque to clip content)
@@ -182,30 +186,30 @@ const CRTOverlay: React.FC = () => {
 
       material.uniforms.u_time.value = time * 0.001;
       material.uniforms.u_distortion.value = distortionValue;
-      
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
 
     const handleResize = () => {
-       if (!mountRef.current) return;
-       const { clientWidth, clientHeight } = mountRef.current;
-       renderer.setSize(clientWidth, clientHeight);
-       renderer.setPixelRatio(window.devicePixelRatio);
-       material.uniforms.u_resolution.value.set(clientWidth, clientHeight);
+      if (!mountRef.current) return;
+      const { clientWidth, clientHeight } = mountRef.current;
+      renderer.setSize(clientWidth, clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      material.uniforms.u_resolution.value.set(clientWidth, clientHeight);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-        if (!mountRef.current) return;
-        const rect = mountRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = 1.0 - (e.clientY - rect.top) / rect.height;
-        material.uniforms.u_mouse.value.set(x, y);
+      if (!mountRef.current) return;
+      const rect = mountRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = 1.0 - (e.clientY - rect.top) / rect.height;
+      material.uniforms.u_mouse.value.set(x, y);
     };
 
     const handleClick = () => {
-        targetDistortion = 1.0;
-        material.uniforms.u_time.value += 10.0;
+      targetDistortion = 1.0;
+      material.uniforms.u_time.value += 10.0;
     };
 
     // Attach resize to ResizeObserver
@@ -213,8 +217,8 @@ const CRTOverlay: React.FC = () => {
     resizeObserver.observe(mountRef.current);
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('click', handleClick); 
-    
+    window.addEventListener('click', handleClick);
+
     const animId = requestAnimationFrame(animate);
 
     return () => {

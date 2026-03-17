@@ -26,7 +26,7 @@ const BoardSection = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px 20px 50px 20px;
+  padding: 20px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
   
   @media (max-width: 768px) {
     display: none;
@@ -573,8 +573,8 @@ const MobileTabBar = styled.div`
     display: flex;
     background: #111;
     border-top: 1px solid #333;
-    padding: 0 5px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding: 0 var(--screen-edge-horizontal);
+    padding-bottom: var(--screen-edge-bottom);
     flex-shrink: 0;
   }
 `;
@@ -710,23 +710,9 @@ const AccordionInner = styled.div`
 const InlineTimelineWrap = styled.div`
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
   position: relative;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    left: 20px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #415a77;
-    z-index: 0;
-  }
-  
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 `;
 
 /* Inline suspect carousel for mobile accordion */

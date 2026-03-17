@@ -9,9 +9,9 @@ import { useDragScroll } from '../hooks/useDragScroll';
 type CardTheme = 'green' | 'cyan' | 'gold';
 
 const THEME_COLORS: Record<CardTheme, { border: string; bright: string; glow: string; badgeBg: string }> = {
-  green:  { border: '#0a0', bright: '#0f0', glow: 'rgba(0, 255, 0, 0.2)',       badgeBg: '#031' },
-  cyan:   { border: '#0aa', bright: '#0ff', glow: 'rgba(0, 255, 255, 0.2)',     badgeBg: '#044' },
-  gold:   { border: '#a80', bright: '#fc0', glow: 'rgba(255, 200, 0, 0.2)',     badgeBg: '#442' },
+  green: { border: '#0a0', bright: '#0f0', glow: 'rgba(0, 255, 0, 0.2)', badgeBg: '#031' },
+  cyan: { border: '#0aa', bright: '#0ff', glow: 'rgba(0, 255, 255, 0.2)', badgeBg: '#044' },
+  gold: { border: '#a80', bright: '#fc0', glow: 'rgba(255, 200, 0, 0.2)', badgeBg: '#442' },
 };
 
 const getTheme = (theme?: CardTheme) => THEME_COLORS[theme || 'cyan'];
@@ -25,7 +25,7 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  padding: 20px 40px;
+  padding: 20px var(--screen-edge-horizontal);
   border-bottom: 1px solid #333;
   display: flex;
   align-items: center;
@@ -58,7 +58,7 @@ const MobileBottomTabBar = styled.div`
     background: #111;
     border-top: 1px solid #333;
     flex-shrink: 0;
-    padding: 0 5px;
+    padding: 0 var(--screen-edge-horizontal);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 `;
@@ -152,7 +152,7 @@ const SortButton = styled.button<{ $active: boolean }>`
 const Carousel = styled.div`
   display: flex;
   gap: 12px;
-  padding: 40px;
+  padding: 40px var(--screen-edge-horizontal);
   overflow-x: auto;
   overflow-y: hidden;
   flex: 1;
@@ -173,7 +173,7 @@ const Carousel = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 15px 5vw;
+    padding: 15px var(--screen-edge-horizontal);
     scroll-snap-type: x mandatory;
     & > div {
       flex: 0 0 90vw;
@@ -189,7 +189,7 @@ const NetworkGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  padding: 40px;
+  padding: 40px var(--screen-edge-horizontal);
   overflow-y: auto;
   flex: 1;
   height: 100%;
@@ -205,7 +205,7 @@ const NetworkGrid = styled.div`
 
   @media (max-width: 768px) {
     display: flex;
-    padding: 15px 5vw;
+    padding: 15px var(--screen-edge-horizontal);
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
