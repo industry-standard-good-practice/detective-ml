@@ -24,6 +24,8 @@ interface OnboardingContextType {
   skipTour: () => void;
   completeStep: (step: OnboardingStep, autoNext?: boolean) => void;
   isActionCompleted: boolean;
+  evidenceTooltipSeen: boolean;
+  dismissEvidenceTooltip: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -32,6 +34,9 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.NONE);
   const [isActive, setIsActive] = useState(false);
   const [isActionCompleted, setIsActionCompleted] = useState(false);
+  const [evidenceTooltipSeen, setEvidenceTooltipSeen] = useState(() => {
+    return localStorage.getItem('evidence_tooltip_seen') === 'true';
+  });
 
   useEffect(() => {
     setIsActionCompleted(false);
@@ -50,6 +55,9 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const completed = localStorage.getItem('onboarding_completed');
       if (completed === 'true') return;
     }
+    // Reset evidence tooltip so it replays when the user next finds evidence
+    setEvidenceTooltipSeen(false);
+    localStorage.removeItem('evidence_tooltip_seen');
     setCurrentStep(OnboardingStep.MISSION_BRIEFING);
     setIsActive(true);
   };
@@ -80,8 +88,13 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  const dismissEvidenceTooltip = () => {
+    setEvidenceTooltipSeen(true);
+    localStorage.setItem('evidence_tooltip_seen', 'true');
+  };
+
   return (
-    <OnboardingContext.Provider value={{ currentStep, isActive, startTour, nextStep, skipTour, completeStep, isActionCompleted }}>
+    <OnboardingContext.Provider value={{ currentStep, isActive, startTour, nextStep, skipTour, completeStep, isActionCompleted, evidenceTooltipSeen, dismissEvidenceTooltip }}>
       {children}
     </OnboardingContext.Provider>
   );

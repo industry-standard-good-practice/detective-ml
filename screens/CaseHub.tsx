@@ -26,7 +26,7 @@ const BoardSection = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
+  padding: 20px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 50px + 10px) var(--screen-edge-horizontal);
   
   @media (max-width: 768px) {
     display: none;

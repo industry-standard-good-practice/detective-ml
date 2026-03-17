@@ -12,6 +12,11 @@ const OverlayContainer = styled.div`
   z-index: 9999;
   pointer-events: none; /* Let clicks pass through */
   overflow: hidden;
+
+  /* Ensure the Three.js canvas also never captures events */
+  & > * {
+    pointer-events: none;
+  }
 `;
 
 const CRTOverlay: React.FC = () => {

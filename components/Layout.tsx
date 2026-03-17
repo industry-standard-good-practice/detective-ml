@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import { ScreenState } from '../types';
@@ -16,7 +16,7 @@ const GlobalStyle = createGlobalStyle`
     /* CRT Screen Edge Padding — controls how far content sits from the curved CRT border */
     --screen-edge-top: 50px;
     --screen-edge-bottom: 30px;
-    --screen-edge-horizontal: 60px;
+    --screen-edge-horizontal: 80px;
     
     /* Typographic Scale */
     --type-h1: 3rem;
@@ -208,7 +208,7 @@ const TopBar = styled.div`
   }
 `;
 
-const TitleContainer = styled.div`
+const TitleContainer = styled.div<{ $marquee?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -228,10 +228,15 @@ const TitleContainer = styled.div`
     overflow: hidden;
     grid-column: 2;
     grid-row: 1;
+    
+    ${props => props.$marquee && css`
+      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    `}
   }
 `;
 
-const Title = styled.h1`
+const Title = styled.h1<{ $marquee?: boolean }>`
   margin: 0;
   font-size: var(--type-h3);
   letter-spacing: 2px;
@@ -247,6 +252,15 @@ const Title = styled.h1`
   
   @media (max-width: 768px) {
     font-size: 1.4rem;
+    
+    ${props => props.$marquee && css`
+      overflow: visible;
+      text-overflow: clip;
+      text-align: left;
+      width: auto;
+      display: inline-block;
+      padding: 0 10px 0 20px;
+    `}
   }
 `;
 
@@ -400,22 +414,21 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
 
 const SlideMenu = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: 70px;
+  top: calc(var(--screen-edge-top) + 30px);
   left: 0;
-  width: 280px;
+  width: 400px;
   height: calc(100% - 80px);
   background: #0a0a0a;
   border-right: 2px solid #0f0;
   display: flex;
   flex-direction: column;
   padding: 20px;
-  padding-left: var(--screen-edge-horizontal);
+  padding-left: calc(var(--screen-edge-horizontal) + 10px);
   padding-bottom: var(--screen-edge-bottom);
   gap: 10px;
   z-index: 100;
   transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-110%)'};
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: ${props => props.$isOpen ? '10px 0 30px rgba(0,0,0,0.9)' : 'none'};
   overflow-y: auto;
 
   /* Force all buttons left-aligned and full-width in menu */
@@ -538,6 +551,62 @@ const Layout: React.FC<LayoutProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const { startTour } = useOnboarding();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
+  const marqueeStyleRef = useRef<HTMLStyleElement | null>(null);
+  const [marqueeAnimName, setMarqueeAnimName] = useState('');
+
+  // Detect title overflow and create marquee animation
+  useEffect(() => {
+    // Reset so React re-renders with non-marquee styles
+    setIsTitleOverflowing(false);
+    setMarqueeAnimName('');
+    if (marqueeStyleRef.current) {
+      marqueeStyleRef.current.remove();
+      marqueeStyleRef.current = null;
+    }
+
+    const el = titleRef.current;
+    if (!el) return;
+
+    // Wait for React re-render + double-rAF for iOS Safari layout
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (window.innerWidth > 768 || !el.parentElement) return;
+
+          // Check if text overflows: el has width:100% + overflow:hidden in non-marquee state
+          // Temporarily left-align for accurate scrollWidth
+          el.style.textAlign = 'left';
+          const overflows = el.scrollWidth > el.clientWidth + 2;
+          el.style.textAlign = '';
+
+          if (!overflows) return;
+
+          setIsTitleOverflowing(true);
+
+          // Use calc(containerWidth - 100%) in translateX
+          // 100% in translateX = the element's own rendered width (inline-block)
+          // So translateX(calc(Cpx - 100%)) positions the right edge at the container's right edge
+          const cw = el.parentElement.clientWidth;
+          const animName = `marquee_${Date.now()}`;
+          const styleEl = document.createElement('style');
+          styleEl.textContent = `@keyframes ${animName}{0%,20%{transform:translateX(0)}80%,100%{transform:translateX(calc(${cw}px - 100%))}}`;
+          document.head.appendChild(styleEl);
+          marqueeStyleRef.current = styleEl;
+          setMarqueeAnimName(animName);
+        });
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      if (marqueeStyleRef.current) {
+        marqueeStyleRef.current.remove();
+        marqueeStyleRef.current = null;
+      }
+    };
+  }, [caseTitle, screenState, mobileAction]);
 
   // Logic to determine if we are in "Gameplay" mode
   const isGameplay =
@@ -626,8 +695,13 @@ const Layout: React.FC<LayoutProps> = ({
                   )}
 
                   {/* CENTER TITLE */}
-                  <TitleContainer>
-                    <Title title={caseTitle || 'DetectiveML'}>
+                  <TitleContainer $marquee={isTitleOverflowing}>
+                    <Title
+                      ref={titleRef}
+                      $marquee={isTitleOverflowing}
+                      title={caseTitle || 'DetectiveML'}
+                      style={marqueeAnimName ? { animation: `${marqueeAnimName} 6s ease-in-out infinite alternate` } : undefined}
+                    >
                       {caseTitle || 'DetectiveML'}
                     </Title>
                     <SubTitle>v1.0.0 // SYSTEM READY</SubTitle>

@@ -162,7 +162,7 @@ interface AsciiCelebrationProps {
 
 const AsciiCelebration: React.FC<AsciiCelebrationProps> = ({ evidenceName, evidenceImage, onComplete }) => {
   return (
-    <Container onClick={onComplete}>
+    <Container onClick={onComplete} data-cursor="pointer">
       <ScanlineLayer />
       <MovingScanline />
       

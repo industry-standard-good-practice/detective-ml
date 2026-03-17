@@ -4,7 +4,7 @@ import styled, { keyframes } from 'styled-components';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
 import { motion, AnimatePresence } from 'motion/react';
 
-const Overlay = styled(motion.div)`
+export const OnboardingOverlay = styled(motion.div)`
   position: fixed;
   top: 0;
   left: 0;
@@ -15,7 +15,7 @@ const Overlay = styled(motion.div)`
   overflow: hidden;
 `;
 
-const Highlight = styled(motion.div)`
+export const OnboardingHighlight = styled(motion.div)`
   position: absolute;
   background: transparent;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
@@ -35,7 +35,7 @@ const CenteredBackdrop = styled(motion.div)`
   pointer-events: auto;
 `;
 
-const Tooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right'; $hideTail?: boolean }>`
+export const OnboardingTooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right'; $hideTail?: boolean }>`
   position: absolute;
   background: #111;
   border: 1px solid #0f0;
@@ -483,7 +483,7 @@ export const OnboardingTour: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <Overlay
+      <OnboardingOverlay
         id="onboarding-overlay"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -497,7 +497,7 @@ export const OnboardingTour: React.FC = () => {
           />
         )}
         {rect && !step.centered && (
-          <Highlight
+          <OnboardingHighlight
             initial={false}
             animate={{
               top: rect.top - 5,
@@ -509,7 +509,7 @@ export const OnboardingTour: React.FC = () => {
           />
         )}
 
-        <Tooltip
+        <OnboardingTooltip
           ref={tooltipRef}
           $position={renderedPosition}
           $hideTail={!!step.centered}
@@ -541,8 +541,8 @@ export const OnboardingTour: React.FC = () => {
           </ButtonGroup>
 
           <StepIndicator>Step {currentStep} of 10</StepIndicator>
-        </Tooltip>
-      </Overlay>
+        </OnboardingTooltip>
+      </OnboardingOverlay>
     </AnimatePresence>
   );
 };

@@ -10,6 +10,7 @@ import SuspectPortrait from '../components/SuspectPortrait';
 import { generateTTS } from '../services/geminiTTS';
 import { playAudioFromUrl, AudioPlayback } from '../services/audioPlayer';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
+import { OnboardingOverlay, OnboardingHighlight, OnboardingTooltip } from '../components/OnboardingTour';
 import { hasNativeSpeechRecognition, hasMediaRecorderFallback, startFallbackListening, stopFallbackListening } from '../services/geminiSTT';
 
 const Container = styled.div`
@@ -32,7 +33,7 @@ const MainContent = styled.div`
   display: flex;
   flex: 1;
   overflow: hidden;
-  padding: 20px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
+  padding: 20px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 50px + 10px) var(--screen-edge-horizontal);
   gap: 20px;
   position: relative;
   z-index: 1;
@@ -40,7 +41,7 @@ const MainContent = styled.div`
 
   @media (max-width: 1280px) {
     gap: 15px;
-    padding: 15px var(--screen-edge-horizontal) var(--screen-edge-bottom) var(--screen-edge-horizontal);
+    padding: 15px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 50px + 10px) var(--screen-edge-horizontal);
   }
   
   @media (max-width: 768px) {
@@ -123,6 +124,7 @@ const EvidenceChip = styled.div<{ $collected: boolean }>`
   font-size: var(--type-small);
   font-weight: bold;
   cursor: ${props => props.$collected ? 'default' : 'pointer'};
+  &[data-cursor] { cursor: ${props => props.$collected ? 'default' : 'pointer'}; }
   display: inline-block;
   align-self: flex-start;
   animation: fadeIn 0.5s;
@@ -1003,7 +1005,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
   onClearUnread
 }) => {
   const [inputVal, setInputVal] = useState('');
-  const { completeStep, isActive: isOnboarding, currentStep: onboardingStep } = useOnboarding();
+  const { completeStep, isActive: isOnboarding, currentStep: onboardingStep, evidenceTooltipSeen, dismissEvidenceTooltip } = useOnboarding();
+  const [showEvidenceTooltip, setShowEvidenceTooltip] = useState(false);
+  const evidenceChipRef = useRef<HTMLDivElement>(null);
+  const evidenceTooltipBubbleRef = useRef<HTMLDivElement>(null);
+  const [evidenceChipRect, setEvidenceChipRect] = useState<DOMRect | null>(null);
   const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
   const [selectedEvidence, setSelectedEvidence] = useState<(Evidence | TimelineStatement)[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
@@ -1383,7 +1389,64 @@ const Interrogation: React.FC<InterrogationProps> = ({
     }
   };
 
+  // Detect first uncollected evidence for tooltip
+  const firstUncollectedEvidenceIdx = chatHistory.findIndex(msg => msg.evidence && !msg.isEvidenceCollected);
+  const shouldShowEvidenceTooltip = !evidenceTooltipSeen && !isOnboarding && firstUncollectedEvidenceIdx !== -1;
+
+  // Auto-scroll to evidence chip and track its position for the fixed tooltip
+  useEffect(() => {
+    if (shouldShowEvidenceTooltip && !showEvidenceTooltip) {
+      setShowEvidenceTooltip(true);
+      // Scroll the chip into view after a brief delay for rendering
+      setTimeout(() => {
+        evidenceChipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    } else if (!shouldShowEvidenceTooltip) {
+      setShowEvidenceTooltip(false);
+      setEvidenceChipRect(null);
+    }
+  }, [shouldShowEvidenceTooltip]);
+
+  // Poll the evidence chip's position so the fixed highlight/tooltip tracks it
+  useEffect(() => {
+    if (!showEvidenceTooltip) return;
+    const update = () => {
+      if (evidenceChipRef.current) {
+        const r = evidenceChipRef.current.getBoundingClientRect();
+        // Account for CRT screen transform offset (same as OnboardingTour)
+        const overlayEl = document.getElementById('evidence-tooltip-overlay');
+        let offsetTop = 0;
+        let offsetLeft = 0;
+        if (overlayEl) {
+          const overlayRect = overlayEl.getBoundingClientRect();
+          offsetTop = overlayRect.top;
+          offsetLeft = overlayRect.left;
+        }
+        setEvidenceChipRect({
+          top: r.top - offsetTop,
+          left: r.left - offsetLeft,
+          width: r.width,
+          height: r.height,
+          bottom: r.bottom - offsetTop,
+          right: r.right - offsetLeft,
+        } as DOMRect);
+      }
+    };
+    update();
+    const interval = setInterval(update, 200);
+    window.addEventListener('resize', update);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', update);
+    };
+  }, [showEvidenceTooltip]);
+
   const handleEvidenceClick = (index: number, name: string, suspectId: string) => {
+    // Dismiss evidence tooltip on first collection
+    if (showEvidenceTooltip) {
+      dismissEvidenceTooltip();
+      setShowEvidenceTooltip(false);
+    }
     // Play evidence collection sound
     playEvidenceSfx();
     // Pass the full name string (including description if present) to celebration
@@ -1462,6 +1525,47 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   return (
     <Container ref={containerRef}>
+
+      {showEvidenceTooltip && evidenceChipRect && (
+        <OnboardingOverlay id="evidence-tooltip-overlay">
+          <OnboardingHighlight
+            initial={false}
+            animate={{
+              top: evidenceChipRect.top - 5,
+              left: evidenceChipRect.left - 5,
+              width: evidenceChipRect.width + 10,
+              height: evidenceChipRect.height + 10,
+            }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            onClick={() => {
+              if (firstUncollectedEvidenceIdx !== -1) {
+                const msg = chatHistory[firstUncollectedEvidenceIdx];
+                if (msg?.evidence && !msg.isEvidenceCollected) {
+                  handleEvidenceClick(firstUncollectedEvidenceIdx, msg.evidence, suspect.id);
+                }
+              }
+            }}
+            style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+            data-cursor="pointer"
+          />
+          <OnboardingTooltip
+            ref={evidenceTooltipBubbleRef}
+            $position="top"
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: 0,
+              top: evidenceChipRect.top - (evidenceTooltipBubbleRef.current?.offsetHeight || 120) - 30,
+              left: Math.max(10, Math.min(window.innerWidth - 310, evidenceChipRect.left + evidenceChipRect.width / 2 - 150)),
+            }}
+            transition={{ delay: 0.2 }}
+          >
+            <h4 style={{ margin: 0, color: '#0f0', textTransform: 'uppercase', fontFamily: "'VT323', monospace", fontSize: '1.5rem' }}>New Evidence!</h4>
+            <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.4, color: '#ccc' }}>Click on evidence to collect it and add it to your evidence board.</p>
+          </OnboardingTooltip>
+        </OnboardingOverlay>
+      )}
 
       <SuspectCardDock
         suspects={activeCase.suspects}
@@ -1553,8 +1657,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 )}
                 {msg.evidence && (
                   <EvidenceChip
+                    ref={idx === firstUncollectedEvidenceIdx && !msg.isEvidenceCollected ? evidenceChipRef : undefined}
                     $collected={!!msg.isEvidenceCollected}
                     onClick={() => !msg.isEvidenceCollected && handleEvidenceClick(idx, msg.evidence!, suspect.id)}
+                    data-cursor={msg.isEvidenceCollected ? undefined : 'pointer'}
+                    style={showEvidenceTooltip && idx === firstUncollectedEvidenceIdx && !msg.isEvidenceCollected ? { position: 'relative', zIndex: 10001 } : undefined}
                   >
                     {getShortEvidenceTitle(msg.evidence)}
                   </EvidenceChip>
