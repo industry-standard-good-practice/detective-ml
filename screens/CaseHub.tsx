@@ -989,7 +989,11 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <AccordionInner id="evidence-board-mobile">
                     <InlineEvidenceWrap>
                       <EvidenceGrid>
-                        {evidenceDiscovered.map((ev, i) => (
+                        {[...evidenceDiscovered].sort((a, b) => {
+                          const aNew = newEvidenceTitles.has(a.title) ? 0 : 1;
+                          const bNew = newEvidenceTitles.has(b.title) ? 0 : 1;
+                          return aNew - bNew;
+                        }).map((ev, i) => (
                           <EvidenceItemBase key={ev.id || i} style={{ position: 'relative' }}>
                             {newEvidenceTitles.has(ev.title) && (
                               <span style={{
