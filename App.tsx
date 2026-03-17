@@ -213,6 +213,7 @@ const App: React.FC = () => {
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
   const [unreadSuspects, setUnreadSuspects] = useState<Set<string>>(new Set());
   const [caseSelectionTab, setCaseSelectionTab] = useState<'featured' | 'network' | 'mycases'>('featured');
+  const [boardAccordionTab, setBoardAccordionTab] = useState<string>('evidence');
 
   useEffect(() => {
     localStorage.setItem('isMuted', String(isMuted));
@@ -1248,11 +1249,19 @@ const App: React.FC = () => {
     });
   };
 
+  const previousScreenRef = useRef<ScreenState>(gameState.currentScreen);
+
   const navigateTo = (screen: ScreenState) => {
     if (screen === ScreenState.CASE_SELECTION) {
+       previousScreenRef.current = gameState.currentScreen;
        resetGame();
        return;
     }
+    // When returning to CaseHub from interrogation, force suspects accordion open
+    if (screen === ScreenState.CASE_HUB && (gameState.currentScreen === ScreenState.INTERROGATION || gameState.currentScreen === ScreenState.ACCUSATION)) {
+      setBoardAccordionTab('suspects');
+    }
+    previousScreenRef.current = gameState.currentScreen;
     setGameState(prev => ({ ...prev, currentScreen: screen }));
   };
 
@@ -1452,6 +1461,10 @@ const App: React.FC = () => {
               onNavigate={navigateTo}
               onSendOfficerMessage={handleSendOfficerMessage}
               unreadSuspectIds={unreadSuspects}
+              initialMobileTab={previousScreenRef.current === ScreenState.INTERROGATION || previousScreenRef.current === ScreenState.ACCUSATION ? 'BOARD' : 'HQ'}
+              initialAccordion={boardAccordionTab}
+              onAccordionChange={setBoardAccordionTab}
+              scrollToSuspectId={previousScreenRef.current === ScreenState.INTERROGATION ? gameState.currentSuspectId : undefined}
             />
           )}
 

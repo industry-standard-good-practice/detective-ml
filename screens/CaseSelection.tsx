@@ -4,6 +4,20 @@ import styled from 'styled-components';
 import { CaseData, CaseStats } from '../types';
 import { useDragScroll } from '../hooks/useDragScroll';
 
+/* ─── Theme System ─── */
+
+type CardTheme = 'green' | 'cyan' | 'gold';
+
+const THEME_COLORS: Record<CardTheme, { border: string; bright: string; glow: string; badgeBg: string }> = {
+  green:  { border: '#0a0', bright: '#0f0', glow: 'rgba(0, 255, 0, 0.2)',       badgeBg: '#031' },
+  cyan:   { border: '#0aa', bright: '#0ff', glow: 'rgba(0, 255, 255, 0.2)',     badgeBg: '#044' },
+  gold:   { border: '#a80', bright: '#fc0', glow: 'rgba(255, 200, 0, 0.2)',     badgeBg: '#442' },
+};
+
+const getTheme = (theme?: CardTheme) => THEME_COLORS[theme || 'cyan'];
+
+/* ─── Layout ─── */
+
 const Container = styled.div`
   height: 100%;
   display: flex;
@@ -21,6 +35,12 @@ const Header = styled.div`
     display: none;
   }
 `;
+
+const HeaderTitle = styled.h2`
+  margin: 0;
+`;
+
+/* ─── Tab Bars ─── */
 
 const TabBar = styled.div`
   display: flex;
@@ -77,6 +97,57 @@ const BottomTabButton = styled.button<{ $active: boolean; $color: string }>`
   letter-spacing: 1px;
   transition: all 0.2s;
 `;
+
+/* ─── Sort Controls ─── */
+
+const SortBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: flex-end;
+  }
+`;
+
+const MobileSortBar = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 5vw 0;
+    flex-shrink: 0;
+  }
+`;
+
+const SortLabel = styled.span`
+  color: #555;
+  font-size: var(--type-small);
+  text-transform: uppercase;
+`;
+
+const SortButton = styled.button<{ $active: boolean }>`
+  background: ${props => props.$active ? 'rgba(0, 255, 255, 0.15)' : 'transparent'};
+  border: 1px solid ${props => props.$active ? '#0ff' : '#333'};
+  color: ${props => props.$active ? '#0ff' : '#666'};
+  padding: 4px 12px;
+  font-family: inherit;
+  font-size: var(--type-small);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #0ff;
+    color: #0ff;
+  }
+`;
+
+/* ─── Grid Layouts ─── */
 
 const Carousel = styled.div`
   display: flex;
@@ -153,15 +224,7 @@ const NetworkGrid = styled.div`
   }
 `;
 
-type CardTheme = 'green' | 'cyan' | 'gold';
-
-const THEME_COLORS: Record<CardTheme, { border: string; bright: string; glow: string; badgeBg: string }> = {
-  green:  { border: '#0a0', bright: '#0f0', glow: 'rgba(0, 255, 0, 0.2)',       badgeBg: '#031' },
-  cyan:   { border: '#0aa', bright: '#0ff', glow: 'rgba(0, 255, 255, 0.2)',     badgeBg: '#044' },
-  gold:   { border: '#a80', bright: '#fc0', glow: 'rgba(255, 200, 0, 0.2)',     badgeBg: '#442' },
-};
-
-const getTheme = (theme?: CardTheme) => THEME_COLORS[theme || 'cyan'];
+/* ─── Case Card ─── */
 
 const CaseCard = styled.div<{ $theme?: CardTheme; $isActive?: boolean }>`
   border: 2px solid ${props => getTheme(props.$theme).border};
@@ -199,6 +262,26 @@ const CaseCard = styled.div<{ $theme?: CardTheme; $isActive?: boolean }>`
   }
 `;
 
+const CaseImage = styled.div<{ $src?: string }>`
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: calc(80vh - 200px);
+  max-width: calc(80vh - 200px);
+  background-color: #080808;
+  background-image: ${props => props.$src && props.$src !== 'PLACEHOLDER' ? `url(${props.$src})` : 'none'};
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #333;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: var(--type-small);
+  text-transform: uppercase;
+  flex-shrink: 0;
+`;
+
 const CardTextContent = styled.div`
   display: flex;
   flex-direction: column;
@@ -220,25 +303,78 @@ const CardTextContent = styled.div`
   }
 `;
 
-const CaseImage = styled.div<{ $src?: string }>`
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  max-height: calc(80vh - 200px);
-  max-width: calc(80vh - 200px);
-  background-color: #080808;
-  background-image: ${props => props.$src && props.$src !== 'PLACEHOLDER' ? `url(${props.$src})` : 'none'};
-  background-size: cover;
-  background-position: center;
-  border: 1px solid #333;
-  image-rendering: pixelated;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #333;
-  font-size: var(--type-small);
-  text-transform: uppercase;
-  flex-shrink: 0;
+const CardTitle = styled.h3<{ $color: string }>`
+  color: ${props => props.$color};
+  font-size: var(--type-h3);
+  margin: 0 0 5px 0;
 `;
+
+const BadgeRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+`;
+
+const Badge = styled.span<{ $bg: string; $color: string }>`
+  background: ${props => props.$bg};
+  color: ${props => props.$color};
+  padding: 2px 8px;
+  font-size: var(--type-small);
+  font-weight: bold;
+  text-transform: uppercase;
+`;
+
+const TypeBadge = styled.span<{ $bg: string; $color: string }>`
+  background: ${props => props.$bg};
+  color: ${props => props.$color};
+  padding: 2px 8px;
+  font-size: var(--type-small);
+`;
+
+const DifficultyLabel = styled.span<{ $difficulty: string }>`
+  color: ${props => props.$difficulty === 'Hard' ? 'red' : props.$difficulty === 'Medium' ? '#fa0' : 'green'};
+  font-size: var(--type-small);
+`;
+
+const VersionLabel = styled.span`
+  color: #555;
+  font-size: var(--type-small);
+`;
+
+const AuthorLine = styled.div`
+  color: #666;
+  font-size: var(--type-small);
+  margin-top: 5px;
+  font-style: italic;
+`;
+
+const Description = styled.p`
+  color: #aaa;
+  margin: 5px 0 0 0;
+  font-size: var(--type-body);
+  line-height: 1.4;
+`;
+
+const StatsLine = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: var(--type-small);
+  color: #555;
+`;
+
+const UpvoteStat = styled.span`
+  color: #0a0;
+`;
+
+const DownvoteStat = styled.span`
+  color: #a00;
+`;
+
+/* ─── Special Cards ─── */
 
 const CreateCard = styled(CaseCard)`
   border: 2px dashed #0f0;
@@ -250,6 +386,7 @@ const CreateCard = styled(CaseCard)`
   
   @media (min-width: 769px) {
     &:hover {
+      border-color: #fff;
       background: rgba(0, 50, 0, 0.4);
       box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
     }
@@ -262,6 +399,13 @@ const CreateCard = styled(CaseCard)`
     min-height: 150px;
   }
 `;
+
+const CreateCardTitle = styled.h3`
+  font-size: var(--type-h3);
+  margin: 0;
+`;
+
+/* ─── Admin Controls ─── */
 
 const AdminControls = styled.div`
   display: flex;
@@ -289,73 +433,15 @@ const AdminButton = styled.button<{ $variant?: 'delete' | 'feature' | 'publish' 
   }
 `;
 
-const AuthorLine = styled.div`
-  color: #666;
-  font-size: var(--type-small);
-  margin-top: 5px;
-  font-style: italic;
+/* ─── Status Messages ─── */
+
+const EmptyMessage = styled.div<{ $color?: string; $fullWidth?: boolean }>`
+  color: ${props => props.$color || '#555'};
+  padding: 20px;
+  ${props => props.$fullWidth && 'grid-column: 1 / -1;'}
 `;
 
-const SortBar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-  
-  @media (max-width: 768px) {
-    width: 100%;
-    justify-content: flex-end;
-  }
-`;
-
-const MobileSortBar = styled.div`
-  display: none;
-  @media (max-width: 768px) {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    padding: 10px 5vw 0;
-    flex-shrink: 0;
-  }
-`;
-
-const SortButton = styled.button<{ $active: boolean }>`
-  background: ${props => props.$active ? 'rgba(0, 255, 255, 0.15)' : 'transparent'};
-  border: 1px solid ${props => props.$active ? '#0ff' : '#333'};
-  color: ${props => props.$active ? '#0ff' : '#666'};
-  padding: 4px 12px;
-  font-family: inherit;
-  font-size: var(--type-small);
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s;
-
-  &:hover {
-    border-color: #0ff;
-    color: #0ff;
-  }
-`;
-
-const DraftBadge = styled.span`
-  background: #a80;
-  color: #000;
-  padding: 2px 8px;
-  font-size: var(--type-small);
-  font-weight: bold;
-  text-transform: uppercase;
-`;
-
-const StatsLine = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-top: 8px;
-  font-size: var(--type-small);
-  color: #555;
-`;
-
-
+/* ─── Component ─── */
 
 interface CaseSelectionProps {
   communityCases: CaseData[];
@@ -472,8 +558,6 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     if (activeTab === 'network') return observeCarousel(networkGridRef.current, setActiveNetworkId);
   }, [activeTab, sortedNetworkCases.length]);
 
-
-
   // Merge local drafts + published cases by this user (deduplicated by id)
   const myCases = useMemo(() => {
     const publishedByMe = communityCases.filter(c => c.authorId === userId);
@@ -499,6 +583,33 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     if (activeTab === 'mycases') return observeCarousel(myCasesGridRef.current, setActiveMyCaseId);
   }, [activeTab, myCases.length]);
 
+  /* ─── Reusable Renderers ─── */
+
+  const renderStats = (caseId: string, requirePublished = false, isPublished = true) => {
+    if (requirePublished && !isPublished) return null;
+    const stats = caseStats[caseId];
+    if (!stats || stats.plays <= 0) return null;
+    return (
+      <StatsLine>
+        <span>▶ {stats.plays} plays</span>
+        <UpvoteStat>▲ {stats.upvotes || 0}</UpvoteStat>
+        <DownvoteStat>▼ {stats.downvotes || 0}</DownvoteStat>
+      </StatsLine>
+    );
+  };
+
+  const renderBadgeRow = (c: CaseData, theme: CardTheme, extraBadges?: React.ReactNode) => {
+    const colors = THEME_COLORS[theme];
+    return (
+      <BadgeRow>
+        {extraBadges}
+        <TypeBadge $bg={colors.badgeBg} $color={colors.bright}>{c.type}</TypeBadge>
+        <DifficultyLabel $difficulty={c.difficulty}>{c.difficulty}</DifficultyLabel>
+        {c.version && <VersionLabel>v{c.version}</VersionLabel>}
+      </BadgeRow>
+    );
+  };
+
   const renderCaseCardContent = (c: CaseData, theme: CardTheme, showFeaturedBadge = false) => {
     const colors = THEME_COLORS[theme];
     return (
@@ -507,62 +618,60 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
           {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
         </CaseImage>
         <CardTextContent>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-            {showFeaturedBadge && c.isFeatured && <span style={{ background: colors.bright, color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>FEATURED</span>}
-            <h3 style={{ color: colors.bright, fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <span style={{ background: colors.badgeBg, color: colors.bright, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-            <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-            {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-          </div>
-          <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
-          <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-          {caseStats[c.id] && caseStats[c.id].plays > 0 && (
-            <StatsLine>
-              <span>▶ {caseStats[c.id].plays} plays</span>
-              <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-              <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-            </StatsLine>
+          <CardTitle $color={colors.bright}>{c.title || "[ NO TITLE ]"}</CardTitle>
+          {renderBadgeRow(c, theme,
+            showFeaturedBadge && c.isFeatured ? <Badge $bg={colors.bright} $color="#000">FEATURED</Badge> : null
           )}
+          <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
+          <Description>{c.description}</Description>
+          {renderStats(c.id)}
         </CardTextContent>
       </>
     );
   };
 
+  const renderAdminControls = (c: CaseData) => (
+    <AdminControls onClick={(e) => e.stopPropagation()}>
+      {(isAdmin || c.authorId === userId) && onEditCase && (
+        <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
+      )}
+      {isAdmin && onToggleFeatured && (
+        <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
+      )}
+      {c.authorId === userId && onUnpublish && (
+        <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
+      )}
+      {isAdmin && onDeleteCase && (
+        <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
+      )}
+    </AdminControls>
+  );
+
+  const renderSortControls = () => (
+    <>
+      <SortLabel>Sort:</SortLabel>
+      <SortButton $active={sortMode === 'popular'} onClick={() => setSortMode('popular')}>Popular</SortButton>
+      <SortButton $active={sortMode === 'recent'} onClick={() => setSortMode('recent')}>Recent</SortButton>
+    </>
+  );
+
   return (
     <Container>
       <Header>
-        <h2 className="hide-on-mobile" style={{ margin: 0 }}>OPEN CASES</h2>
+        <HeaderTitle className="hide-on-mobile">OPEN CASES</HeaderTitle>
         <TabBar>
-          <TabButton
-            $active={activeTab === 'featured'}
-            $color="#0f0"
-            onClick={() => setActiveTab('featured')}
-          >
+          <TabButton $active={activeTab === 'featured'} $color="#0f0" onClick={() => setActiveTab('featured')}>
             [ FEATURED ]
           </TabButton>
-          <TabButton
-            $active={activeTab === 'network'}
-            $color="#0ff"
-            onClick={() => setActiveTab('network')}
-          >
+          <TabButton $active={activeTab === 'network'} $color="#0ff" onClick={() => setActiveTab('network')}>
             [ NETWORK ]
           </TabButton>
-          <TabButton
-            $active={activeTab === 'mycases'}
-            $color="#fc0"
-            onClick={() => setActiveTab('mycases')}
-          >
+          <TabButton $active={activeTab === 'mycases'} $color="#fc0" onClick={() => setActiveTab('mycases')}>
             [ MY CASES ]
           </TabButton>
         </TabBar>
         {activeTab === 'network' && (
-          <SortBar>
-            <span style={{ color: '#555', fontSize: 'var(--type-small)', textTransform: 'uppercase' }}>Sort:</span>
-            <SortButton $active={sortMode === 'popular'} onClick={() => setSortMode('popular')}>Popular</SortButton>
-            <SortButton $active={sortMode === 'recent'} onClick={() => setSortMode('recent')}>Recent</SortButton>
-          </SortBar>
+          <SortBar>{renderSortControls()}</SortBar>
         )}
       </Header>
 
@@ -570,119 +679,77 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
         <>
           <Carousel ref={carouselRef}>
             {featuredCases.length === 0 && !isLoadingCommunity && (
-              <div key="no-featured" style={{ color: '#555', padding: '20px' }}>No featured cases available.</div>
+              <EmptyMessage key="no-featured">No featured cases available.</EmptyMessage>
             )}
             {featuredCases.map((c) => {
               if (!c.id) return null;
               return (
                 <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer" data-case-id={c.id} $isActive={activeFeaturedId === c.id} $theme="green">
                   {renderCaseCardContent(c, 'green')}
-                  <AdminControls onClick={(e) => e.stopPropagation()}>
-                    {(isAdmin || c.authorId === userId) && onEditCase && (
-                      <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
-                    )}
-                    {isAdmin && onToggleFeatured && (
-                      <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
-                    )}
-                    {c.authorId === userId && onUnpublish && (
-                      <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
-                    )}
-                    {isAdmin && onDeleteCase && (
-                      <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
-                    )}
-                  </AdminControls>
+                  {renderAdminControls(c)}
                 </CaseCard>
               );
             })}
           </Carousel>
-
         </>
       ) : activeTab === 'network' ? (
         <>
-          <MobileSortBar>
-            <span style={{ color: '#555', fontSize: 'var(--type-small)', textTransform: 'uppercase' }}>Sort:</span>
-            <SortButton $active={sortMode === 'popular'} onClick={() => setSortMode('popular')}>Popular</SortButton>
-            <SortButton $active={sortMode === 'recent'} onClick={() => setSortMode('recent')}>Recent</SortButton>
-          </MobileSortBar>
+          <MobileSortBar>{renderSortControls()}</MobileSortBar>
           <NetworkGrid ref={networkGridRef}>
             {isLoadingCommunity && (
-              <div key="loading-network" style={{ color: '#0ff', padding: '20px' }}>Accessing secure network...</div>
+              <EmptyMessage key="loading-network" $color="#0ff">Accessing secure network...</EmptyMessage>
             )}
-
             {!isLoadingCommunity && communityCases.length === 0 && (
-              <div key="no-network" style={{ color: '#555', padding: '20px' }}>No signals detected on the network.</div>
+              <EmptyMessage key="no-network">No signals detected on the network.</EmptyMessage>
             )}
-
             {sortedNetworkCases.map((c) => {
               if (!c.id) return null;
               return (
                 <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $theme="cyan" data-cursor="pointer" data-case-id={c.id} $isActive={activeNetworkId === c.id}>
                   {renderCaseCardContent(c, 'cyan', true)}
-                  <AdminControls onClick={(e) => e.stopPropagation()}>
-                    {(isAdmin || c.authorId === userId) && onEditCase && (
-                      <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
-                    )}
-                    {isAdmin && onToggleFeatured && (
-                      <AdminButton key={`feature-${c.id}`} $variant="feature" onClick={() => onToggleFeatured(c.id, !c.isFeatured)}>{c.isFeatured ? 'UNFEATURE' : 'FEATURE'}</AdminButton>
-                    )}
-                    {c.authorId === userId && onUnpublish && (
-                      <AdminButton key={`unpublish-${c.id}`} $variant="delete" onClick={() => onUnpublish(c.id)}>UNPUBLISH</AdminButton>
-                    )}
-                    {isAdmin && onDeleteCase && (
-                      <AdminButton key={`delete-${c.id}`} $variant="delete" onClick={() => onDeleteCase(c.id)}>DELETE</AdminButton>
-                    )}
-                  </AdminControls>
+                  {renderAdminControls(c)}
                 </CaseCard>
               );
             })}
           </NetworkGrid>
-
         </>
       ) : (
         /* MY CASES TAB */
         <>
           <NetworkGrid ref={myCasesGridRef}>
             <CreateCard onClick={onCreateNew} data-cursor="pointer">
-              <h3 style={{ fontSize: 'var(--type-h3)', margin: 0 }}>+ CREATE A NEW CASE</h3>
+              <CreateCardTitle>+ CREATE A NEW CASE</CreateCardTitle>
             </CreateCard>
 
             {myCases.length === 0 && (
-              <div key="no-mycases" style={{ color: '#555', padding: '20px', gridColumn: '1 / -1' }}>
+              <EmptyMessage key="no-mycases" $fullWidth>
                 No cases yet. Create one to get started!
-              </div>
+              </EmptyMessage>
             )}
 
             {myCases.map((c) => {
               if (!c.id) return null;
               const isPublished = c.isUploaded;
+              const colors = THEME_COLORS['gold'];
               return (
                 <CaseCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer" data-case-id={c.id} $isActive={activeMyCaseId === c.id} $theme="gold">
                   <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
                     {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
                   </CaseImage>
                   <CardTextContent>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-                      {isPublished
-                        ? <span style={{ background: '#fc0', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
-                        : <DraftBadge>DRAFT</DraftBadge>
-                      }
-                      {c.isFeatured && <span style={{ background: '#a80', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>FEATURED</span>}
-                      <h3 style={{ color: '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                      <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-                      <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-                      {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-                    </div>
-                    <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
-                    <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-                    {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
-                      <StatsLine>
-                        <span>▶ {caseStats[c.id].plays} plays</span>
-                        <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-                        <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-                      </StatsLine>
+                    <CardTitle $color={colors.bright}>{c.title || "[ NO TITLE ]"}</CardTitle>
+                    {renderBadgeRow(c, 'gold',
+                      <>
+                        {isPublished
+                          ? <Badge $bg={colors.bright} $color="#000">LIVE</Badge>
+                          : <Badge $bg={colors.border} $color="#000">DRAFT</Badge>
+                        }
+                        {c.isFeatured && <Badge $bg={colors.border} $color="#000">FEATURED</Badge>}
+                      </>
                     )}
+                    <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
+                    <Description>{c.description}</Description>
+                    {renderStats(c.id, true, !!isPublished)}
                   </CardTextContent>
                   <AdminControls onClick={(e) => e.stopPropagation()}>
                     {onEditCase && (
@@ -705,29 +772,16 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               );
             })}
           </NetworkGrid>
-
         </>
       )}
       <MobileBottomTabBar>
-        <BottomTabButton
-          $active={activeTab === 'featured'}
-          $color="#0f0"
-          onClick={() => setActiveTab('featured')}
-        >
+        <BottomTabButton $active={activeTab === 'featured'} $color="#0f0" onClick={() => setActiveTab('featured')}>
           FEATURED
         </BottomTabButton>
-        <BottomTabButton
-          $active={activeTab === 'network'}
-          $color="#0ff"
-          onClick={() => setActiveTab('network')}
-        >
+        <BottomTabButton $active={activeTab === 'network'} $color="#0ff" onClick={() => setActiveTab('network')}>
           NETWORK
         </BottomTabButton>
-        <BottomTabButton
-          $active={activeTab === 'mycases'}
-          $color="#fc0"
-          onClick={() => setActiveTab('mycases')}
-        >
+        <BottomTabButton $active={activeTab === 'mycases'} $color="#fc0" onClick={() => setActiveTab('mycases')}>
           MY CASES
         </BottomTabButton>
       </MobileBottomTabBar>

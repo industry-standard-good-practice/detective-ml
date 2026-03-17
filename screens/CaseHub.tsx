@@ -781,6 +781,10 @@ interface CaseHubProps {
   onNavigate: (screen: ScreenState) => void;
   onSendOfficerMessage: (text: string) => void;
   unreadSuspectIds?: Set<string>;
+  initialMobileTab?: 'BOARD' | 'HQ';
+  initialAccordion?: string;
+  onAccordionChange?: (tab: string) => void;
+  scrollToSuspectId?: string | null;
 }
 
 const CaseHub: React.FC<CaseHubProps> = ({
@@ -794,7 +798,11 @@ const CaseHub: React.FC<CaseHubProps> = ({
   onStartInterrogation,
   onNavigate,
   onSendOfficerMessage,
-  unreadSuspectIds = new Set()
+  unreadSuspectIds = new Set(),
+  initialMobileTab = 'HQ',
+  initialAccordion = 'evidence',
+  onAccordionChange,
+  scrollToSuspectId
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -811,9 +819,16 @@ const CaseHub: React.FC<CaseHubProps> = ({
     setLightboxEvidence(null);
   };
   const [inputVal, setInputVal] = useState('');
-  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'HQ'>('HQ');
+  const [activeMobileTab, setActiveMobileTab] = useState<'BOARD' | 'HQ'>(initialMobileTab);
   // Mobile accordion state — always one panel open, default to evidence
-  const [openAccordion, setOpenAccordion] = useState<string>('evidence');
+  const [openAccordion, setOpenAccordionLocal] = useState<string>(initialAccordion);
+  const setOpenAccordion = (val: string | ((prev: string) => string)) => {
+    setOpenAccordionLocal(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      onAccordionChange?.(next);
+      return next;
+    });
+  };
   const inlineCarouselRef = useRef<HTMLDivElement>(null);
   const inlineCarouselDrag = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
 
@@ -834,6 +849,20 @@ const CaseHub: React.FC<CaseHubProps> = ({
   useEffect(() => {
     startTour(false);
   }, []);
+
+  // Scroll to the suspect that was being interrogated when returning
+  useEffect(() => {
+    if (!scrollToSuspectId || openAccordion !== 'suspects') return;
+    const timer = setTimeout(() => {
+      const el = inlineCarouselRef.current;
+      if (!el) return;
+      const card = el.querySelector(`[data-suspect-id="${scrollToSuspectId}"]`) as HTMLElement;
+      if (card) {
+        card.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [scrollToSuspectId, openAccordion]);
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -1030,7 +1059,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                       style={{ cursor: 'grab' }}
                     >
                       {caseData.suspects.map(s => (
-                        <CarouselCardItem key={s.id}>
+                        <CarouselCardItem key={s.id} data-suspect-id={s.id}>
                           <SuspectCard
                             suspect={s}
                             width="100%"
