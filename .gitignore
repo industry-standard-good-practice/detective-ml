@@ -29,3 +29,5 @@ dist-ssr
 
 # Dev SSL certs
 .certs/
+
+backend/.auth/*

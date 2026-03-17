@@ -1,0 +1,549 @@
+openapi: '3.0.3'
+info:
+  title: DetectiveML Backend API
+  description: |
+    Backend API for DetectiveML. All endpoints require Firebase Authentication — 
+    clients send `Authorization: Bearer <firebaseIdToken>` to prove identity.
+    The backend validates the token and performs Firebase operations using a service account.
+  version: '1.0.0'
+
+servers:
+  - url: http://localhost:4000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID Token
+      description: Firebase ID token obtained via `auth.currentUser.getIdToken()`
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      example:
+        error: "Something went wrong."
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      example:
+        success: true
+
+    CaseData:
+      type: object
+      required: [id, title, type, description, difficulty, suspects, authorId]
+      properties:
+        id:
+          type: string
+          example: "case_abc123"
+        title:
+          type: string
+          example: "The Missing Diamond"
+        type:
+          type: string
+          example: "Larceny"
+        description:
+          type: string
+          example: "A priceless diamond vanishes from a locked museum exhibit."
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        isUploaded:
+          type: boolean
+          description: "Whether the case is published (read-only, controlled by publish endpoint)"
+        authorId:
+          type: string
+          example: "uid_user123"
+        authorDisplayName:
+          type: string
+          example: "Detective Jane"
+        version:
+          type: integer
+          example: 3
+        createdAt:
+          type: number
+          description: "Epoch timestamp (ms)"
+        updatedAt:
+          type: number
+          description: "Epoch timestamp (ms)"
+        heroImageUrl:
+          type: string
+        suspects:
+          type: array
+          items:
+            type: object
+        initialEvidence:
+          type: array
+          items:
+            type: object
+        initialTimeline:
+          type: array
+          items:
+            type: object
+        officer:
+          type: object
+        partner:
+          type: object
+
+    CaseStats:
+      type: object
+      properties:
+        plays:
+          type: integer
+          example: 42
+        successes:
+          type: integer
+          example: 28
+        failures:
+          type: integer
+          example: 14
+        upvotes:
+          type: integer
+          example: 35
+        downvotes:
+          type: integer
+          example: 3
+        totalEvidenceFound:
+          type: integer
+          example: 120
+        totalSuspectsSpoken:
+          type: integer
+          example: 85
+        totalTimelineFound:
+          type: integer
+          example: 60
+
+    AttemptDetail:
+      type: object
+      required: [evidenceFound, suspectsSpoken, timelineFound]
+      properties:
+        evidenceFound:
+          type: integer
+          example: 4
+        suspectsSpoken:
+          type: integer
+          example: 3
+        timelineFound:
+          type: integer
+          example: 2
+
+    ImageUploadRequest:
+      type: object
+      required: [base64, path]
+      properties:
+        base64:
+          type: string
+          description: "Base64-encoded image data (may include data:image/png;base64, prefix)"
+          example: "data:image/png;base64,iVBORw0KGgo..."
+        path:
+          type: string
+          description: "Storage path"
+          example: "images/uid123/cases/case456/hero.png"
+
+    ImageUploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          example: "https://storage.googleapis.com/detectiveml.firebasestorage.app/images/uid123/cases/case456/hero.png"
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      security: []
+      tags: [System]
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    example: "2026-03-17T15:00:00.000Z"
+
+  /api/cases:
+    get:
+      summary: List cases
+      description: |
+        Without query params, returns all published community cases.
+        With `?authorId=<uid>`, returns all cases (published + unpublished) for that user.
+      tags: [Cases]
+      parameters:
+        - name: authorId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Filter by author UID (returns all their cases, not just published)"
+      responses:
+        '200':
+          description: Array of cases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaseData'
+              example:
+                - id: "case_abc123"
+                  title: "The Missing Diamond"
+                  type: "Larceny"
+                  isUploaded: true
+                  authorId: "uid_user123"
+                  authorDisplayName: "Detective Jane"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cases/{id}:
+    put:
+      summary: Create or update a case
+      description: |
+        Creates a new case or updates an existing one. Business logic:
+        - Preserves original author identity from existing data
+        - Strips `isUploaded` from input (publish state is controlled by the publish endpoint)
+        - Increments version on major updates (title, suspects, evidence changes)
+        - New cases are always created as unpublished
+      tags: [Cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseData'
+      responses:
+        '200':
+          description: Case saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request (missing authorId or authorDisplayName)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "authorId is required in the request body."
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+    delete:
+      summary: Delete a case
+      tags: [Cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Case deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/cases/{id}/publish:
+    post:
+      summary: Publish a case
+      description: |
+        Sets `isUploaded: true` on the case. Validates that authorId and 
+        authorDisplayName are present and valid before publishing.
+      tags: [Cases]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseData'
+      responses:
+        '200':
+          description: Case published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request (missing author info)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Cannot publish: valid authorDisplayName is required."
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/stats/{id}:
+    get:
+      summary: Get stats for a case
+      tags: [Stats]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Case statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseStats'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/stats/{id}/results:
+    post:
+      summary: Record a game result
+      description: "Atomically increments play count and success/failure counters using a transaction."
+      tags: [Stats]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result, detail]
+              properties:
+                result:
+                  type: string
+                  enum: [SUCCESS, PARTIAL, FAILURE]
+                  example: "SUCCESS"
+                detail:
+                  $ref: '#/components/schemas/AttemptDetail'
+            example:
+              result: "SUCCESS"
+              detail:
+                evidenceFound: 4
+                suspectsSpoken: 3
+                timelineFound: 2
+      responses:
+        '200':
+          description: Result recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/stats/{id}/vote:
+    get:
+      summary: Get current user's vote
+      tags: [Voting]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User's vote
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vote:
+                    type: string
+                    nullable: true
+                    enum: [up, down, null]
+              example:
+                vote: "up"
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+    post:
+      summary: Submit or change a vote
+      description: |
+        Records the user's vote and atomically updates aggregate vote counts.
+        If the user already voted, the old vote is undone first.
+      tags: [Voting]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vote]
+              properties:
+                vote:
+                  type: string
+                  enum: [up, down]
+            example:
+              vote: "up"
+      responses:
+        '200':
+          description: Vote submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  previousVote:
+                    type: string
+                    nullable: true
+              example:
+                success: true
+                previousVote: null
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'vote must be "up" or "down"'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/stats:
+    get:
+      summary: Get all case stats
+      tags: [Stats]
+      responses:
+        '200':
+          description: Map of caseId to stats
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/CaseStats'
+              example:
+                case_abc123:
+                  plays: 42
+                  successes: 28
+                  failures: 14
+                  upvotes: 35
+                  downvotes: 3
+                  totalEvidenceFound: 120
+                  totalSuspectsSpoken: 85
+                  totalTimelineFound: 60
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /api/images/upload:
+    post:
+      summary: Upload an image
+      description: |
+        Uploads a base64-encoded image to Firebase Storage using the backend's service account.
+        Returns the public download URL.
+      tags: [Images]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '200':
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+tags:
+  - name: System
+    description: Health checks and system info
+  - name: Cases
+    description: Case CRUD operations
+  - name: Stats
+    description: Game statistics
+  - name: Voting
+    description: Case voting
+  - name: Images
+    description: Image upload to Firebase Storage

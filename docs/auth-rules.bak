@@ -1,0 +1,29 @@
+{
+  "rules": {
+    // Allow any authenticated user to read all data in the database.
+    // This maintains your previous global read access for logged-in users.
+    ".read": "auth != null",
+
+    // This is the global write rule.
+    // It grants full write access to the specific admin UID provided.
+    // If the authenticated user's UID matches the admin UID, they can write anywhere.
+    // If not, this rule fails, and evaluation continues to more specific rules below.
+    ".write": "auth != null && auth.uid === 'DUYxYU2qZEWc7wkBasF9JRhBHGi2'",
+
+    // This section is for user-specific data.
+    // We're assuming a data structure where user data is stored under a top-level `users` node,
+    // with each child node being the user's unique UID (e.g., `/users/<user_uid>/profile`).
+    "users": {
+      "$user_uid": {
+        // This rule allows an authenticated user to write ONLY to their own data path
+        // (i.e., where the `$user_uid` in the path matches their authenticated `auth.uid`).
+        // This rule is more specific than the global `.write` rule above.
+        // It's evaluated if the global rule didn't grant access (meaning the user is not the admin).
+        ".write": "auth != null && auth.uid === $user_uid"
+      }
+    }
+    // Any other top-level paths (e.g., `/public_messages`, `/app_settings`)
+    // that are not under `users/$user_uid` will only be writable by the admin,
+    // because only the admin satisfies the global `.write` rule.
+  }
+}
