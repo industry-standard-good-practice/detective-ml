@@ -97,6 +97,64 @@ async function startServer() {
     }
   });
 
+  // Server-side audio transcription via Gemini
+  // Offloads heavy processing from iOS Safari to prevent memory crashes
+  app.post("/api/transcribe", express.raw({ type: "audio/*", limit: "2mb" }), async (req, res) => {
+    try {
+      // Read API key from .env.local
+      const envPath = path.join(process.cwd(), ".env.local");
+      let apiKey = "";
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, "utf-8");
+        const match = envContent.match(/GEMINI_API_KEY=(.+)/);
+        if (match) apiKey = match[1].trim();
+      }
+      if (!apiKey) {
+        return res.status(500).json({ error: "No GEMINI_API_KEY in .env.local" });
+      }
+
+      const audioBuffer = req.body as Buffer;
+      if (!audioBuffer || audioBuffer.length === 0) {
+        return res.status(400).json({ error: "No audio data received" });
+      }
+
+      const base64Audio = audioBuffer.toString("base64");
+      const mimeType = (req.headers["content-type"] || "audio/mp4").split(";")[0];
+
+      // Call Gemini REST API directly (avoids importing the SDK on the server)
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
+      const geminiRes = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType, data: base64Audio } },
+              { text: "Transcribe the speech in this audio clip into text. Return ONLY the transcribed text, nothing else. No quotes, no labels, no explanations. If you cannot hear any speech or the audio is empty/silent, return exactly: [EMPTY]" }
+            ]
+          }]
+        })
+      });
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        console.error("Gemini transcription error:", geminiRes.status, errText);
+        return res.status(500).json({ error: "Transcription failed" });
+      }
+
+      const data = await geminiRes.json() as any;
+      const transcript = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+      if (transcript && transcript !== "[EMPTY]") {
+        res.json({ transcript });
+      } else {
+        res.json({ transcript: "" });
+      }
+    } catch (err) {
+      console.error("Transcription endpoint error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
   // Get or create certs early so the download endpoint works
   let certs: { cert: string; key: string } | null = null;
   try {
@@ -106,7 +164,6 @@ async function startServer() {
   }
 
   // Serve the certificate for iOS installation (must be before Vite middleware)
-  // Navigate to http://<LAN_IP>:3000/install-cert on iOS Safari to install
   app.get("/install-cert", (req, res) => {
     if (!certs) {
       return res.status(500).send("No certificate available");
@@ -116,10 +173,27 @@ async function startServer() {
     res.send(certs.cert);
   });
 
-  // Vite middleware for development
+  // Create HTTPS server BEFORE Vite so we can attach HMR WebSocket to it
+  let httpsServer: ReturnType<typeof https.createServer> | null = null;
+  if (certs) {
+    httpsServer = https.createServer({ key: certs.key, cert: certs.cert }, app);
+    httpsServer.on("error", (e: any) => {
+      if (e.code === "EADDRINUSE") {
+        console.warn(`⚠️  HTTPS port ${HTTPS_PORT} already in use — skipping.`);
+      } else {
+        console.warn("⚠️  HTTPS server error:", e);
+      }
+    });
+  }
+
+  // Vite middleware for development — attach HMR to HTTPS server so hot reload works on :3443
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true, allowedHosts: true },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        hmr: httpsServer ? { server: httpsServer } : true,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -138,17 +212,8 @@ async function startServer() {
     console.log(`HTTP  server running on http://0.0.0.0:${HTTP_PORT}`);
   });
 
-  // HTTPS server (needed for iOS Safari microphone access)
-  if (certs) {
-    const httpsServer = https.createServer({ key: certs.key, cert: certs.cert }, app);
-    httpsServer.on("error", (e: any) => {
-      if (e.code === "EADDRINUSE") {
-        console.warn(`⚠️  HTTPS port ${HTTPS_PORT} already in use — skipping HTTPS server.`);
-        console.warn(`   Kill the old process or use a different port.`);
-      } else {
-        console.warn("⚠️  HTTPS server error:", e);
-      }
-    });
+  // Start HTTPS server
+  if (httpsServer) {
     httpsServer.listen(HTTPS_PORT, "0.0.0.0", () => {
       console.log(`HTTPS server running on https://0.0.0.0:${HTTPS_PORT}`);
       console.log(`\n  📱 iOS Safari Setup:`);

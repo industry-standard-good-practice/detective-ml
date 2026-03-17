@@ -21,7 +21,7 @@ import CreateCase from './screens/CreateCase';
 import CaseReview from './screens/CaseReview';
 import BootSequence from './components/BootSequence';
 import Login from './components/Login';
-import { OnboardingTour } from './components/OnboardingTour';
+
 
 // --- STYLES FOR MODAL ---
 const Overlay = styled.div`
@@ -527,7 +527,8 @@ const App: React.FC = () => {
               : `[PARTNER HINT]: "${partnerDialogue}". The partner suggests where to look next.`;
             
             const examResponse = await getSuspectResponse(
-              suspect, currentCase, examPrompt, 'action', null, 0, false, evidenceDiscovered, newGameTime
+              suspect, currentCase, examPrompt, 'action', null, 0, false, evidenceDiscovered, newGameTime,
+              chatHistory[currentSuspectId] || []
             );
             
             let examAudioUrl: string | null = null;
@@ -571,7 +572,8 @@ const App: React.FC = () => {
           newAgg, 
           false,
           evidenceDiscovered, // Pass discovered evidence
-          newGameTime // Pass current game time
+          newGameTime, // Pass current game time
+          chatHistory[currentSuspectId] || [] // Pass conversation history
         );
 
         let finalAgg = newAgg + response.aggravationDelta;
@@ -745,7 +747,8 @@ const App: React.FC = () => {
         currentAgg,
         isFirstTurn,
         evidenceDiscovered, // Pass discovered evidence
-        newGameTime // Pass current game time
+        newGameTime, // Pass current game time
+        suspectHistory // Pass conversation history
       );
 
       let newAgg = (aggravationLevels[currentSuspectId] || 0) + response.aggravationDelta;
@@ -1611,7 +1614,7 @@ const App: React.FC = () => {
           </ConfirmBox>
         </Overlay>
       )}
-      <OnboardingTour />
+
     </Layout>
     </>
   );

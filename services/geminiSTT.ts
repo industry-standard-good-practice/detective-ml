@@ -1,13 +1,10 @@
 
-import { GoogleGenAI } from "@google/genai";
-import { GEMINI_MODELS } from "./geminiModels";
-
 /**
- * Client-side Gemini Speech-to-Text
+ * Speech-to-Text via MediaRecorder + Server-side Gemini transcription
  * 
- * Uses MediaRecorder to capture audio, then sends it to Gemini's
- * multimodal API for transcription. This is the fallback for browsers
- * where the native SpeechRecognition API is not available (iOS Safari, PWA mode).
+ * Uses MediaRecorder to capture audio, then sends the blob to the
+ * /api/transcribe server endpoint for transcription. This avoids loading
+ * the Gemini SDK in the browser, preventing iOS Safari memory crashes.
  */
 
 let activeRecorder: MediaRecorder | null = null;
@@ -54,11 +51,6 @@ export const startFallbackListening = (
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    onError("No API key available for speech recognition.");
-    return;
-  }
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     // This typically happens on non-secure contexts (HTTP over LAN IP)
@@ -118,47 +110,23 @@ export const startFallbackListening = (
           // Free chunk references immediately to reduce memory
           chunks.length = 0;
 
-          // Safety: reject recordings over 1MB to prevent iOS memory crashes
-          if (blob.size > 1024 * 1024) {
-            console.warn("[STT] Recording too large:", blob.size, "bytes — skipping");
-            onError("Recording too long. Try a shorter message.");
-            onEnd();
-            return;
-          }
-
-          // Convert blob to base64
-          const base64 = await blobToBase64(blob);
-
-          // Determine the MIME type string for the Gemini API
-          const geminiMime = mimeType.split(";")[0]; // strip codec info
-
-          const ai = new GoogleGenAI({ apiKey });
-          const response = await ai.models.generateContent({
-            model: GEMINI_MODELS.CHAT,
-            contents: [
-              {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: geminiMime,
-                      data: base64,
-                    },
-                  },
-                  {
-                    text: "Transcribe the speech in this audio clip into text. Return ONLY the transcribed text, nothing else. No quotes, no labels, no explanations. If you cannot hear any speech or the audio is empty/silent, return exactly: [EMPTY]",
-                  },
-                ],
-              },
-            ],
+          // Send audio to server for transcription (avoids loading Gemini SDK on iOS)
+          const response = await fetch("/api/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": mimeType },
+            body: blob,
           });
 
-          const transcript = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+          }
 
-          if (transcript && transcript !== "[EMPTY]") {
-            onResult(transcript);
+          const data = await response.json();
+          if (data.transcript) {
+            onResult(data.transcript);
           }
         } catch (err) {
-          console.error("Gemini STT error:", err);
+          console.error("STT error:", err);
           onError("Transcription failed. Please try again.");
         } finally {
           onEnd();
@@ -190,17 +158,3 @@ export const stopFallbackListening = (): void => {
   }
 };
 
-/** Convert Blob to base64 string (without the data URL prefix) */
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      // Strip the "data:...;base64," prefix
-      const base64 = dataUrl.split(",")[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}

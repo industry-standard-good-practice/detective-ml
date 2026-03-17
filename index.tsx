@@ -141,16 +141,27 @@ root.render(
   </OnboardingProvider>
 );
 
-// Register service worker for PWA installability
+// Register service worker for PWA installability (production only)
+// During dev, the SW caches stale content and blocks hot reload
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
-      (registration) => {
-        console.log('SW registered:', registration.scope);
-      },
-      (error) => {
-        console.log('SW registration failed:', error);
-      }
-    );
-  });
+  const isDev = ['localhost', '127.0.0.1'].includes(location.hostname) ||
+    location.hostname.match(/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/);
+
+  if (isDev) {
+    // Unregister any existing SW during dev so cached content doesn't interfere
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(
+        (registration) => {
+          console.log('SW registered:', registration.scope);
+        },
+        (error) => {
+          console.log('SW registration failed:', error);
+        }
+      );
+    });
+  }
 }

@@ -10,7 +10,7 @@ export const OnboardingOverlay = styled(motion.div)`
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 10000;
+  z-index: 9990;
   pointer-events: none;
   overflow: hidden;
 `;
@@ -22,7 +22,7 @@ export const OnboardingHighlight = styled(motion.div)`
   border-radius: 8px;
   border: 2px solid #0f0;
   pointer-events: none;
-  z-index: 10001;
+  z-index: 9991;
 `;
 
 const CenteredBackdrop = styled(motion.div)`
@@ -42,7 +42,7 @@ export const OnboardingTooltip = styled(motion.div) <{ $position: 'top' | 'botto
   padding: 20px;
   width: 300px;
   color: #fff;
-  z-index: 10002;
+  z-index: 9992;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;

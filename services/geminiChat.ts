@@ -13,7 +13,8 @@ export const getSuspectResponse = async (
   currentAggravation: number,
   isFirstTurn: boolean,
   discoveredEvidence: Evidence[] = [],
-  currentGameTime?: number // The current in-game timestamp (ms since epoch)
+  currentGameTime?: number, // The current in-game timestamp (ms since epoch)
+  conversationHistory: ChatMessage[] = [] // Full chat history for this suspect
 ): Promise<{
   text: string;
   emotion: Emotion;
@@ -171,8 +172,8 @@ export const getSuspectResponse = async (
         4. TIMELINE (Activities): ${timelineStr}
         5. KNOWN FACTS (True info): ${factsStr}
         6. WITNESS OBSERVATIONS (What you saw): ${observations}
-        7. UNREVEALED SECRETS (You possess these but haven't told the detective yet): ${unrevealedStr}
-        8. REVEALED SECRETS (You have already told the detective about these): ${revealedStr}
+        7. UNREVEALED SECRETS (You possess these but the detective hasn't discovered them yet): ${unrevealedStr}
+        8. ALREADY KNOWN TO DETECTIVE (The detective has already discovered these through investigation — you don't need to reveal them again): ${revealedStr}
         
         Case Context: ${caseData.description}
         The Victim: ${deceasedSuspect ? `${deceasedSuspect.name} (${deceasedSuspect.role})` : 'Unknown'}.
@@ -184,6 +185,30 @@ export const getSuspectResponse = async (
         
         Current Aggravation: ${currentAggravation}/100.
         ${currentAggravation > 80 ? "You are furious and near breaking point." : "You are composed but guarded."}
+        
+        ${isFirstTurn ? `
+        **CONVERSATION STATE: THIS IS THE VERY FIRST EXCHANGE.**
+        The detective has JUST sat down in front of you. You have NOT spoken to them before this moment.
+        - Do NOT reference any prior conversation with this detective. There was none.
+        - Do NOT say things like "as I already told you" or "I already mentioned" or "like I said before".
+        - You are hearing the detective's words for the FIRST TIME right now.
+        - Your opening response should reflect that this conversation is JUST BEGINNING.
+        ` : `
+        **CONVERSATION STATE: This is a CONTINUATION of an ongoing interrogation.**
+        Below is the COMPLETE transcript of everything said so far in this interrogation.
+        You MUST be consistent with what you have already said. Do NOT contradict your earlier statements unless you are intentionally changing your story (which should be a deliberate character choice, not an accident).
+        Do NOT repeat information you've already given unless the detective specifically asks you to clarify or repeat.
+        
+        --- CONVERSATION TRANSCRIPT ---
+        ${conversationHistory.map(msg => {
+          if (msg.sender === 'player') return 'DETECTIVE: "' + msg.text + '"';
+          if (msg.sender === 'suspect') return 'YOU (' + suspect.name + '): "' + msg.text + '"';
+          if (msg.sender === 'partner') return 'PARTNER: "' + msg.text + '"';
+          if (msg.sender === 'system') return '[SYSTEM NOTE: ' + msg.text + ']';
+          return '';
+        }).filter(Boolean).join('\n        ')}
+        --- END TRANSCRIPT ---
+        `}
         
         User Input: "${userInput}" (Type: ${type})
         Evidence Shown: ${evidenceAttachment || "None"}

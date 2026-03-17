@@ -8,6 +8,7 @@ import { User } from 'firebase/auth';
 
 import { useOnboarding } from '../contexts/OnboardingContext';
 import ExitCaseDialog from './ExitCaseDialog';
+import { OnboardingTour } from './OnboardingTour';
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -635,6 +636,7 @@ const Layout: React.FC<LayoutProps> = ({
       <MainContainer data-monitor>
         <Screen $powerState={powerState}>
           <CRTOverlay />
+          <OnboardingTour />
           <ContentInset>
             {!isBooting && (
               <>
