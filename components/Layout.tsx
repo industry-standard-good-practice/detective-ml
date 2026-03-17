@@ -56,6 +56,7 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;
     font-family: var(--font-main);
     overflow: hidden;
+    text-align: pretty;
   }
   
   /* Ensure inputs and buttons use the font */

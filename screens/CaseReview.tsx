@@ -156,6 +156,8 @@ const InputGroup = styled.div`
   textarea {
     resize: vertical;
     min-height: 80px;
+    padding: 10px;
+    padding-bottom: 4px;
 
     @media (max-width: 1080px) {
       resize: none;
@@ -654,7 +656,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     const textareas = containerRef.current.querySelectorAll('textarea');
     textareas.forEach((ta) => {
       ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
+      ta.style.height = (ta.scrollHeight + 10) + 'px';
     });
   });
 
@@ -1287,268 +1289,268 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
       {/* LEFT: Case Details */}
       <LeftColumn $mobileHidden={mobileTab !== 'case'}>
-      <Panel $mobileHidden={mobileTab !== 'case'}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, color: '#fff' }}>Case Details</h2>
-          {draftCase.version && (
-            <span style={{ color: '#555', fontSize: 'var(--type-small)', border: '1px solid #333', padding: '2px 8px' }}>
-              VERSION {draftCase.version}
-            </span>
-          )}
-        </div>
+        <Panel $mobileHidden={mobileTab !== 'case'}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, color: '#fff' }}>Case Details</h2>
+            {draftCase.version && (
+              <span style={{ color: '#555', fontSize: 'var(--type-small)', border: '1px solid #333', padding: '2px 8px' }}>
+                VERSION {draftCase.version}
+              </span>
+            )}
+          </div>
 
-        <InputGroup>
-          <label>Case Title</label>
-          <input
-            value={draftCase.title || ''}
-            onChange={(e) => handleCaseChange('title', e.target.value)}
-          />
-        </InputGroup>
-
-        <InputGroup>
-          <label>Crime Type</label>
-          <input
-            value={draftCase.type || ''}
-            onChange={(e) => handleCaseChange('type', e.target.value)}
-          />
-        </InputGroup>
-
-        <InputGroup>
-          <label>Briefing / Description</label>
-          <textarea
-            value={draftCase.description || ''}
-            onChange={(e) => handleCaseChange('description', e.target.value)}
-          />
-        </InputGroup>
-
-        <InputGroup>
-          <label>Investigation Start Time</label>
-          <input
-            type="datetime-local"
-            value={draftCase.startTime || '2030-09-12T23:30'}
-            onChange={(e) => handleCaseChange('startTime', e.target.value)}
-          />
-        </InputGroup>
-
-        <InputGroup>
-          <label>Hero Image (Case Card)</label>
-          <HeroImageModuleWrapper>
-            <HeroImageModuleInner>
-              <HeroImagePreview $imageUrl={draftCase.heroImageUrl || undefined}>
-                {!draftCase.heroImageUrl && "NO IMAGE"}
-              </HeroImagePreview>
-              <HeroImageControls>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <SmallButton
-                    $active={heroMode === 'suspect'}
-                    onClick={() => setHeroMode('suspect')}
-                    style={{ flex: 1, background: heroMode === 'suspect' ? '#3b82f6' : '#222' }}
-                  >
-                    USE SUSPECT
-                  </SmallButton>
-                  <SmallButton
-                    $active={heroMode === 'evidence'}
-                    onClick={() => setHeroMode('evidence')}
-                    style={{ flex: 1, background: heroMode === 'evidence' ? '#3b82f6' : '#222' }}
-                  >
-                    USE EVIDENCE
-                  </SmallButton>
-                  <SmallButton
-                    $active={heroMode === 'custom'}
-                    onClick={() => setHeroMode('custom')}
-                    style={{ flex: 1, background: heroMode === 'custom' ? '#3b82f6' : '#222' }}
-                  >
-                    USE CUSTOM
-                  </SmallButton>
-                </div>
-
-                {heroMode === 'suspect' && (
-                  <select
-                    style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
-                    onChange={(e) => {
-                      const s = draftCase.suspects?.find(x => x.id === e.target.value);
-                      if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
-                    }}
-                    value={draftCase.suspects?.find(s => s.portraits?.[Emotion.NEUTRAL] === draftCase.heroImageUrl)?.id || ''}
-                  >
-                    <option value="">Select a suspect...</option>
-                    {(draftCase.suspects || []).map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
-                    ))}
-                  </select>
-                )}
-
-                {heroMode === 'evidence' && (
-                  <select
-                    style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
-                    onChange={(e) => {
-                      const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
-                      if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
-                    }}
-                    value={[...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(ev => ev.imageUrl === draftCase.heroImageUrl)?.id || ''}
-                  >
-                    <option value="">Select evidence...</option>
-                    {[...(draftCase.initialEvidence || []), ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].map(ev => (
-                      <option key={ev.id} value={ev.id}>{ev.title}</option>
-                    ))}
-                  </select>
-                )}
-
-                {heroMode === 'custom' && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <SmallButton onClick={() => setShowHeroEditor(true)} style={{ flex: 1 }}>
-                      GENERATE CUSTOM
-                    </SmallButton>
-                    <SmallButton onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.onchange = (e: any) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => handleCaseChange('heroImageUrl', ev.target?.result as string);
-                        reader.readAsDataURL(file);
-                      };
-                      input.click();
-                    }} style={{ flex: 1 }}>
-                      UPLOAD IMAGE
-                    </SmallButton>
-                  </div>
-                )}
-
-                <input
-                  placeholder="Or paste image URL here..."
-                  value={draftCase.heroImageUrl || ''}
-                  onChange={(e) => handleCaseChange('heroImageUrl', e.target.value)}
-                  style={{ fontSize: '0.75rem', padding: '8px', background: '#111', border: '1px solid #333', borderRadius: '4px', color: '#888', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-                />
-              </HeroImageControls>
-            </HeroImageModuleInner>
-          </HeroImageModuleWrapper>
-        </InputGroup>
-
-        <InputGroup>
-          <label>Edit case</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,255,0,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,255,0,0.1)' }}>
-            <textarea
-              placeholder="e.g. 'Change the setting to a futuristic space station' or 'Add a secret accomplice for the killer' or 'Make the victim a famous opera singer'..."
-              value={editPrompt}
-              onChange={(e) => setEditPrompt(e.target.value)}
-              style={{ minHeight: '100px' }}
+          <InputGroup>
+            <label>Case Title</label>
+            <input
+              value={draftCase.title || ''}
+              onChange={(e) => handleCaseChange('title', e.target.value)}
             />
-            <StartButton
-              onClick={handleEditCase}
-              disabled={loadingState.visible || !editPrompt.trim()}
-              style={{ fontSize: 'var(--type-body)', padding: '10px' }}
-            >
-              APPLY EDITS
-            </StartButton>
-            <p style={{ fontSize: '0.7rem', color: '#555', margin: 0 }}>
-              This will transform suspects, evidence, and narrative to match your request.
+          </InputGroup>
+
+          <InputGroup>
+            <label>Crime Type</label>
+            <input
+              value={draftCase.type || ''}
+              onChange={(e) => handleCaseChange('type', e.target.value)}
+            />
+          </InputGroup>
+
+          <InputGroup>
+            <label>Briefing / Description</label>
+            <textarea
+              value={draftCase.description || ''}
+              onChange={(e) => handleCaseChange('description', e.target.value)}
+            />
+          </InputGroup>
+
+          <InputGroup>
+            <label>Investigation Start Time</label>
+            <input
+              type="datetime-local"
+              value={draftCase.startTime || '2030-09-12T23:30'}
+              onChange={(e) => handleCaseChange('startTime', e.target.value)}
+            />
+          </InputGroup>
+
+          <InputGroup>
+            <label>Hero Image (Case Card)</label>
+            <HeroImageModuleWrapper>
+              <HeroImageModuleInner>
+                <HeroImagePreview $imageUrl={draftCase.heroImageUrl || undefined}>
+                  {!draftCase.heroImageUrl && "NO IMAGE"}
+                </HeroImagePreview>
+                <HeroImageControls>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <SmallButton
+                      $active={heroMode === 'suspect'}
+                      onClick={() => setHeroMode('suspect')}
+                      style={{ flex: 1, background: heroMode === 'suspect' ? '#3b82f6' : '#222' }}
+                    >
+                      USE SUSPECT
+                    </SmallButton>
+                    <SmallButton
+                      $active={heroMode === 'evidence'}
+                      onClick={() => setHeroMode('evidence')}
+                      style={{ flex: 1, background: heroMode === 'evidence' ? '#3b82f6' : '#222' }}
+                    >
+                      USE EVIDENCE
+                    </SmallButton>
+                    <SmallButton
+                      $active={heroMode === 'custom'}
+                      onClick={() => setHeroMode('custom')}
+                      style={{ flex: 1, background: heroMode === 'custom' ? '#3b82f6' : '#222' }}
+                    >
+                      USE CUSTOM
+                    </SmallButton>
+                  </div>
+
+                  {heroMode === 'suspect' && (
+                    <select
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
+                      onChange={(e) => {
+                        const s = draftCase.suspects?.find(x => x.id === e.target.value);
+                        if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
+                      }}
+                      value={draftCase.suspects?.find(s => s.portraits?.[Emotion.NEUTRAL] === draftCase.heroImageUrl)?.id || ''}
+                    >
+                      <option value="">Select a suspect...</option>
+                      {(draftCase.suspects || []).map(s => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {heroMode === 'evidence' && (
+                    <select
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
+                      onChange={(e) => {
+                        const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
+                        if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
+                      }}
+                      value={[...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(ev => ev.imageUrl === draftCase.heroImageUrl)?.id || ''}
+                    >
+                      <option value="">Select evidence...</option>
+                      {[...(draftCase.initialEvidence || []), ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].map(ev => (
+                        <option key={ev.id} value={ev.id}>{ev.title}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {heroMode === 'custom' && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <SmallButton onClick={() => setShowHeroEditor(true)} style={{ flex: 1 }}>
+                        GENERATE CUSTOM
+                      </SmallButton>
+                      <SmallButton onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => handleCaseChange('heroImageUrl', ev.target?.result as string);
+                          reader.readAsDataURL(file);
+                        };
+                        input.click();
+                      }} style={{ flex: 1 }}>
+                        UPLOAD IMAGE
+                      </SmallButton>
+                    </div>
+                  )}
+
+                  <input
+                    placeholder="Or paste image URL here..."
+                    value={draftCase.heroImageUrl || ''}
+                    onChange={(e) => handleCaseChange('heroImageUrl', e.target.value)}
+                    style={{ fontSize: '0.75rem', padding: '8px', background: '#111', border: '1px solid #333', borderRadius: '4px', color: '#888', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                  />
+                </HeroImageControls>
+              </HeroImageModuleInner>
+            </HeroImageModuleWrapper>
+          </InputGroup>
+
+          <InputGroup>
+            <label>Edit case</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,255,0,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,255,0,0.1)' }}>
+              <textarea
+                placeholder="e.g. 'Change the setting to a futuristic space station' or 'Add a secret accomplice for the killer' or 'Make the victim a famous opera singer'..."
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                style={{ minHeight: '100px' }}
+              />
+              <StartButton
+                onClick={handleEditCase}
+                disabled={loadingState.visible || !editPrompt.trim()}
+                style={{ fontSize: 'var(--type-body)', padding: '10px' }}
+              >
+                APPLY EDITS
+              </StartButton>
+              <p style={{ fontSize: '0.7rem', color: '#555', margin: 0 }}>
+                This will transform suspects, evidence, and narrative to match your request.
+              </p>
+            </div>
+          </InputGroup>
+
+          <InputGroup>
+            <label>Difficulty (Calculated)</label>
+            <div style={{
+              color: draftCase.difficulty === 'Hard' ? '#f55' : draftCase.difficulty === 'Medium' ? '#fa0' : '#0f0',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              fontSize: 'var(--type-h3)',
+              padding: '5px 0'
+            }}>
+              {draftCase.difficulty}
+            </div>
+            <p style={{ fontSize: 'var(--type-small)', color: '#555', margin: 0 }}>
+              Based on {draftCase.suspects?.filter(s => !s.isDeceased).length || 0} suspects, {draftCase.suspects?.filter(s => s.isDeceased).length || 0} victim(s), {draftCase.suspects?.filter(s => s.isGuilty).length || 0} guilty suspect(s), {(draftCase.initialEvidence?.length || 0) + (draftCase.suspects?.reduce((a, s) => a + (s.hiddenEvidence?.length || 0), 0) || 0)} total evidence items, and {draftCase.initialTimeline?.length || 0} initial timeline events.
             </p>
-          </div>
-        </InputGroup>
+          </InputGroup>
 
-        <InputGroup>
-          <label>Difficulty (Calculated)</label>
-          <div style={{
-            color: draftCase.difficulty === 'Hard' ? '#f55' : draftCase.difficulty === 'Medium' ? '#fa0' : '#0f0',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            fontSize: 'var(--type-h3)',
-            padding: '5px 0'
-          }}>
-            {draftCase.difficulty}
-          </div>
-          <p style={{ fontSize: 'var(--type-small)', color: '#555', margin: 0 }}>
-            Based on {draftCase.suspects?.filter(s => !s.isDeceased).length || 0} suspects, {draftCase.suspects?.filter(s => s.isDeceased).length || 0} victim(s), {draftCase.suspects?.filter(s => s.isGuilty).length || 0} guilty suspect(s), {(draftCase.initialEvidence?.length || 0) + (draftCase.suspects?.reduce((a, s) => a + (s.hiddenEvidence?.length || 0), 0) || 0)} total evidence items, and {draftCase.initialTimeline?.length || 0} initial timeline events.
-          </p>
-        </InputGroup>
+          <EvidenceEditor
+            label="Initial Evidence"
+            evidenceList={draftCase.initialEvidence}
+            onChange={(newList) => handleCaseChange('initialEvidence', newList)}
+            onRerollImage={(ev) => handleRerollEvidence(ev, 'initial')}
+          />
 
-        <EvidenceEditor
-          label="Initial Evidence"
-          evidenceList={draftCase.initialEvidence}
-          onChange={(newList) => handleCaseChange('initialEvidence', newList)}
-          onRerollImage={(ev) => handleRerollEvidence(ev, 'initial')}
-        />
-
-        <Fieldset>
-          <legend>Initial Timeline (Known Facts)</legend>
-          <ModuleContainer>
-            {(draftCase.initialTimeline || []).map((event, idx) => (
-              <ModuleItem key={`initial-timeline-${idx}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <div style={{ display: 'flex', gap: '5px' }}>
+          <Fieldset>
+            <legend>Initial Timeline (Known Facts)</legend>
+            <ModuleContainer>
+              {(draftCase.initialTimeline || []).map((event, idx) => (
+                <ModuleItem key={`initial-timeline-${idx}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <StyledInput
+                        placeholder="Day (e.g. Day of the Crime)"
+                        value={event.day || ''}
+                        onChange={(e) => {
+                          const newList = [...(draftCase.initialTimeline || [])];
+                          newList[idx] = { ...newList[idx], day: e.target.value };
+                          handleCaseChange('initialTimeline', newList);
+                        }}
+                        style={{ flex: 2 }}
+                      />
+                      <StyledInput
+                        placeholder="Offset"
+                        type="number"
+                        value={event.dayOffset ?? 0}
+                        onChange={(e) => {
+                          const newList = [...(draftCase.initialTimeline || [])];
+                          newList[idx] = { ...newList[idx], dayOffset: parseInt(e.target.value) || 0 };
+                          handleCaseChange('initialTimeline', newList);
+                        }}
+                        style={{ flex: 0, width: '70px' }}
+                      />
+                    </div>
                     <StyledInput
-                      placeholder="Day (e.g. Day of the Crime)"
-                      value={event.day || ''}
+                      placeholder="Time (e.g. 10:00 PM)"
+                      value={event.time}
                       onChange={(e) => {
                         const newList = [...(draftCase.initialTimeline || [])];
-                        newList[idx] = { ...newList[idx], day: e.target.value };
+                        newList[idx] = { ...newList[idx], time: e.target.value };
                         handleCaseChange('initialTimeline', newList);
                       }}
-                      style={{ flex: 2 }}
                     />
-                    <StyledInput
-                      placeholder="Offset"
-                      type="number"
-                      value={event.dayOffset ?? 0}
+                    <StyledTextArea
+                      placeholder="Activity/Discovery"
+                      value={event.activity || (event as any).statement || ''}
                       onChange={(e) => {
                         const newList = [...(draftCase.initialTimeline || [])];
-                        newList[idx] = { ...newList[idx], dayOffset: parseInt(e.target.value) || 0 };
+                        newList[idx] = { ...newList[idx], activity: e.target.value };
                         handleCaseChange('initialTimeline', newList);
                       }}
-                      style={{ flex: 0, width: '70px' }}
                     />
                   </div>
-                  <StyledInput
-                    placeholder="Time (e.g. 10:00 PM)"
-                    value={event.time}
-                    onChange={(e) => {
-                      const newList = [...(draftCase.initialTimeline || [])];
-                      newList[idx] = { ...newList[idx], time: e.target.value };
+                  <DeleteButton
+                    onClick={() => {
+                      const newList = (draftCase.initialTimeline || []).filter((_, i) => i !== idx);
                       handleCaseChange('initialTimeline', newList);
                     }}
-                  />
-                  <StyledTextArea
-                    placeholder="Activity/Discovery"
-                    value={event.activity || (event as any).statement || ''}
-                    onChange={(e) => {
-                      const newList = [...(draftCase.initialTimeline || [])];
-                      newList[idx] = { ...newList[idx], activity: e.target.value };
-                      handleCaseChange('initialTimeline', newList);
-                    }}
-                  />
-                </div>
-                <DeleteButton
-                  onClick={() => {
-                    const newList = (draftCase.initialTimeline || []).filter((_, i) => i !== idx);
-                    handleCaseChange('initialTimeline', newList);
-                  }}
-                  style={{ marginLeft: '10px', alignSelf: 'stretch' }}
-                  title="Delete timeline event"
-                >
-                  <XIcon />
-                </DeleteButton>
-              </ModuleItem>
-            ))}
-            <SmallButton onClick={() => {
-              const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Day of the Crime', dayOffset: 0 }];
-              handleCaseChange('initialTimeline', newList);
-            }} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
-          </ModuleContainer>
-        </Fieldset>
+                    style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                    title="Delete timeline event"
+                  >
+                    <XIcon />
+                  </DeleteButton>
+                </ModuleItem>
+              ))}
+              <SmallButton onClick={() => {
+                const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Day of the Crime', dayOffset: 0 }];
+                handleCaseChange('initialTimeline', newList);
+              }} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
+            </ModuleContainer>
+          </Fieldset>
 
-        <MobileOnly>
-          <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-            <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#fff', border: 'none' }}>CLOSE</SaveButton>
-            <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
-            <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
-          </div>
-          <StartButton onClick={onStart}>CASE HUB</StartButton>
-        </MobileOnly>
-      </Panel>
+          <MobileOnly>
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#fff', border: 'none' }}>CLOSE</SaveButton>
+              <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
+              <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
+            </div>
+            <StartButton onClick={onStart}>CASE HUB</StartButton>
+          </MobileOnly>
+        </Panel>
       </LeftColumn>
 
       {/* RIGHT: Suspect Editor */}
@@ -1696,7 +1698,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </InputGroup>
                 <InputGroup>
                   <label>Personality</label>
-                  <input
+                  <textarea
                     value={activeSuspect.personality}
                     onChange={(e) => handleSuspectChange(selectedSuspectId!, 'personality', e.target.value)}
                   />
