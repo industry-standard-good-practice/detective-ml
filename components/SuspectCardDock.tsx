@@ -42,10 +42,10 @@ const DockRowVisual = styled.div`
 /* Hit-test layer: captures events only within its clipped area */
 const DockRowHitArea = styled.div`
   position: absolute;
-  bottom: var(--screen-edge-bottom);
+  bottom: 0;
   left: 0;
   width: 100%;
-  height: 50px;
+  height: calc(50px + var(--screen-edge-bottom));
   display: flex;
   align-items: flex-end;
   overflow: hidden;
@@ -53,6 +53,7 @@ const DockRowHitArea = styled.div`
   z-index: 21;
   cursor: grab;
   opacity: 0;
+  padding-bottom: var(--screen-edge-bottom);
 
   @media (max-width: 768px) {
     display: none;
