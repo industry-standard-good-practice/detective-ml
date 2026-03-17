@@ -320,8 +320,6 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
         <DockRowInner ref={visualInnerRef}>
           {inactiveSuspects.map(s => (
             <DockSlot key={`visual-${s.id}`} $hovered={hoveredId === s.id}>
-              {(unreadSuspectIds.get(s.id) || 0) > 0 && <NotificationBadge>{unreadSuspectIds.get(s.id)}</NotificationBadge>}
-              {thinkingSuspectId === s.id && !(unreadSuspectIds.get(s.id)) && <LoadingBadge />}
               <motion.div
                 layoutId={`suspect-dock-${s.id}`}
                 transition={springTransition}
@@ -331,6 +329,8 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
                   variant="peek"
                   width="200px"
                   height="300px"
+                  notificationCount={unreadSuspectIds.get(s.id) || 0}
+                  isLoading={thinkingSuspectId === s.id}
                   onAction={() => onSelectSuspect(s.id)}
                   actionLabel={inactiveActionLabel}
                   onFlip={onFlipCard}

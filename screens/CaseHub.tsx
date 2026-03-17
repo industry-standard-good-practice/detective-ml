@@ -1048,47 +1048,20 @@ const CaseHub: React.FC<CaseHubProps> = ({
                     >
                       {caseData.suspects.map(s => (
                         <CarouselCardItem key={s.id} data-suspect-id={s.id}>
-                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                            {(unreadSuspectIds.get(s.id) || 0) > 0 && (
-                              <div style={{
-                                position: 'absolute', top: 8, right: 8, zIndex: 30,
-                                minWidth: 20, height: 20, borderRadius: 10,
-                                background: '#0f0', color: '#000',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.75rem', fontWeight: 'bold',
-                                fontFamily: "'VT323', monospace",
-                                padding: '0 5px',
-                                border: '2px solid #000',
-                                boxShadow: '0 0 8px #0f0, 0 0 16px rgba(0,255,0,0.4)',
-                                animation: 'notif-pulse 1.5s ease-in-out infinite',
-                              }}>
-                                {unreadSuspectIds.get(s.id)}
-                              </div>
-                            )}
-                            {thinkingSuspectId === s.id && !(unreadSuspectIds.get(s.id)) && (
-                              <div style={{
-                                position: 'absolute', top: 8, right: 8, zIndex: 30,
-                                width: 18, height: 18, borderRadius: '50%',
-                                background: 'transparent',
-                                border: '2px solid #0f0',
-                                borderTopColor: 'transparent',
-                                boxShadow: '0 0 8px rgba(0,255,0,0.3)',
-                                animation: 'spin 0.8s linear infinite',
-                              }} />
-                            )}
-                            <SuspectCard
-                              suspect={s}
-                              width="100%"
-                              height="100%"
-                              variant="default"
-                              disableTouchRotation
-                              onAction={() => {
-                                completeStep(OnboardingStep.SUSPECT_CARDS, true);
-                                onStartInterrogation(s.id);
-                              }}
-                              actionLabel="INTERROGATE"
-                            />
-                          </div>
+                          <SuspectCard
+                            suspect={s}
+                            width="100%"
+                            height="100%"
+                            variant="default"
+                            disableTouchRotation
+                            notificationCount={unreadSuspectIds.get(s.id) || 0}
+                            isLoading={thinkingSuspectId === s.id}
+                            onAction={() => {
+                              completeStep(OnboardingStep.SUSPECT_CARDS, true);
+                              onStartInterrogation(s.id);
+                            }}
+                            actionLabel="INTERROGATE"
+                          />
                         </CarouselCardItem>
                       ))}
                     </InlineSuspectCarousel>

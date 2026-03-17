@@ -216,7 +216,7 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
       if (!container || container.clientWidth === 0) return;
 
       const containerWidth = container.clientWidth;
-      
+
       // Use a temporary span in the DOM to measure accurate width including webfonts
       const span = document.createElement('span');
       span.style.fontFamily = "'VT323', monospace";
@@ -229,7 +229,7 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
       span.style.whiteSpace = 'nowrap';
       span.textContent = text;
       document.body.appendChild(span);
-      
+
       const textWidth = span.offsetWidth;
       document.body.removeChild(span);
 
@@ -239,24 +239,24 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
         const ratio = containerWidth / textWidth;
         // Use 90% of the ratio as a safety buffer to ensure it strictly fits without touching edges
         const safeScale = ratio * 0.90;
-        
+
         // Allow scaling down to 40%
         if (safeScale >= 0.4) {
-           setState({ scale: safeScale, isMarquee: false, duration: 0 });
+          setState({ scale: safeScale, isMarquee: false, duration: 0 });
         } else {
-           // Too big: Enable marquee, but keep static text scaled reasonably (clipped without ellipsis)
-           const marqueeScale = 0.75;
-           const scaledTextWidth = textWidth * marqueeScale;
-           // Speed: ~50px/sec
-           const duration = (scaledTextWidth + 30) / 40;
-           setState({ scale: marqueeScale, isMarquee: true, duration });
+          // Too big: Enable marquee, but keep static text scaled reasonably (clipped without ellipsis)
+          const marqueeScale = 0.75;
+          const scaledTextWidth = textWidth * marqueeScale;
+          // Speed: ~50px/sec
+          const duration = (scaledTextWidth + 30) / 40;
+          setState({ scale: marqueeScale, isMarquee: true, duration });
         }
       }
     };
 
     // Measure immediately
     measure();
-    
+
     // Also wait for fonts if they aren't ready (mostly for first load)
     document.fonts.ready.then(measure);
 
@@ -265,7 +265,7 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
     observer.observe(containerRef.current);
 
     return () => {
-        observer.disconnect();
+      observer.disconnect();
     };
   }, [text, compact]);
 
@@ -277,25 +277,25 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
       {state.isMarquee ? (
         <>
           {/* Static state: Scaled down + Clipped (no ellipsis) */}
-          <StaticName 
-            $compact={compact} 
+          <StaticName
+            $compact={compact}
             className="hide-on-hover"
             style={{ fontSize: `${baseSize * state.scale}rem` }}
           >
             {text}
           </StaticName>
-          
+
           {/* Hover state: Marquee */}
           <MarqueeTrack $compact={compact} $duration={state.duration} className="show-on-hover">
-             <h2 style={{ fontSize: `${baseSize * state.scale}rem` }}>{text}</h2>
-             <h2 style={{ fontSize: `${baseSize * state.scale}rem` }}>{text}</h2>
+            <h2 style={{ fontSize: `${baseSize * state.scale}rem` }}>{text}</h2>
+            <h2 style={{ fontSize: `${baseSize * state.scale}rem` }}>{text}</h2>
           </MarqueeTrack>
         </>
       ) : (
         // Fit mode: Just render static text with calculated scale
-        <StaticName 
-          $compact={compact} 
-          style={{ 
+        <StaticName
+          $compact={compact}
+          style={{
             fontSize: `${baseSize * state.scale}rem`
           }}
         >
@@ -421,20 +421,22 @@ interface SuspectCardProps {
   onAction?: () => void;
   actionLabel?: string;
   variant?: 'default' | 'compact' | 'peek';
-  style?: React.CSSProperties; 
+  style?: React.CSSProperties;
   className?: string;
   turnId?: string;
   onFlip?: (isFlipped: boolean) => void;
   id?: string;
   disableTouchRotation?: boolean;
   initialFlipped?: boolean;
+  notificationCount?: number;
+  isLoading?: boolean;
 }
 
-const SuspectCard: React.FC<SuspectCardProps> = ({ 
-  suspect, 
-  emotion = Emotion.NEUTRAL, 
+const SuspectCard: React.FC<SuspectCardProps> = ({
+  suspect,
+  emotion = Emotion.NEUTRAL,
   aggravation = 0,
-  width = "300px", 
+  width = "300px",
   height = "450px",
   onAction,
   actionLabel = "INTERROGATE",
@@ -445,7 +447,9 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
   onFlip,
   id,
   disableTouchRotation = false,
-  initialFlipped = false
+  initialFlipped = false,
+  notificationCount = 0,
+  isLoading = false
 }) => {
   const [isFlipped, setIsFlipped] = useState(initialFlipped);
 
@@ -463,7 +467,7 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
 
   const handleFlip = (e: React.MouseEvent | React.TouchEvent) => {
     console.log("[DEBUG] handleFlip triggered by:", e.type);
-    e.stopPropagation(); 
+    e.stopPropagation();
     if ('preventDefault' in e) e.preventDefault();
     const nextFlipped = !isFlipped;
     setIsFlipped(nextFlipped);
@@ -481,10 +485,10 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
   const backColor = getSuspectBackingColor(suspect.avatarSeed);
 
   return (
-    <CardWrapper 
+    <CardWrapper
       id={id}
-      $width={finalWidth} 
-      $height={finalHeight} 
+      $width={finalWidth}
+      $height={finalHeight}
       $variant={variant}
       onClick={handleMainClick}
       title={variant === 'peek' ? `Switch to ${suspect.name}` : undefined}
@@ -492,129 +496,178 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
       className={className}
       data-cursor="pointer"
     >
-      <Atropos 
-        activeOffset={disableTouchRotation ? 0 : 40} 
-        shadow={false} 
-        highlight={false} 
+      <Atropos
+        activeOffset={disableTouchRotation ? 0 : 40}
+        shadow={false}
+        highlight={false}
         className="my-atropos"
         rotateXMax={disableTouchRotation ? 0 : (variant === 'peek' ? 5 : 15)}
         rotateYMax={disableTouchRotation ? 0 : (variant === 'peek' ? 5 : 15)}
         rotateTouch={disableTouchRotation ? false : (isFlipped ? false : 'scroll-y')} /* Allow scrolling on touch */
       >
         <FlipContainer $flipped={isFlipped}>
-          
+
           {/* --- FRONT FACE --- */}
           <CardFace $active={!isFlipped}>
             <ContentClipper $bgColor={bgColor}>
-                {variant === 'compact' ? (
-                    // COMPACT LAYOUT
-                    <div style={{ display: 'flex', height: '100%', alignItems: 'center' }}>
-                        <div style={{ width: '150px', minWidth: '150px', height: '100%', position: 'relative', borderRight: '2px solid rgba(255,255,255,0.2)' }}>
-                            <SuspectPortrait 
-                                suspect={suspect} 
-                                size={200}
-                                turnId={turnId}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} 
-                            />
-                        </div>
-                        <div style={{ flex: 1, padding: '10px 15px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
-                            <ResponsiveName text={suspect.name} compact />
-                            <Subtitle>{suspect.role}</Subtitle>
-                        </div>
-                    </div>
-                ) : (
-                    // DEFAULT & PEEK LAYOUT (FULL BLEED)
-                    <>
-                        {/* Background Layer (Absolute) */}
-                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
-                            <SuspectPortrait 
-                                suspect={suspect} 
-                                // Removed hardcoded size={600} to allow auto-fill relative to container
-                                emotion={emotion}
-                                aggravation={aggravation}
-                                turnId={turnId}
-                            />
-                        </div>
+              {variant === 'compact' ? (
+                // COMPACT LAYOUT
+                <div style={{ display: 'flex', height: '100%', alignItems: 'center' }}>
+                  <div style={{ width: '150px', minWidth: '150px', height: '100%', position: 'relative', borderRight: '2px solid rgba(255,255,255,0.2)' }}>
+                    <SuspectPortrait
+                      suspect={suspect}
+                      size={200}
+                      turnId={turnId}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, padding: '10px 15px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                    <ResponsiveName text={suspect.name} compact />
+                    <Subtitle>{suspect.role}</Subtitle>
+                  </div>
+                </div>
+              ) : (
+                // DEFAULT & PEEK LAYOUT (FULL BLEED)
+                <>
+                  {/* Background Layer (Absolute) */}
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
+                    <SuspectPortrait
+                      suspect={suspect}
+                      // Removed hardcoded size={600} to allow auto-fill relative to container
+                      emotion={emotion}
+                      aggravation={aggravation}
+                      turnId={turnId}
+                    />
+                  </div>
 
-                        {/* Content Overlay (Relative to sit on top) */}
-                        <Header data-atropos-offset="5" style={{ 
-                            position: 'relative', 
-                            zIndex: 2, 
-                            background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
-                            paddingBottom: '40px',
-                            paddingTop: '30px'
-                        }}>
-                          <ResponsiveName text={suspect.name} />
-                          <Subtitle style={{ textShadow: '0 2px 4px #000' }}>Age: {suspect.age}</Subtitle>
-                        </Header>
-                    </>
-                )}
+                  {/* Content Overlay (Relative to sit on top) */}
+                  <Header data-atropos-offset="5" style={{
+                    position: 'relative',
+                    zIndex: 2,
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+                    paddingBottom: '40px',
+                    paddingTop: '30px'
+                  }}>
+                    <ResponsiveName text={suspect.name} />
+                    <Subtitle style={{ textShadow: '0 2px 4px #000' }}>Age: {suspect.age}</Subtitle>
+                  </Header>
+                </>
+              )}
             </ContentClipper>
-            
+
             {/* FLOATING CONTROLS (Outside Clipper) */}
             {variant === 'compact' && onAction && (
-                 <div style={{ position: 'absolute', right: '15px', bottom: '15px', zIndex: 100, transform: 'translateZ(60px)' }}>
-                     <button style={{ background: '#fff', color: bgColor, border: 'none', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer' }} 
-                        onClick={(e) => { e.stopPropagation(); onAction(); }}>
-                       [{actionLabel}]
-                     </button>
-                 </div>
+              <div style={{ position: 'absolute', right: '15px', bottom: '15px', zIndex: 100, transform: 'translateZ(60px)' }}>
+                <button style={{ background: '#fff', color: bgColor, border: 'none', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer' }}
+                  onClick={(e) => { e.stopPropagation(); onAction(); }}>
+                  [{actionLabel}]
+                </button>
+              </div>
             )}
 
             {variant === 'default' && (
-                <FlipButton 
-                  id="flip-card-button"
-                  onClick={handleFlip} 
-                  onTouchEnd={handleFlip}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
+              <FlipButton
+                id="flip-card-button"
+                onClick={handleFlip}
+                onTouchEnd={handleFlip}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 [Flip Card]
-                </FlipButton>
+              </FlipButton>
+            )}
+
+            {/* Notification Badge — inside 3D context */}
+            {notificationCount > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 15,
+                right: 15,
+                minWidth: 22,
+                height: 22,
+                borderRadius: 11,
+                background: '#0f0',
+                color: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                fontFamily: "'VT323', monospace",
+                padding: '0 5px',
+                border: '2px solid #000',
+                boxShadow: '0 0 8px #0f0, 0 0 16px rgba(0,255,0,0.4)',
+                animation: 'notif-pulse 1.5s ease-in-out infinite',
+                zIndex: 9999,
+                transform: 'translateZ(100px)',
+                pointerEvents: 'none',
+              }}>
+                {notificationCount}
+              </div>
+            )}
+            {isLoading && notificationCount === 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 15,
+                right: 15,
+                zIndex: 9999,
+                transform: 'translateZ(100px)',
+                pointerEvents: 'none',
+              }}>
+                <div style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  border: '3px solid #0f0',
+                  borderTopColor: 'transparent',
+                  boxShadow: '0 0 8px rgba(0,255,0,0.3)',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+              </div>
             )}
           </CardFace>
 
           {/* --- BACK FACE --- */}
           <CardBackFace $active={isFlipped}>
             <ContentClipper $bgColor={backColor} style={{ overflow: isFlipped ? 'visible' : 'hidden' }}>
-                <Header>
-                  <ResponsiveName text={suspect.name} />
-                </Header>
+              <Header>
+                <ResponsiveName text={suspect.name} />
+              </Header>
 
-                <BackContent 
-                  $allowHorizontalScroll={disableTouchRotation}
-                  onWheel={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    e.currentTarget.scrollTop += e.deltaY;
-                  }}
-                  onTouchMove={disableTouchRotation ? undefined : (e) => e.stopPropagation()}
-                >
-                  <InfoList>
-                    <InfoItem>
-                        <strong>Role</strong>
-                        <span>{suspect.role}</span>
-                    </InfoItem>
-                    <InfoItem>
-                        <strong>Public Profile</strong>
-                        <span>{suspect.bio}</span>
-                    </InfoItem>
-                    <InfoItem>
-                        <strong>Profession</strong>
-                        <span>{suspect.professionalBackground}</span>
-                    </InfoItem>
-                    <InfoItem>
-                        <strong>Status</strong>
-                        <span>Person of Interest</span>
-                    </InfoItem>
-                  </InfoList>
-                </BackContent>
+              <BackContent
+                $allowHorizontalScroll={disableTouchRotation}
+                onWheel={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  e.currentTarget.scrollTop += e.deltaY;
+                }}
+                onTouchMove={disableTouchRotation ? undefined : (e) => e.stopPropagation()}
+              >
+                <InfoList>
+                  <InfoItem>
+                    <strong>Role</strong>
+                    <span>{suspect.role}</span>
+                  </InfoItem>
+                  <InfoItem>
+                    <strong>Public Profile</strong>
+                    <span>{suspect.bio}</span>
+                  </InfoItem>
+                  <InfoItem>
+                    <strong>Profession</strong>
+                    <span>{suspect.professionalBackground}</span>
+                  </InfoItem>
+                  <InfoItem>
+                    <strong>Status</strong>
+                    <span>Person of Interest</span>
+                  </InfoItem>
+                </InfoList>
+              </BackContent>
             </ContentClipper>
 
             {/* Back Controls */}
-            <FlipButton 
+            <FlipButton
               id="flip-card-button-back"
               $isBack
-              onClick={handleFlip} 
+              onClick={handleFlip}
               onTouchEnd={handleFlip}
               onMouseDown={(e) => e.stopPropagation()}
             >
