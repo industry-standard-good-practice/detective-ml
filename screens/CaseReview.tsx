@@ -69,6 +69,7 @@ const Panel = styled.div<{ $mobileHidden?: boolean }>`
     padding: 15px;
     min-height: 0;
     flex: 1;
+    overflow-x: hidden;
   }
 `;
 
@@ -1591,7 +1592,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         </SuspectList>
 
         {activeSuspect && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ margin: 0, color: '#aaa', fontSize: 'var(--type-h3)' }}>
@@ -1677,11 +1678,11 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </InputGroup>
                 <InputGroup>
                   <label>TTS Voice</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', minWidth: 0 }}>
                     <select
                       value={activeSuspect.voice || ''}
                       onChange={(e) => handleSuspectChange(selectedSuspectId!, 'voice', e.target.value)}
-                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', flex: 1, WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', flex: 1, minWidth: 0, WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px', boxSizing: 'border-box' }}
                     >
                       {TTS_VOICES.map(v => (
                         <option key={v.name} value={v.name}>
