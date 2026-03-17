@@ -605,7 +605,7 @@ const Layout: React.FC<LayoutProps> = ({
                   </TitleContainer>
 
                   {/* RIGHT — always-visible key items */}
-                  <NavGroup style={{ justifyContent: 'flex-end', minWidth: 'auto' }}>
+                  <NavGroup style={{ justifyContent: 'flex-end', minWidth: 'auto', position: 'absolute', right: '15px' }}>
                     {hasUnsavedChanges && (
                       <span style={{
                         color: '#fa0', fontSize: '0.75rem',
