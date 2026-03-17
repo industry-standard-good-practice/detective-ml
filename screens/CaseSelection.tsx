@@ -531,11 +531,19 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     publishedByMe.forEach(c => publishedMap.set(c.id, c));
 
     const merged = new Map<string, CaseData>();
-    // Add drafts first, but merge heroImageUrl from published version if local is missing
+    // Add drafts first, but merge fields from published version
     localDrafts.forEach(d => {
       const published = publishedMap.get(d.id);
       if (published) {
-        merged.set(d.id, { ...d, heroImageUrl: d.heroImageUrl || published.heroImageUrl, isFeatured: published.isFeatured, isUploaded: published.isUploaded ?? d.isUploaded });
+        // Use the LATEST updatedAt from either local or published (cross-device sync)
+        const latestUpdatedAt = Math.max(d.updatedAt || 0, published.updatedAt || 0) || d.createdAt || published.createdAt;
+        merged.set(d.id, {
+          ...d,
+          heroImageUrl: d.heroImageUrl || published.heroImageUrl,
+          isFeatured: published.isFeatured,
+          isUploaded: published.isUploaded ?? d.isUploaded,
+          updatedAt: latestUpdatedAt
+        });
       } else {
         merged.set(d.id, d);
       }

@@ -1005,21 +1005,26 @@ const App: React.FC = () => {
         }
         // Fetch updated case to get the new version number
         await loadCommunity();
+        // Also update local draft so My Cases sort refreshes
+        saveLocalDraft(stamped);
+        setLocalDrafts(fetchLocalDrafts());
         const updatedCase = communityCases.find(c => c.id === stamped.id) || stamped;
         selectCase(updatedCase);
     } else {
-        // Save to Firebase (private, not published) AND locally
+        // Save to Firebase (private, not published) AND locally (stamps updatedAt)
         saveLocalDraft(stamped);
-        setLocalDrafts(fetchLocalDrafts());
+        const refreshed = fetchLocalDrafts();
+        setLocalDrafts(refreshed);
+        const savedVersion = refreshed.find(d => d.id === stamped.id) || stamped;
         // Also persist to Firebase so it's not lost if localStorage clears
         await updateCase(stamped.id, stamped);
         setCommunityCases(prev => {
             if (!stamped.id || !stamped.title) return prev;
             const exists = prev.some(c => c.id === stamped.id);
-            if (exists) return prev.map(c => c.id === stamped.id ? stamped : c);
-            return [stamped, ...prev];
+            if (exists) return prev.map(c => c.id === stamped.id ? savedVersion : c);
+            return [savedVersion, ...prev];
         });
-        selectCase(stamped);
+        selectCase(savedVersion);
     }
     setDraftCase(null);
     originalDraftRef.current = null;
@@ -1053,12 +1058,16 @@ const App: React.FC = () => {
     };
     
     const { updateCase: doUpdate, saveLocalDraft: doSaveLocal } = await import('./services/persistence');
-    // Always save locally as a safety net
+    // Always save locally as a safety net (this stamps updatedAt)
     doSaveLocal(stamped);
+    const refreshedDrafts = fetchLocalDrafts();
+    setLocalDrafts(refreshedDrafts);
+    // Use the localStorage version (includes updatedAt) for state consistency
+    const savedVersion = refreshedDrafts.find(d => d.id === stamped.id) || stamped;
     // Also persist to Firebase
     const success = await doUpdate(stamped.id, stamped);
-    setDraftCase(stamped); // Keep stamped version in state
-    originalDraftRef.current = JSON.parse(JSON.stringify(stamped));
+    setDraftCase(savedVersion);
+    originalDraftRef.current = JSON.parse(JSON.stringify(savedVersion));
     setHasUnsavedDraftChanges(false);
     if (success) {
       toast.success('Case saved successfully!');
@@ -1492,12 +1501,16 @@ const App: React.FC = () => {
                 }}
                 onStart={handleTestInvestigation}
                 onCancel={() => {
-                    // Restore original case data into communityCases/localDrafts
-                    // so that the real-time sync useEffect's dirty edits are reverted
-                    const original = originalDraftRef.current;
-                    if (original) {
-                      setCommunityCases(prev => prev.map(c => c.id === original.id ? original : c));
-                      setLocalDrafts(prev => prev.map(d => d.id === original.id ? original : d));
+                    if (hasUnsavedDraftChanges) {
+                      // User is discarding unsaved edits — revert to last saved state
+                      const original = originalDraftRef.current;
+                      if (original) {
+                        setCommunityCases(prev => prev.map(c => c.id === original.id ? original : c));
+                        setLocalDrafts(prev => prev.map(d => d.id === original.id ? original : d));
+                      }
+                    } else {
+                      // No unsaved changes — re-read from localStorage to get authoritative state (with updatedAt)
+                      setLocalDrafts(fetchLocalDrafts());
                     }
                     originalDraftRef.current = null;
                     setDraftCase(null);
