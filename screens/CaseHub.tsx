@@ -772,6 +772,11 @@ interface CaseHubProps {
   onAccordionChange?: (tab: string) => void;
   scrollToSuspectId?: string | null;
   thinkingSuspectId?: string | null;
+  newEvidenceTitles?: Set<string>;
+  newTimelineIds?: Set<string>;
+  onClearNewEvidence?: (title: string) => void;
+  onClearAllNewEvidence?: () => void;
+  onClearNewTimeline?: () => void;
 }
 
 const CaseHub: React.FC<CaseHubProps> = ({
@@ -790,7 +795,12 @@ const CaseHub: React.FC<CaseHubProps> = ({
   initialAccordion = 'evidence',
   onAccordionChange,
   scrollToSuspectId,
-  thinkingSuspectId
+  thinkingSuspectId,
+  newEvidenceTitles = new Set(),
+  newTimelineIds = new Set(),
+  onClearNewEvidence,
+  onClearAllNewEvidence,
+  onClearNewTimeline
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -800,6 +810,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
   const openLightbox = (item: Evidence, evidenceKey: string) => {
     setSelectedEvidenceId(evidenceKey);
     setLightboxEvidence(item);
+    // Mark this evidence as seen (desktop)
+    onClearNewEvidence?.(item.title);
   };
 
   const closeLightbox = () => {
@@ -934,7 +946,10 @@ const CaseHub: React.FC<CaseHubProps> = ({
               <AccordionButton
                 $color="orange"
                 $isOpen={openAccordion === 'evidence'}
-                onClick={() => toggleAccordion('evidence')}
+                onClick={() => {
+                  toggleAccordion('evidence');
+                  onClearAllNewEvidence?.();
+                }}
                 id="accordion-evidence"
                 data-open={openAccordion === 'evidence' ? 'true' : 'false'}
               >
@@ -944,6 +959,15 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <path d="M8 8v13" />
                 </svg>
                 EVIDENCE ({evidenceDiscovered.length})
+                {newEvidenceTitles.size > 0 && (
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#fa0',
+                    boxShadow: '0 0 6px #fa0, 0 0 12px rgba(255,170,0,0.4)',
+                    animation: 'notif-pulse 1.5s ease-in-out infinite',
+                    marginLeft: 6, flexShrink: 0,
+                  }} />
+                )}
                 <AccordionChevron
                   animate={{ rotate: openAccordion === 'evidence' ? 180 : 0 }}
                   transition={{ duration: 0.3 }}
@@ -985,7 +1009,10 @@ const CaseHub: React.FC<CaseHubProps> = ({
               <AccordionButton
                 $color="blue"
                 $isOpen={openAccordion === 'timeline'}
-                onClick={() => toggleAccordion('timeline')}
+                onClick={() => {
+                  toggleAccordion('timeline');
+                  onClearNewTimeline?.();
+                }}
                 id="accordion-timeline"
                 data-open={openAccordion === 'timeline' ? 'true' : 'false'}
               >
@@ -994,6 +1021,15 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 TIMELINE ({timelineStatements.length})
+                {newTimelineIds.size > 0 && (
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#4af',
+                    boxShadow: '0 0 6px #4af, 0 0 12px rgba(68,170,255,0.4)',
+                    animation: 'notif-pulse 1.5s ease-in-out infinite',
+                    marginLeft: 6, flexShrink: 0,
+                  }} />
+                )}
                 <AccordionChevron
                   animate={{ rotate: openAccordion === 'timeline' ? 180 : 0 }}
                   transition={{ duration: 0.3 }}
@@ -1141,9 +1177,19 @@ const CaseHub: React.FC<CaseHubProps> = ({
                       style={{
                         rotate: isSelected ? 0 : Math.random() * 6 - 3,
                         visibility: isSelected ? 'hidden' : 'visible',
-                        pointerEvents: isSelected ? 'none' : 'auto'
+                        pointerEvents: isSelected ? 'none' : 'auto',
+                        position: 'relative',
                       }}
                     >
+                      {newEvidenceTitles.has(ev.title) && (
+                        <span style={{
+                          position: 'absolute', top: -4, right: -4, zIndex: 10,
+                          width: 10, height: 10, borderRadius: '50%',
+                          background: '#fa0',
+                          boxShadow: '0 0 6px #fa0, 0 0 12px rgba(255,170,0,0.4)',
+                          animation: 'notif-pulse 1.5s ease-in-out infinite',
+                        }} />
+                      )}
                       <PolaroidImage $src={ev.imageUrl}>
                         {!ev.imageUrl && 'No IMG'}
                       </PolaroidImage>
@@ -1192,12 +1238,24 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 </SecureLineButton>
               </ChiefWidget>
 
-              <TimelineButton id="timeline-button" onClick={() => setIsTimelineOpen(true)}>
+              <TimelineButton id="timeline-button" onClick={() => {
+                setIsTimelineOpen(true);
+                onClearNewTimeline?.();
+              }} style={{ position: 'relative' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 TIMELINE
+                {newTimelineIds.size > 0 && (
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#4af',
+                    boxShadow: '0 0 6px #4af, 0 0 12px rgba(68,170,255,0.4)',
+                    animation: 'notif-pulse 1.5s ease-in-out infinite',
+                    marginLeft: 6, flexShrink: 0,
+                  }} />
+                )}
               </TimelineButton>
 
               <AccuseButton onClick={() => onNavigate(ScreenState.ACCUSATION)}>

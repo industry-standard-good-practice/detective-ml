@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { CaseData, CaseStats } from '../types';
-import { useDragScroll } from '../hooks/useDragScroll';
+
 
 /* ─── Theme System ─── */
 
@@ -149,41 +149,6 @@ const SortButton = styled.button<{ $active: boolean }>`
 
 /* ─── Grid Layouts ─── */
 
-const Carousel = styled.div`
-  display: flex;
-  gap: 12px;
-  padding: 40px var(--screen-edge-horizontal);
-  overflow-x: auto;
-  overflow-y: hidden;
-  flex: 1;
-  height: 100%;
-  min-height: 0;
-  align-items: stretch;
-
-  &::-webkit-scrollbar { display: none; }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  & > div {
-    flex: 0 0 min(450px, 40vh);
-    width: min(450px, 40vh);
-    height: auto;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-
-  @media (max-width: 768px) {
-    padding: 15px var(--screen-edge-horizontal);
-    scroll-snap-type: x mandatory;
-    & > div {
-      flex: 0 0 90vw;
-      scroll-snap-align: center;
-      max-height: none;
-      height: 100%;
-      overflow-y: hidden;
-    }
-  }
-`;
 
 const NetworkGrid = styled.div`
   display: grid;
@@ -490,19 +455,12 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     onTabChange?.(tab);
   };
   const [sortMode, setSortMode] = useState<'popular' | 'recent'>('popular');
-  const carouselDragRef = useDragScroll<HTMLDivElement>();
-  const carouselElRef = useRef<HTMLDivElement | null>(null);
+  const carouselElRef = useRef<HTMLDivElement>(null);
   const networkGridRef = useRef<HTMLDivElement>(null);
   const [activeFeaturedId, setActiveFeaturedId] = useState<string | null>(null);
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null);
   const [activeMyCaseId, setActiveMyCaseId] = useState<string | null>(null);
   const myCasesGridRef = useRef<HTMLDivElement>(null);
-
-  // Combined ref callback for carousel: sets both drag-scroll and element ref
-  const carouselRef = useCallback((el: HTMLDivElement | null) => {
-    carouselElRef.current = el;
-    carouselDragRef(el);
-  }, [carouselDragRef]);
 
   // IntersectionObserver to detect centered card in carousel
   const observeCarousel = (container: HTMLElement | null, setActiveId: (id: string | null) => void) => {
@@ -677,7 +635,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
 
       {activeTab === 'featured' ? (
         <>
-          <Carousel ref={carouselRef}>
+          <NetworkGrid ref={carouselElRef}>
             {featuredCases.length === 0 && !isLoadingCommunity && (
               <EmptyMessage key="no-featured">No featured cases available.</EmptyMessage>
             )}
@@ -690,7 +648,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                 </CaseCard>
               );
             })}
-          </Carousel>
+          </NetworkGrid>
         </>
       ) : activeTab === 'network' ? (
         <>

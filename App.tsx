@@ -212,6 +212,8 @@ const App: React.FC = () => {
   });
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
   const [unreadSuspects, setUnreadSuspects] = useState<Map<string, number>>(new Map());
+  const [newEvidenceTitles, setNewEvidenceTitles] = useState<Set<string>>(new Set());
+  const [newTimelineIds, setNewTimelineIds] = useState<Set<string>>(new Set());
   const [caseSelectionTab, setCaseSelectionTab] = useState<'featured' | 'network' | 'mycases'>('featured');
   const [boardAccordionTab, setBoardAccordionTab] = useState<string>('evidence');
 
@@ -648,6 +650,7 @@ const App: React.FC = () => {
                   day: timelineEntry.day || 'Day of the Crime',
                   dayOffset: timelineEntry.dayOffset ?? 0
                 });
+                setNewTimelineIds(prev => new Set(prev).add(`ts-${Date.now()}`));
               }
             }
 
@@ -799,8 +802,9 @@ const App: React.FC = () => {
           );
 
           if (!alreadyExists) {
+            const tsId = `ts-${Date.now()}`;
             newTimelineStatements.push({
-              id: `ts-${Date.now()}`,
+              id: tsId,
               suspectId: currentSuspectId,
               suspectName: currentSuspect.name,
               suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
@@ -809,6 +813,7 @@ const App: React.FC = () => {
               day: timelineEntry.day || 'Day of the Crime',
               dayOffset: timelineEntry.dayOffset ?? 0
             });
+            setNewTimelineIds(prev => new Set(prev).add(tsId));
           }
         }
 
@@ -1105,6 +1110,9 @@ const App: React.FC = () => {
       }
 
       const alreadyHas = prev.evidenceDiscovered.some(e => e.title === foundEvidence!.title);
+      if (!alreadyHas) {
+        setNewEvidenceTitles(prevTitles => new Set(prevTitles).add(foundEvidence!.title));
+      }
       
       return {
         ...prev,
@@ -1465,6 +1473,17 @@ const App: React.FC = () => {
               onSendOfficerMessage={handleSendOfficerMessage}
               unreadSuspectIds={unreadSuspects}
               thinkingSuspectId={thinkingSuspectId}
+              newEvidenceTitles={newEvidenceTitles}
+              newTimelineIds={newTimelineIds}
+              onClearNewEvidence={(title) => {
+                setNewEvidenceTitles(prev => {
+                  const next = new Set(prev);
+                  next.delete(title);
+                  return next;
+                });
+              }}
+              onClearAllNewEvidence={() => setNewEvidenceTitles(new Set())}
+              onClearNewTimeline={() => setNewTimelineIds(new Set())}
               initialMobileTab={previousScreenRef.current === ScreenState.INTERROGATION || previousScreenRef.current === ScreenState.ACCUSATION ? 'BOARD' : 'HQ'}
               initialAccordion={boardAccordionTab}
               onAccordionChange={setBoardAccordionTab}
