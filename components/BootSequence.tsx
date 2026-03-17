@@ -16,7 +16,7 @@ const Container = styled.div`
   color: #33ff33;
   font-family: 'VT323', monospace;
   font-size: 1.5rem;
-  padding: 40px;
+  padding: calc(var(--screen-edge-top, 50px) + 20px) calc(var(--screen-edge-horizontal, 80px) + 20px) calc(var(--screen-edge-bottom, 30px) + 20px) calc(var(--screen-edge-horizontal, 80px) + 20px);
   z-index: 100;
   overflow: hidden;
   display: flex;

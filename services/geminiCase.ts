@@ -774,6 +774,17 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - The startTime DATE must align with the crime-day date implied by the timeline. If the initialTimeline mentions events on "September 12", the startTime must also be on September 12 (or shortly after midnight on September 13 for very late-night crimes).
 - Choose a startTime that fits the case atmosphere: noir murders → late night; corporate crimes → evening; daytime incidents → afternoon.  
 - The startTime should be close enough to the crime that the trail is still warm.`,
+
+    /** Evidence description style — used in generation, consistency, and edit */
+    EVIDENCE_DESCRIPTION_STYLE: `**EVIDENCE DESCRIPTION STYLE (CRITICAL):**
+- ALL evidence descriptions (both initialEvidence and hiddenEvidence) must NEVER use pronouns (he, she, they, him, her, his, hers, their, them, etc.).
+- ALWAYS use the FULL NAME of the person being referenced instead of a pronoun.
+- This applies to every 'description' field on every evidence item throughout the entire case.
+- WRONG: "A letter found in his desk revealing he had been embezzling funds."
+- CORRECT: "A letter found in Robert Chen's desk revealing Robert Chen had been embezzling funds."
+- WRONG: "She was seen leaving the building at 9 PM."
+- CORRECT: "Martha Rodriguez was seen leaving the building at 9 PM."
+- When rewriting existing descriptions, replace ALL pronouns with the appropriate full name. Do not leave any pronoun references.`,
 } as const;
 
 // --- SCHEMAS ---
@@ -1012,7 +1023,9 @@ ${userChangeLog}
     
     9. ${PROMPT_RULES.START_TIME_ALIGNMENT}
     
-    10. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+    10. ${PROMPT_RULES.EVIDENCE_DESCRIPTION_STYLE}
+    
+    11. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
     
     CASE DATA:
     ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -1234,7 +1247,9 @@ ${userChangeLog}
 
       11. ${PROMPT_RULES.START_TIME_ALIGNMENT}
            
-      12. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
+      12. ${PROMPT_RULES.EVIDENCE_DESCRIPTION_STYLE}
+      
+      13. ${PROMPT_RULES.OUTPUT_FORMAT_WITH_REPORT}
       
       CASE DATA:
       ${JSON.stringify(lightweightCase, null, 2)}`,
@@ -1493,6 +1508,8 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     
     CRITICAL INSTRUCTION - START TIME:
     ${PROMPT_RULES.START_TIME_ALIGNMENT}
+    
+    ${PROMPT_RULES.EVIDENCE_DESCRIPTION_STYLE}
     
     Output JSON structure matching CaseData interface.
   `;

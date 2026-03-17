@@ -94,17 +94,17 @@ export const startFallbackListening = (
 
       recorder.onstart = () => {
         onStart();
-        // Auto-stop after 15 seconds max
+        // Auto-stop after 10 seconds max (shorter = less memory on iOS)
         setTimeout(() => {
           if (recorder.state === "recording") {
             recorder.stop();
           }
-        }, 15000);
+        }, 10000);
       };
 
       recorder.onstop = async () => {
-        // Clean up the microphone stream
-        stream.getTracks().forEach((t) => t.stop());
+        // Clean up the microphone stream immediately
+        try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
         activeStream = null;
         activeRecorder = null;
 
@@ -113,14 +113,23 @@ export const startFallbackListening = (
           return;
         }
 
-        const blob = new Blob(chunks, { type: mimeType });
-
         try {
+          const blob = new Blob(chunks, { type: mimeType });
+          // Free chunk references immediately to reduce memory
+          chunks.length = 0;
+
+          // Safety: reject recordings over 1MB to prevent iOS memory crashes
+          if (blob.size > 1024 * 1024) {
+            console.warn("[STT] Recording too large:", blob.size, "bytes — skipping");
+            onError("Recording too long. Try a shorter message.");
+            onEnd();
+            return;
+          }
+
           // Convert blob to base64
           const base64 = await blobToBase64(blob);
 
           // Determine the MIME type string for the Gemini API
-          // Gemini accepts audio/webm, audio/mp4, audio/wav, etc.
           const geminiMime = mimeType.split(";")[0]; // strip codec info
 
           const ai = new GoogleGenAI({ apiKey });
@@ -157,14 +166,15 @@ export const startFallbackListening = (
       };
 
       recorder.onerror = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
         activeStream = null;
         activeRecorder = null;
         onError("Recording failed.");
         onEnd();
       };
 
-      recorder.start();
+      // Use timeslice to get data in smaller chunks (reduces peak memory)
+      recorder.start(1000);
     })
     .catch((err) => {
       console.error("Microphone access error:", err);

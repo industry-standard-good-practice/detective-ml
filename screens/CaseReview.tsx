@@ -17,13 +17,13 @@ import { PIXEL_ART_BASE } from '@/services/geminiStyles';
 const Container = styled.div`
   display: flex;
   height: 100%;
-  padding: 20px;
+  padding: 20px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 20px) var(--screen-edge-horizontal);
   gap: 20px;
   position: relative;
 
   @media (max-width: 1080px) {
     flex-direction: column;
-    padding: 10px;
+    padding: 10px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 20px) var(--screen-edge-horizontal);
     gap: 0;
   }
 `;

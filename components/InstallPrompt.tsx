@@ -98,23 +98,53 @@ const CloseBtn = styled.button`
   right: 8px;
 `;
 
+/* ─── Helpers ─── */
+
+function isIOSSafari(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // On iOS, all browsers use WebKit, but only Safari shows the A2HS option.
+  // CriOS = Chrome on iOS, FxiOS = Firefox on iOS, etc.
+  const isSafari = !(/CriOS|FxiOS|OPiOS|EdgiOS/.test(ua));
+  return isIOS && isSafari;
+}
+
+function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as any).standalone === true; // iOS Safari standalone check
+}
+
+const DISMISS_KEY = 'pwa-install-dismissed';
+
+/* ─── Component ─── */
+
 const InstallPrompt: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIOSBanner, setShowIOSBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Already running as a PWA
+    if (isStandalone()) {
       setIsInstalled(true);
       return;
     }
 
     // Check if user previously dismissed
-    if (localStorage.getItem('pwa-install-dismissed') === 'true') {
+    if (localStorage.getItem(DISMISS_KEY) === 'true') {
       setDismissed(true);
     }
 
+    // iOS Safari: no beforeinstallprompt, show custom banner
+    if (isIOSSafari()) {
+      setShowIOSBanner(true);
+      return;
+    }
+
+    // Android / Chrome: listen for native install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -123,12 +153,16 @@ const InstallPrompt: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handler);
 
     // Listen for successful install
-    window.addEventListener('appinstalled', () => {
+    const installedHandler = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
-    });
+    };
+    window.addEventListener('appinstalled', installedHandler);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -143,11 +177,39 @@ const InstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('pwa-install-dismissed', 'true');
+    localStorage.setItem(DISMISS_KEY, 'true');
   };
 
-  // Don't show if: already installed, no prompt available, or user dismissed
-  if (isInstalled || !deferredPrompt || dismissed) return null;
+  // Don't show if already installed or explicitly dismissed
+  if (isInstalled || dismissed) return null;
+
+  // iOS Safari banner
+  if (showIOSBanner) {
+    return createPortal(
+      <Banner>
+        <CloseBtn onClick={handleDismiss}>×</CloseBtn>
+        <IconImg src="/icon-192.png" alt="DetectiveML" />
+        <TextCol>
+          <Title>Install DetectiveML</Title>
+          <Subtitle>
+            Tap{' '}
+            <span style={{ fontSize: '18px', verticalAlign: 'middle' }}>
+              {/* iOS share icon (box with arrow) */}
+              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" style={{ verticalAlign: 'middle', marginBottom: '2px' }}>
+                <path d="M8 0L8 11M8 0L4 4M8 0L12 4" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 7V15C1 16.1 1.9 17 3 17H13C14.1 17 15 16.1 15 15V7" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+            {' '}then <strong style={{ color: '#fff' }}>"Add to Home Screen"</strong>
+          </Subtitle>
+        </TextCol>
+      </Banner>,
+      document.body
+    );
+  }
+
+  // Android/Chrome banner — only show when native prompt is available
+  if (!deferredPrompt) return null;
 
   return createPortal(
     <Banner>

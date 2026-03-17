@@ -178,6 +178,27 @@ Safari respects the `apple-mobile-web-app-capable` meta tag over HTTP, so you ca
    - Tap **Share** (square with arrow) → **"Add to Home Screen"** → **Add**
    - The app opens in **standalone mode** (no Safari UI) ✅
 
+#### Enabling Microphone (HTTPS Setup)
+
+iOS Safari requires HTTPS for microphone access (`getUserMedia`). The dev server automatically runs an HTTPS server on **port 3443** with a self-signed certificate that includes your LAN IP.
+
+1. **Install the certificate on your iOS device:**
+   - In Safari, open `http://<your-lan-ip>:3000/install-cert`
+   - iOS will prompt you to download a configuration profile
+
+2. **Trust the profile:**
+   - Go to **Settings → General → VPN & Device Management**
+   - Tap the **"Detective ML Dev"** profile → **Install**
+
+3. **Enable full trust:**
+   - Go to **Settings → General → About → Certificate Trust Settings**
+   - Toggle **ON** for **"Detective ML Dev"**
+
+4. **Access via HTTPS:**
+   - Open `https://<your-lan-ip>:3443` — the mic icon will now work
+
+> **Note:** This is a one-time setup per device. The certificate persists across server restarts (cached in `.certs/`). If your LAN IP changes, delete the `.certs/` folder and restart the server to regenerate.
+
 > **Note:** Service workers require HTTPS, so offline caching won't work over HTTP during development. This doesn't affect normal testing — the app works fully while connected to your network.
 
 #### Remote Debugging (macOS only)

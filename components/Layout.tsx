@@ -193,7 +193,7 @@ const TopBar = styled.div`
   font-size: var(--type-body-lg);
   border-bottom: 2px solid #333;
   background: #0f0f0f;
-  z-index: 5;
+  z-index: 101;
   min-height: 70px;
   position: relative;
   justify-content: space-between;
@@ -230,13 +230,13 @@ const TitleContainer = styled.div<{ $marquee?: boolean }>`
     grid-row: 1;
     
     ${props => props.$marquee && css`
-      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+      mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
     `}
   }
 `;
 
-const Title = styled.h1<{ $marquee?: boolean }>`
+const Title = styled.h1`
   margin: 0;
   font-size: var(--type-h3);
   letter-spacing: 2px;
@@ -252,15 +252,6 @@ const Title = styled.h1<{ $marquee?: boolean }>`
   
   @media (max-width: 768px) {
     font-size: 1.4rem;
-    
-    ${props => props.$marquee && css`
-      overflow: visible;
-      text-overflow: clip;
-      text-align: left;
-      width: auto;
-      display: inline-block;
-      padding: 0 10px 0 20px;
-    `}
   }
 `;
 
@@ -372,7 +363,6 @@ const HamburgerButton = styled.button<{ $visible?: boolean }>`
   z-index: 20;
   text-transform: uppercase;
   flex-shrink: 0;
-  padding: 0 10px;
   align-items: center;
   
   &:hover {
@@ -392,7 +382,6 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
     background: transparent;
     color: #0f0;
     border: none;
-    padding: 0 10px;
     font-family: inherit;
     font-size: var(--type-body-lg);
     font-weight: bold;
@@ -552,13 +541,14 @@ const Layout: React.FC<LayoutProps> = ({
   const [showExitDialog, setShowExitDialog] = useState(false);
   const { startTour } = useOnboarding();
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const marqueeSpanRef = useRef<HTMLSpanElement>(null);
   const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
-  const marqueeStyleRef = useRef<HTMLStyleElement | null>(null);
+  const [marqueeWidth, setMarqueeWidth] = useState(0);
   const [marqueeAnimName, setMarqueeAnimName] = useState('');
+  const marqueeStyleRef = useRef<HTMLStyleElement | null>(null);
 
-  // Detect title overflow and create marquee animation
+  // Phase 1: Detect overflow. Title stays in original layout for reliable measurement.
   useEffect(() => {
-    // Reset so React re-renders with non-marquee styles
     setIsTitleOverflowing(false);
     setMarqueeAnimName('');
     if (marqueeStyleRef.current) {
@@ -569,35 +559,15 @@ const Layout: React.FC<LayoutProps> = ({
     const el = titleRef.current;
     if (!el) return;
 
-    // Wait for React re-render + double-rAF for iOS Safari layout
     const timer = setTimeout(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (window.innerWidth > 768 || !el.parentElement) return;
-
-          // Check if text overflows: el has width:100% + overflow:hidden in non-marquee state
-          // Temporarily left-align for accurate scrollWidth
-          el.style.textAlign = 'left';
-          const overflows = el.scrollWidth > el.clientWidth + 2;
-          el.style.textAlign = '';
-
-          if (!overflows) return;
-
+        if (window.innerWidth > 768) return;
+        if (el.scrollWidth > el.clientWidth + 2) {
+          setMarqueeWidth(el.clientWidth);
           setIsTitleOverflowing(true);
-
-          // Use calc(containerWidth - 100%) in translateX
-          // 100% in translateX = the element's own rendered width (inline-block)
-          // So translateX(calc(Cpx - 100%)) positions the right edge at the container's right edge
-          const cw = el.parentElement.clientWidth;
-          const animName = `marquee_${Date.now()}`;
-          const styleEl = document.createElement('style');
-          styleEl.textContent = `@keyframes ${animName}{0%,20%{transform:translateX(0)}80%,100%{transform:translateX(calc(${cw}px - 100%))}}`;
-          document.head.appendChild(styleEl);
-          marqueeStyleRef.current = styleEl;
-          setMarqueeAnimName(animName);
-        });
+        }
       });
-    }, 300);
+    }, 200);
 
     return () => {
       clearTimeout(timer);
@@ -607,6 +577,37 @@ const Layout: React.FC<LayoutProps> = ({
       }
     };
   }, [caseTitle, screenState, mobileAction]);
+
+  // Phase 2: After the animated span renders, measure it and create the keyframe.
+  useEffect(() => {
+    if (!isTitleOverflowing) return;
+
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        const span = marqueeSpanRef.current;
+        const wrapper = span?.parentElement;
+        if (!span || !wrapper) return;
+
+        // Real measurement: span width vs wrapper width
+        const scrollDist = span.offsetWidth - wrapper.clientWidth;
+        if (scrollDist <= 0) return;
+
+        // Clean up any previous keyframe
+        if (marqueeStyleRef.current) {
+          marqueeStyleRef.current.remove();
+        }
+
+        const name = `mq_${Date.now()}`;
+        const style = document.createElement('style');
+        style.textContent = `@keyframes ${name}{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(-${scrollDist}px)}}`;
+        document.head.appendChild(style);
+        marqueeStyleRef.current = style;
+        setMarqueeAnimName(name);
+      });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isTitleOverflowing, caseTitle]);
 
   // Logic to determine if we are in "Gameplay" mode
   const isGameplay =
@@ -698,12 +699,33 @@ const Layout: React.FC<LayoutProps> = ({
                   <TitleContainer $marquee={isTitleOverflowing}>
                     <Title
                       ref={titleRef}
-                      $marquee={isTitleOverflowing}
                       title={caseTitle || 'DetectiveML'}
-                      style={marqueeAnimName ? { animation: `${marqueeAnimName} 6s ease-in-out infinite alternate` } : undefined}
+                      style={isTitleOverflowing ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : undefined}
                     >
                       {caseTitle || 'DetectiveML'}
                     </Title>
+                    {isTitleOverflowing && (
+                      <div style={{
+                        width: marqueeWidth > 0 ? marqueeWidth + 'px' : '100%',
+                        overflow: 'hidden',
+                      }}>
+                        <span ref={marqueeSpanRef} style={{
+                          display: 'inline-block',
+                          whiteSpace: 'nowrap',
+                          fontSize: '1.4rem',
+                          letterSpacing: '2px',
+                          textTransform: 'uppercase',
+                          color: '#fff',
+                          textShadow: '0 0 5px #fff',
+                          lineHeight: '1.1',
+                          fontFamily: 'inherit',
+                          padding: '0 10px',
+                          animation: marqueeAnimName ? `${marqueeAnimName} 8s ease-in-out infinite alternate` : 'none',
+                        } as React.CSSProperties}>
+                          {caseTitle || 'DetectiveML'}
+                        </span>
+                      </div>
+                    )}
                     <SubTitle>v1.0.0 // SYSTEM READY</SubTitle>
                   </TitleContainer>
 

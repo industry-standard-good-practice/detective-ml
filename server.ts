@@ -7,9 +7,25 @@ import { createServer as createViteServer } from "vite";
 import fetch from "node-fetch";
 import selfsigned from "selfsigned";
 
+import os from "os";
+
 const CERTS_DIR = path.join(process.cwd(), ".certs");
 const CERT_FILE = path.join(CERTS_DIR, "cert.pem");
 const KEY_FILE = path.join(CERTS_DIR, "key.pem");
+
+function getLocalIPs(): string[] {
+  const ips: string[] = ["127.0.0.1", "0.0.0.0"];
+  const interfaces = os.networkInterfaces();
+  for (const iface of Object.values(interfaces)) {
+    if (!iface) continue;
+    for (const info of iface) {
+      if (info.family === "IPv4" && !info.internal) {
+        ips.push(info.address);
+      }
+    }
+  }
+  return ips;
+}
 
 async function getOrCreateCerts() {
   // Reuse existing certs if they exist
@@ -21,18 +37,22 @@ async function getOrCreateCerts() {
     };
   }
 
+  const localIPs = getLocalIPs();
   console.log("  → Generating new self-signed certificate...");
+  console.log("    SANs:", ["localhost", ...localIPs].join(", "));
+
   const attrs = [{ name: "commonName", value: "Detective ML Dev" }];
+  const altNames: any[] = [
+    { type: 2, value: "localhost" },  // DNS
+    ...localIPs.map(ip => ({ type: 7, ip })),  // All local IPs
+  ];
+
   const pems = await (selfsigned as any).generate(attrs, {
     days: 365,
     keySize: 2048,
     algorithm: "sha256",
     extensions: [
-      { name: "subjectAltName", altNames: [
-        { type: 2, value: "localhost" },   // DNS
-        { type: 7, ip: "127.0.0.1" },      // IP
-        { type: 7, ip: "0.0.0.0" },        // IP
-      ]}
+      { name: "subjectAltName", altNames }
     ],
   });
 
@@ -77,6 +97,25 @@ async function startServer() {
     }
   });
 
+  // Get or create certs early so the download endpoint works
+  let certs: { cert: string; key: string } | null = null;
+  try {
+    certs = await getOrCreateCerts();
+  } catch (e) {
+    console.warn("⚠️  Failed to generate certificates:", e);
+  }
+
+  // Serve the certificate for iOS installation (must be before Vite middleware)
+  // Navigate to http://<LAN_IP>:3000/install-cert on iOS Safari to install
+  app.get("/install-cert", (req, res) => {
+    if (!certs) {
+      return res.status(500).send("No certificate available");
+    }
+    res.setHeader("Content-Type", "application/x-x509-ca-cert");
+    res.setHeader("Content-Disposition", "attachment; filename=detective-ml-dev.crt");
+    res.send(certs.cert);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -91,22 +130,33 @@ async function startServer() {
     });
   }
 
+  const localIPs = getLocalIPs().filter(ip => ip !== "127.0.0.1" && ip !== "0.0.0.0");
+  const lanIP = localIPs[0] || "<YOUR_LAN_IP>";
+
   // HTTP server
   app.listen(HTTP_PORT, "0.0.0.0", () => {
     console.log(`HTTP  server running on http://0.0.0.0:${HTTP_PORT}`);
   });
 
   // HTTPS server (needed for iOS Safari microphone access)
-  try {
-    const certs = await getOrCreateCerts();
-    https.createServer({ key: certs.key, cert: certs.cert }, app).listen(HTTPS_PORT, "0.0.0.0", () => {
-      console.log(`HTTPS server running on https://0.0.0.0:${HTTPS_PORT}`);
-      console.log(`\n  📱 iOS Safari: Open https://<YOUR_LAN_IP>:${HTTPS_PORT}`);
-      console.log(`     Then trust the certificate in Settings → General → About → Certificate Trust Settings`);
+  if (certs) {
+    const httpsServer = https.createServer({ key: certs.key, cert: certs.cert }, app);
+    httpsServer.on("error", (e: any) => {
+      if (e.code === "EADDRINUSE") {
+        console.warn(`⚠️  HTTPS port ${HTTPS_PORT} already in use — skipping HTTPS server.`);
+        console.warn(`   Kill the old process or use a different port.`);
+      } else {
+        console.warn("⚠️  HTTPS server error:", e);
+      }
     });
-  } catch (e) {
-    console.warn("⚠️  HTTPS server failed to start:", e);
-    console.warn("   Microphone/speech won't work on iOS Safari over HTTP.");
+    httpsServer.listen(HTTPS_PORT, "0.0.0.0", () => {
+      console.log(`HTTPS server running on https://0.0.0.0:${HTTPS_PORT}`);
+      console.log(`\n  📱 iOS Safari Setup:`);
+      console.log(`     1. Open http://${lanIP}:${HTTP_PORT}/install-cert → Install the profile`);
+      console.log(`     2. Settings → General → VPN & Device Management → Trust the profile`);
+      console.log(`     3. Settings → General → About → Certificate Trust Settings → Enable full trust`);
+      console.log(`     4. Open https://${lanIP}:${HTTPS_PORT}`);
+    });
   }
 }
 

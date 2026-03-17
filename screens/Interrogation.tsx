@@ -1276,11 +1276,19 @@ const Interrogation: React.FC<InterrogationProps> = ({
     });
   };
 
+  // Ref to hold native SpeechRecognition instance for cleanup
+  const recognitionRef = useRef<any>(null);
+
+  // Detect iOS (all iOS browsers have buggy native SpeechRecognition in standalone/PWA)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   const startListening = () => {
     if (listening || transcribing) return;
 
-    // Try native SpeechRecognition first (works on desktop Chrome, etc.)
-    if (hasNativeSpeechRecognition()) {
+    // On iOS, skip native SpeechRecognition — it crashes WebKit in PWA/standalone mode.
+    // Use MediaRecorder + Gemini transcription instead (requires HTTPS).
+    if (!isIOS && hasNativeSpeechRecognition()) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
@@ -1288,8 +1296,14 @@ const Interrogation: React.FC<InterrogationProps> = ({
       recognition.interimResults = false;
 
       recognition.onstart = () => setListening(true);
-      recognition.onend = () => setListening(false);
-      recognition.onerror = () => setListening(false);
+      recognition.onend = () => {
+        setListening(false);
+        recognitionRef.current = null;
+      };
+      recognition.onerror = () => {
+        setListening(false);
+        recognitionRef.current = null;
+      };
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         if (transcript) {
@@ -1297,6 +1311,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         }
       };
 
+      recognitionRef.current = recognition;
       recognition.start();
       return;
     }
@@ -1324,10 +1339,14 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   const toggleListening = () => {
     if (listening) {
-      // Stop recording — this triggers transcription in the fallback path
+      // Stop native recognition if active
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (_) {}
+        recognitionRef.current = null;
+      }
+      // Stop MediaRecorder fallback — triggers transcription
       stopFallbackListening();
       setTranscribing(true);
-      // Note: for native SpeechRecognition, onend fires automatically
     } else {
       startListening();
     }
