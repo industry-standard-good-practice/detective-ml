@@ -384,7 +384,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
       suspectId: s.suspectId,
       suspectName: s.suspectName,
       isInitial: false,
-      day: s.day || 'Day of the Crime',
+      day: s.day || 'Today',
       dayOffset: s.dayOffset ?? 0
     })),
     ...initialTimeline.map((e, idx) => ({
@@ -394,7 +394,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
       suspectId: null as string | null,
       suspectName: null as string | null,
       isInitial: true,
-      day: e.day || 'Day of the Crime',
+      day: e.day || 'Today',
       dayOffset: e.dayOffset ?? 0
     }))
   ];
@@ -476,7 +476,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
         dayGroups.map((dayGroup, dayIdx) => (
           <React.Fragment key={`day-${dayGroup.dayOffset}-${dayIdx}`}>
             {/* Day divider — always shown if multiple days, or if the single day isn't the default */}
-            {(hasMultipleDays || dayGroup.day !== 'Day of the Crime') && (
+            {(hasMultipleDays || dayGroup.day !== 'Today') && (
               <DayDivider>
                 <DayLabel>{dayGroup.day}</DayLabel>
               </DayDivider>

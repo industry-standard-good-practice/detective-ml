@@ -771,7 +771,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const addTimelineEvent = () => {
     if (!activeSuspect || isSupportChar) return;
     const currentSuspect = activeSuspect as Suspect;
-    handleSuspectChange(activeSuspect.id, 'timeline', [...currentSuspect.timeline, { time: "12:00 PM", activity: "Doing something", day: "Day of the Crime", dayOffset: 0 }]);
+    handleSuspectChange(activeSuspect.id, 'timeline', [...currentSuspect.timeline, { time: "12:00 PM", activity: "Doing something", day: "Today", dayOffset: 0 }]);
   };
 
   const removeTimelineEvent = (index: number) => {
@@ -1313,11 +1313,52 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
           <InputGroup>
             <label>Investigation Start Time</label>
-            <input
-              type="datetime-local"
-              value={draftCase.startTime || '2030-09-12T23:30'}
-              onChange={(e) => handleCaseChange('startTime', e.target.value)}
-            />
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="e.g. 'September 12, 2030 at 11:30 PM' or 'Late evening, night of the gala'"
+                value={draftCase.startTime || ''}
+                onChange={(e) => handleCaseChange('startTime', e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="datetime-local"
+                style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+                id="startTimePicker"
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  const d = new Date(e.target.value);
+                  if (isNaN(d.getTime())) return;
+                  const formatted = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  handleCaseChange('startTime', formatted);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const picker = document.getElementById('startTimePicker') as HTMLInputElement;
+                  if (picker) { picker.showPicker?.(); picker.focus(); }
+                }}
+                style={{
+                  background: '#222',
+                  border: '1px solid #444',
+                  color: '#888',
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  lineHeight: 1,
+                  flexShrink: 0
+                }}
+                title="Open date picker"
+              >
+                📅
+              </button>
+            </div>
+            <p style={{ fontSize: 'var(--type-small)', color: '#555', margin: '4px 0 0' }}>
+              Type any format — this is provided as context to suspects. Use the 📅 button for a date picker.
+            </p>
           </InputGroup>
 
           <InputGroup>
@@ -1471,7 +1512,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <StyledInput
-                        placeholder="Day (e.g. Day of the Crime)"
+                        placeholder="Day (e.g. Today, Yesterday)"
                         value={event.day || ''}
                         onChange={(e) => {
                           const newList = [...(draftCase.initialTimeline || [])];
@@ -1524,7 +1565,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </ModuleItem>
               ))}
               <SmallButton onClick={() => {
-                const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Day of the Crime', dayOffset: 0 }];
+                const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Today', dayOffset: 0 }];
                 handleCaseChange('initialTimeline', newList);
               }} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
             </ModuleContainer>
@@ -1840,7 +1881,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
                           <div style={{ display: 'flex', gap: '5px' }}>
                             <StyledInput
-                              placeholder="Day (e.g. Day of the Crime)"
+                              placeholder="Day (e.g. Today, Yesterday)"
                               value={t.day || ''}
                               onChange={(e) => updateTimeline(i, 'day' as any, e.target.value)}
                               style={{ flex: 2 }}

@@ -35,7 +35,7 @@ export const getSuspectResponse = async (
   const alibiStr = suspect.alibi ? `"${suspect.alibi.statement}" (Loc: ${suspect.alibi.location}, Verified: ${suspect.alibi.isTrue})` : "None";
   const relsStr = (suspect.relationships || []).map(r => `${r.targetName} (${r.type}): ${r.description}`).join('; ');
   const factsStr = (suspect.knownFacts || []).join('; ');
-  const timelineStr = (suspect.timeline || []).map(t => `[${t.day || 'Day of the Crime'}, ${t.time}] ${t.activity}`).join(' -> ');
+  const timelineStr = (suspect.timeline || []).map(t => `[${t.day || 'Today'}, ${t.time}] ${t.activity}`).join(' -> ');
 
   // Separation of Evidence: Revealed vs Unrevealed
   const discoveredTitles = new Set(discoveredEvidence.map(e => e.title.toLowerCase()));
@@ -118,34 +118,51 @@ export const getSuspectResponse = async (
     let interrogationContextStr = '';
     if (caseData.startTime) {
       const startDate = new Date(caseData.startTime);
-      const formattedDate = startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const formattedTime = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const isValidDate = !isNaN(startDate.getTime());
 
-      // Current time context — if gameTime is provided, use it; otherwise fall back to startTime
-      const currentDate = currentGameTime ? new Date(currentGameTime) : startDate;
-      const currentFormattedTime = currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      const currentFormattedDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      if (isValidDate) {
+        const formattedDate = startDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const formattedTime = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-      // Calculate how long they've been sitting
-      const elapsedMs = currentDate.getTime() - startDate.getTime();
-      const elapsedMins = Math.floor(elapsedMs / (60 * 1000));
-      const elapsedStr = elapsedMins < 60
-        ? `${elapsedMins} minutes`
-        : `${Math.floor(elapsedMins / 60)} hour${Math.floor(elapsedMins / 60) > 1 ? 's' : ''} and ${elapsedMins % 60} minutes`;
+        // Current time context — if gameTime is provided, use it; otherwise fall back to startTime
+        const currentDate = currentGameTime ? new Date(currentGameTime) : startDate;
+        const currentFormattedTime = currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const currentFormattedDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-      interrogationContextStr = `
-        --- INTERROGATION SITUATION ---
-        You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
-        The interrogation began on ${formattedDate} at ${formattedTime}.
-        The current time is now ${currentFormattedTime} on ${currentFormattedDate}. You have been in this interrogation room for approximately ${elapsedStr}.
-        The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
-        You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
-        You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
-        **TIME AWARENESS:** You know roughly what time it is. If you've been sitting here for a long time, you may be tired, irritable, or impatient. You can reference the time naturally (e.g. "It's almost midnight and I've been here for two hours", "Can we wrap this up?").
+        // Calculate how long they've been sitting
+        const elapsedMs = currentDate.getTime() - startDate.getTime();
+        const elapsedMins = Math.floor(elapsedMs / (60 * 1000));
+        const elapsedStr = elapsedMins < 60
+          ? `${elapsedMins} minutes`
+          : `${Math.floor(elapsedMins / 60)} hour${Math.floor(elapsedMins / 60) > 1 ? 's' : ''} and ${elapsedMins % 60} minutes`;
 
-        --- YOUR DISPOSITION ---
-        ${dispositionStr}
-      `;
+        interrogationContextStr = `
+          --- INTERROGATION SITUATION ---
+          You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
+          The interrogation began on ${formattedDate} at ${formattedTime}.
+          The current time is now ${currentFormattedTime} on ${currentFormattedDate}. You have been in this interrogation room for approximately ${elapsedStr}.
+          The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
+          You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
+          You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+          **TIME AWARENESS:** You know roughly what time it is. If you've been sitting here for a long time, you may be tired, irritable, or impatient. You can reference the time naturally (e.g. "It's almost midnight and I've been here for two hours", "Can we wrap this up?").
+
+          --- YOUR DISPOSITION ---
+          ${dispositionStr}
+        `;
+      } else {
+        // startTime is a custom string (e.g. "Late evening, night of the gala") — pass it as-is
+        interrogationContextStr = `
+          --- INTERROGATION SITUATION ---
+          You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
+          The investigation started: ${caseData.startTime}.
+          The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
+          You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
+          You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+
+          --- YOUR DISPOSITION ---
+          ${dispositionStr}
+        `;
+      }
     } else {
       interrogationContextStr = `
         --- INTERROGATION SITUATION ---
@@ -286,10 +303,10 @@ export const getSuspectResponse = async (
              - If INNOCENT but GUARDED: Share reluctantly but honestly. You're annoyed but understand why they're asking.
              - If GUILTY or EVASIVE: Deflect, provide vague answers, lie about specifics, or try to redirect the conversation — but NEVER question why the detective is asking. You know exactly why.
              - NEVER say things like "Why do you need to know my schedule?" or "Why does my timeline matter?" — this is a murder investigation and everyone knows the drill.
-           - For EACH entry in the array: 'time' = the EXACT time string from your TIMELINE, 'statement' = YOUR EXACT WORDS from your dialogue text about this time (quote what you actually said, not the raw timeline data — the player will see this on the timeline), 'day' = the day label from your TIMELINE (e.g. "Day of the Crime", "1 Day Before"), 'dayOffset' = the numeric offset from your TIMELINE.
+           - For EACH entry in the array: 'time' = the EXACT time string from your TIMELINE, 'statement' = YOUR EXACT WORDS from your dialogue text about this time (quote what you actually said, not the raw timeline data — the player will see this on the timeline), 'day' = the day label from your TIMELINE (e.g. "Today", "Yesterday", "2 Days Ago"), 'dayOffset' = the numeric offset from your TIMELINE.
            - If the detective doesn't ask about timing, set this to an EMPTY ARRAY []. Most responses should have this as [].
            - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatements[].time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
-           - **DAY CONTEXT (CRITICAL):** When mentioning events from days other than the day of the crime, you MUST reference which day it was (e.g. "The day before, around 3:00 PM, I..."). The 'day' and 'dayOffset' fields in each revealedTimelineStatements entry MUST match your TIMELINE data.
+           - **DAY CONTEXT (CRITICAL):** When mentioning events from days other than today, you MUST reference which day it was (e.g. "Yesterday, around 3:00 PM, I...", "Two days ago, I..."). The 'day' and 'dayOffset' fields in each revealedTimelineStatements entry MUST match your TIMELINE data.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
@@ -376,7 +393,7 @@ export const generateCaseSummary = async (
   ).join("\n");
 
   const mergedTimelines = caseData.suspects.map(s =>
-    `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.day || 'Day of the Crime'}, ${t.time}] ${t.activity}`).join('\n')}`
+    `PROFILE: ${s.name} (Gender: ${s.gender || 'Unknown'})\nTIMELINE:\n${(s.timeline || []).map(t => `[${t.day || 'Today'}, ${t.time}] ${t.activity}`).join('\n')}`
   ).join('\n\n');
 
   const prompt = `

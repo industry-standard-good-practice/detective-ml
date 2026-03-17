@@ -381,9 +381,8 @@ const App: React.FC = () => {
     const officerName = selectedCase.officer?.name || "The Chief";
     const officerGreeting = `This is ${officerName}. I'm busy, so make it quick. What do you have?`;
 
-    const caseStartTime = selectedCase.startTime
-      ? new Date(selectedCase.startTime).getTime()
-      : INITIAL_TIME_MS;
+    const parsedStartMs = selectedCase.startTime ? new Date(selectedCase.startTime).getTime() : NaN;
+    const caseStartTime = !isNaN(parsedStartMs) ? parsedStartMs : INITIAL_TIME_MS;
 
     setGameState(prev => ({
       ...prev,
@@ -399,7 +398,7 @@ const App: React.FC = () => {
         suspectName: 'POLICE REPORT',
         time: t.time,
         statement: t.activity || (t as any).statement || '',
-        day: t.day || 'Day of the Crime',
+        day: t.day || 'Today',
         dayOffset: t.dayOffset ?? 0
       })),
       chatHistory: initialHistory,
@@ -673,7 +672,7 @@ const App: React.FC = () => {
                 const alreadyExists = newTimelineStatements.some(ts => 
                   ts.suspectId === currentSuspectId && 
                   ts.time === entry.time &&
-                  ts.day === (entry.day || 'Day of the Crime')
+                  ts.day === (entry.day || 'Today')
                 );
                 if (!alreadyExists) {
                   const tsId = `ts-${Date.now()}-${i}`;
@@ -684,7 +683,7 @@ const App: React.FC = () => {
                     suspectPortrait: suspect.portraits?.[Emotion.NEUTRAL] || undefined,
                     time: entry.time,
                     statement: entry.statement,
-                    day: entry.day || 'Day of the Crime',
+                    day: entry.day || 'Today',
                     dayOffset: entry.dayOffset ?? 0
                   });
                   setNewTimelineIds(prev => new Set(prev).add(tsId));
@@ -840,7 +839,7 @@ const App: React.FC = () => {
             const alreadyExists = newTimelineStatements.some(ts => 
               ts.suspectId === currentSuspectId && 
               ts.time === entry.time &&
-              ts.day === (entry.day || 'Day of the Crime')
+              ts.day === (entry.day || 'Today')
             );
 
             if (!alreadyExists) {
@@ -852,7 +851,7 @@ const App: React.FC = () => {
                 suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
                 time: entry.time,
                 statement: entry.statement,
-                day: entry.day || 'Day of the Crime',
+                day: entry.day || 'Today',
                 dayOffset: entry.dayOffset ?? 0
               });
               setNewTimelineIds(prev => new Set(prev).add(tsId));

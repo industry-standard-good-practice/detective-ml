@@ -412,8 +412,8 @@ export const enforceTimelines = (caseData: any) => {
 };
 
 /**
- * Validates and fixes the startTime to ensure it falls after all crime-day timeline events.
- * If the startTime is before the latest event on the day of the crime, it is shifted forward.
+ * Validates and fixes the startTime to ensure it falls after all same-day timeline events.
+ * If the startTime is before the latest event on today (dayOffset 0), it is shifted forward.
  */
 export const enforceStartTimeAlignment = (caseData: any) => {
     if (!caseData.startTime) return caseData;
@@ -434,7 +434,7 @@ export const enforceStartTimeAlignment = (caseData: any) => {
         return { hours, minutes };
     };
 
-    // Collect all crime-day timeline events (dayOffset === 0)
+    // Collect all today's timeline events (dayOffset === 0)
     const crimeDayEvents: { hours: number; minutes: number }[] = [];
 
     // From initialTimeline
@@ -669,15 +669,15 @@ const PROMPT_RULES = {
 - Every timeline entry has FOUR separate fields: 'time', 'activity', 'day', and 'dayOffset'.
 - The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "11:30 AM"). Do NOT put the activity description in the time field.
 - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
-- The 'day' field is a human-readable label for which day this event occurred relative to the crime. Examples: "Day of the Crime", "1 Day Before", "2 Days Before", "1 Week Before", "3 Months Before", "40 Years Before", "1 Day After". Use descriptive labels.
-- The 'dayOffset' field is a NUMBER used for sorting. 0 = day of the crime, -1 = 1 day before, -7 = 1 week before, -365 = 1 year before, +1 = 1 day after. Must be consistent with the 'day' label.
+- The 'day' field is a human-readable label for which day this event occurred RELATIVE TO THE INVESTIGATION (today = when suspects are being questioned). Examples: "Today", "Yesterday", "2 Days Ago", "Last Week", "3 Months Ago", "40 Years Ago". Use natural, conversational labels.
+- The 'dayOffset' field is a NUMBER used for sorting. 0 = today (day of questioning), -1 = yesterday, -2 = 2 days ago, -7 = last week, -365 = 1 year ago. Must be consistent with the 'day' label. Negative numbers = past. Most crime events will be on dayOffset 0 (today) or -1 (yesterday).
 - **12-HOUR FORMAT ONLY:** ALL times MUST use 12-hour AM/PM format. NEVER use 24-hour military time (e.g. "20:00", "23:30"). Always write "8:00 PM", not "20:00".
 - WRONG: { time: "8:00 PM: Arrived at the lab", activity: "", day: "", dayOffset: 0 }
-- WRONG: { time: "20:00", activity: "Arrived at the lab", day: "Day of the Crime", dayOffset: 0 }
-- CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift", day: "Day of the Crime", dayOffset: 0 }
-- CORRECT: { time: "3:00 PM", activity: "Had a heated argument with the victim", day: "1 Day Before", dayOffset: -1 }
-- CORRECT: { time: "10:00 AM", activity: "Signed the insurance policy", day: "2 Weeks Before", dayOffset: -14 }
-- **MULTI-DAY TIMELINES:** Cases SHOULD span multiple days when it makes narrative sense. Suspects' timelines should include events from before the crime that establish motive, opportunity, and alibi. The initialTimeline should include key events leading up to discovery.
+- WRONG: { time: "20:00", activity: "Arrived at the lab", day: "Today", dayOffset: 0 }
+- CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift", day: "Today", dayOffset: 0 }
+- CORRECT: { time: "3:00 PM", activity: "Had a heated argument with the victim", day: "Yesterday", dayOffset: -1 }
+- CORRECT: { time: "10:00 AM", activity: "Signed the insurance policy", day: "2 Weeks Ago", dayOffset: -14 }
+- **MULTI-DAY TIMELINES:** Cases SHOULD span multiple days when it makes narrative sense. Suspects' timelines should include events from before today that establish motive, opportunity, and alibi. The initialTimeline should include key events leading up to discovery.
 - This applies to BOTH suspect timelines AND the case-level initialTimeline.`,
 
     /** Rules for keeping initial timeline spoiler-free — used in generation, consistency, and edit */
@@ -730,8 +730,8 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - TIMELINE: A step-by-step list of their movements (at least 3 entries). Each entry has FOUR fields:
   * 'time': ONLY the timestamp (e.g. "8:00 PM"). Do NOT include the activity here.
   * 'activity': The description of what happened (e.g. "Arrived at the restaurant for dinner").
-  * 'day': Which day (e.g. "Day of the Crime", "1 Day Before"). Must be a human-readable label.
-  * 'dayOffset': Numeric offset for sorting (0 = day of crime, -1 = day before, etc.).
+  * 'day': Which day relative to the investigation (e.g. "Today", "Yesterday", "2 Days Ago"). Must be a human-readable label. "Today" = the day of questioning.
+  * 'dayOffset': Numeric offset for sorting (0 = today, -1 = yesterday, -2 = 2 days ago, etc.).
   The timeline SHOULD span multiple days when relevant — include events from days before that establish motive or opportunity.
 - PROFESSIONAL BACKGROUND: A valid job or skill set.
 - WITNESS OBSERVATIONS: Something specific they saw or heard.
@@ -772,8 +772,8 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
     START_TIME_ALIGNMENT: `**START TIME — TIMELINE ALIGNMENT (CRITICAL):**
 - The 'startTime' field is an ISO datetime string (e.g. "2030-09-12T23:30") representing when the player begins their investigation.
 - The startTime MUST be AFTER all crime-day events in the initialTimeline and suspect timelines. The detective cannot arrive before the crime is discovered.
-- Cross-reference the latest initialTimeline entry on the day of the crime (dayOffset: 0). The startTime MUST be at least 30 minutes after this event.
-- Cross-reference suspect timeline entries on the day of the crime. The startTime should be after the crime window.
+- Cross-reference the latest initialTimeline entry on the day of the investigation/questioning (dayOffset: 0). The startTime MUST be at least 30 minutes after this event.
+- Cross-reference suspect timeline entries for today. The startTime should be after the crime window.
 - If any timeline events on the crime day have times LATER than startTime, either:
   (a) Adjust the startTime to be after those events, OR
   (b) Move those events to earlier times if narratively appropriate.
