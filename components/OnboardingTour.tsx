@@ -176,8 +176,8 @@ const STEPS: Record<number, StepConfig> = {
     mobileAccordion: "timeline"
   },
   [OnboardingStep.SUSPECT_CARDS]: {
-    title: "Suspect Profiles",
-    description: "These are your persons of interest. To begin an interrogation, click on a suspect's card. Try clicking one now to proceed.",
+    title: "Persons of Interest",
+    description: "These are the people involved in the case — suspects and victims alike. Click on any card to begin. Suspects can be interrogated; the victim's body can be examined for clues.",
     targetId: "suspect-cards-container",
     position: "top",
     requiresAction: true,
@@ -186,8 +186,8 @@ const STEPS: Record<number, StepConfig> = {
   },
   [OnboardingStep.FLIP_CARD]: {
     title: "Deep Dive",
-    description: "Every suspect has information on the back. Click the [Flip Card] button to see their background and role.",
-    completedDescription: "Great! Always check a suspect's profile before interrogating them. Their background, profession, and role can reveal motives and help you ask the right questions.",
+    description: "Every card has information on the back. Click the [Flip Card] button to see their background and role.",
+    completedDescription: "Great! Always check a profile before diving in. Their background, profession, and role can reveal motives and help you ask the right questions — or know where to look on the body.",
     targetId: "flip-card-button",
     completedTargetId: "active-suspect-card",
     position: "right",
@@ -197,13 +197,13 @@ const STEPS: Record<number, StepConfig> = {
   },
   [OnboardingStep.TALK_ACTION]: {
     title: "Interrogation Tools",
-    description: "Use the input bar to talk to suspects or perform actions. You can ask about evidence by clicking the [+] button or just type your questions.",
+    description: "Use the input bar to interact. Question suspects, perform actions on the victim's body, or present evidence by clicking the [+] button.",
     targetId: "unified-input-bar",
     position: "top"
   },
   [OnboardingStep.AGGRAVATION]: {
     title: "Aggravation Meter",
-    description: "Watch this meter carefully. If you push a suspect too hard or ask repetitive questions, they'll shut down and call their lawyer.",
+    description: "This tracks how agitated a suspect is during interrogation. Push too hard and they'll shut down and call their lawyer. It doesn't apply to the victim — the dead don't get angry.",
     targetId: "aggravation-meter",
     position: "left",
     requiresIntel: true

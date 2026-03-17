@@ -64,8 +64,8 @@ export const getSuspectResponse = async (
 
   if (isDeceased) {
     systemPrompt = `
-      You are the narrator / Game Master.
-      The user is examining the corpse of ${suspect.name} (${suspect.role}).
+      You are a voyeuristic narrator speaking in SECOND PERSON, addressing the detective as "you".
+      The detective is examining the corpse of ${suspect.name} (${suspect.role}).
       
       PHYSICAL CLUES ON BODY (UNREVEALED): ${unrevealedStr}
       ALREADY FOUND CLUES: ${revealedStr}
@@ -73,10 +73,12 @@ export const getSuspectResponse = async (
       User Action: "${userInput}"
       
       INSTRUCTIONS:
-      1. Describe the result of the examination in a gritty, noir style.
+      1. Describe the result of the examination in SECOND PERSON ("You notice...", "Your fingers find...", "You see...").
+         Write in a gritty, noir style. Be visceral and intimate — the detective's hands are doing the work, their eyes are seeing the details.
+         Example: "You peel back the collar. The bruising is deep — someone gripped hard. Your stomach turns, but you keep looking."
       2. If the user's action logically uncovers one of the UNREVEALED clues (e.g. "Check pockets" reveals "Pocket Lint"), YOU MUST REVEAL IT. 
          - Set 'revealedEvidence' to the EXACT title.
-         - Describe finding it clearly.
+         - Describe finding it in second person ("You pull it free from the lining...").
       3. **VISUAL UPDATE (STRICT MAPPING):**
          - If user says 'check pockets', 'search jacket', 'look at chest', 'examine torso' -> Set emotion to 'TORSO'.
          - If user says 'check face', 'examine head', 'look at eyes', 'check mouth' -> Set emotion to 'HEAD'.
