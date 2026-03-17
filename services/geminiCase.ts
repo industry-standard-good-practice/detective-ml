@@ -1065,11 +1065,15 @@ ${userChangeLog}
     // --- HYDRATE IMAGES BACK INTO THE AI CASE ---
     const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
 
-    // CRITICAL: Preserve original case identity — AI generates a new ID but we must keep the original
+    // CRITICAL: Preserve original case identity & metadata — AI only returns narrative fields
     hydratedCase.id = caseData.id;
     hydratedCase.authorId = caseData.authorId;
+    hydratedCase.authorDisplayName = caseData.authorDisplayName;
     hydratedCase.version = caseData.version;
     hydratedCase.isUploaded = caseData.isUploaded;
+    hydratedCase.isFeatured = caseData.isFeatured;
+    hydratedCase.createdAt = caseData.createdAt;
+    hydratedCase.difficulty = caseData.difficulty;
     // Prefer the AI's startTime if it returned one (it may have corrected alignment);
     // only fall back to original if AI returned nothing
     if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
@@ -1280,11 +1284,15 @@ ${userChangeLog}
         // --- HYDRATE IMAGES ---
         const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
 
-        // CRITICAL: Preserve original case identity
+        // CRITICAL: Preserve original case identity & metadata — AI only returns narrative fields
         hydratedCase.id = caseData.id;
         hydratedCase.authorId = caseData.authorId;
+        hydratedCase.authorDisplayName = caseData.authorDisplayName;
         hydratedCase.version = caseData.version;
         hydratedCase.isUploaded = caseData.isUploaded;
+        hydratedCase.isFeatured = caseData.isFeatured;
+        hydratedCase.createdAt = caseData.createdAt;
+        hydratedCase.difficulty = caseData.difficulty;
         // Prefer the AI's startTime if it returned one (it may have corrected alignment);
         // only fall back to original if AI returned nothing
         if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;

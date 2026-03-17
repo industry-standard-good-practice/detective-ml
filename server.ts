@@ -122,7 +122,7 @@ async function startServer() {
       const mimeType = (req.headers["content-type"] || "audio/mp4").split(";")[0];
 
       // Call Gemini REST API directly (avoids importing the SDK on the server)
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
       const geminiRes = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

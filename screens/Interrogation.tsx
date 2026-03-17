@@ -1278,75 +1278,81 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
   // Ref to hold native SpeechRecognition instance for cleanup
   const recognitionRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Detect iOS (all iOS browsers have buggy native SpeechRecognition in standalone/PWA)
+  // Detect iOS
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   const startListening = () => {
     if (listening || transcribing) return;
 
-    // On iOS, skip native SpeechRecognition — it crashes WebKit in PWA/standalone mode.
-    // Use MediaRecorder + Gemini transcription instead (requires HTTPS).
-    if (!isIOS && hasNativeSpeechRecognition()) {
+    // On iOS, native webkitSpeechRecognition is broken (onresult never fires).
+    // Use iOS's built-in keyboard dictation instead — it's reliable and free.
+    if (isIOS) {
+      // Focus the input to bring up the keyboard
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+      toast('Tap the 🎙 on your keyboard for voice input', {
+        duration: 5000,
+        icon: '⌨️',
+        position: 'bottom-center',
+        style: { marginBottom: '120px', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' },
+      });
+      return;
+    }
+
+    if (!hasNativeSpeechRecognition()) {
+      if (!window.isSecureContext) {
+        toast.error('Microphone requires HTTPS. Access via localhost or enable HTTPS.');
+      } else {
+        toast.error('Speech recognition is not supported in this browser.');
+      }
+      return;
+    }
+
+    try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => setListening(true);
       recognition.onend = () => {
         setListening(false);
         recognitionRef.current = null;
       };
-      recognition.onerror = () => {
+      recognition.onerror = (e: any) => {
         setListening(false);
         recognitionRef.current = null;
       };
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
+        let finalTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setInputVal(prev => prev + (prev ? ' ' : '') + finalTranscript);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-      return;
-    }
-
-    // Fallback: MediaRecorder + Gemini transcription (iOS Safari, PWA mode)
-    if (hasMediaRecorderFallback()) {
-      startFallbackListening(
-        () => setListening(true),
-        () => { setListening(false); setTranscribing(false); },
-        (transcript) => {
-          setInputVal(prev => prev + (prev ? ' ' : '') + transcript);
-        },
-        (errorMsg) => toast.error(errorMsg)
-      );
-      return;
-    }
-
-    // If we get here, nothing works
-    if (!window.isSecureContext) {
-      toast.error('Microphone requires HTTPS. Access via localhost or enable HTTPS.');
-    } else {
-      toast.error('Speech recognition is not supported in this browser.');
+    } catch (err) {
+      toast.error('Speech recognition failed to start.');
     }
   };
 
   const toggleListening = () => {
     if (listening) {
-      // Stop native recognition if active
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (_) {}
-        recognitionRef.current = null;
+        try { recognitionRef.current.stop(); } catch (_) { }
       }
-      // Stop MediaRecorder fallback — triggers transcription
-      stopFallbackListening();
-      setTranscribing(true);
     } else {
       startListening();
     }
@@ -1811,6 +1817,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               </PlusButtonWrapper>
 
               <GhostInput
+                ref={inputRef}
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -1904,6 +1911,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   )}
                 </PlusButtonWrapper>
                 <GhostInput
+                  ref={inputRef}
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
