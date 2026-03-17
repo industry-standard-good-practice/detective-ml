@@ -996,7 +996,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   onClearUnread
 }) => {
   const [inputVal, setInputVal] = useState('');
-  const { completeStep } = useOnboarding();
+  const { completeStep, isActive: isOnboarding, currentStep: onboardingStep } = useOnboarding();
   const [inputType, setInputType] = useState<'talk' | 'action'>('talk');
   const [selectedEvidence, setSelectedEvidence] = useState<(Evidence | TimelineStatement)[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
@@ -1872,6 +1872,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         <ModalOverlay id="mobile-profile-modal" onClick={() => setShowMobileProfile(false)}>
           <div onClick={e => e.stopPropagation()}>
             <SuspectCard
+              key={`mobile-profile-${suspect.id}-${isOnboarding}-${onboardingStep}`}
               id="active-suspect-card"
               suspect={suspect}
               emotion={emotion}
@@ -1879,7 +1880,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
               width="300px"
               height="450px"
               variant="default"
-              initialFlipped={true}
+              initialFlipped={!(isOnboarding && onboardingStep === OnboardingStep.FLIP_CARD)}
               onFlip={(flipped) => {
                 if (flipped) {
                   completeStep(OnboardingStep.FLIP_CARD, false);

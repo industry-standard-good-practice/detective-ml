@@ -153,8 +153,18 @@ const NetworkGrid = styled.div`
   }
 `;
 
-const CaseCard = styled.div<{ $isCommunity?: boolean; $isActive?: boolean }>`
-  border: 2px solid ${props => props.$isCommunity ? '#0aa' : '#333'};
+type CardTheme = 'green' | 'cyan' | 'gold';
+
+const THEME_COLORS: Record<CardTheme, { border: string; bright: string; glow: string; badgeBg: string }> = {
+  green:  { border: '#0a0', bright: '#0f0', glow: 'rgba(0, 255, 0, 0.2)',       badgeBg: '#031' },
+  cyan:   { border: '#0aa', bright: '#0ff', glow: 'rgba(0, 255, 255, 0.2)',     badgeBg: '#044' },
+  gold:   { border: '#a80', bright: '#fc0', glow: 'rgba(255, 200, 0, 0.2)',     badgeBg: '#442' },
+};
+
+const getTheme = (theme?: CardTheme) => THEME_COLORS[theme || 'cyan'];
+
+const CaseCard = styled.div<{ $theme?: CardTheme; $isActive?: boolean }>`
+  border: 2px solid ${props => getTheme(props.$theme).border};
   padding: 20px;
   cursor: pointer;
   transition: all 0.2s;
@@ -166,9 +176,9 @@ const CaseCard = styled.div<{ $isCommunity?: boolean; $isActive?: boolean }>`
 
   @media (min-width: 769px) {
     &:hover {
-      border-color: ${props => props.$isCommunity ? '#0ff' : '#fff'};
+      border-color: ${props => getTheme(props.$theme).bright};
       transform: translateY(-2px);
-      box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+      box-shadow: 0 0 15px ${props => getTheme(props.$theme).glow};
     }
   }
 
@@ -176,15 +186,15 @@ const CaseCard = styled.div<{ $isCommunity?: boolean; $isActive?: boolean }>`
     overflow: hidden;
     
     ${props => props.$isActive && `
-      border-color: ${props.$isCommunity ? '#0ff' : '#fff'};
+      border-color: ${getTheme(props.$theme).bright};
       transform: translateY(-2px);
-      box-shadow: 0 0 15px ${props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+      box-shadow: 0 0 15px ${getTheme(props.$theme).glow};
     `}
     
     &:active {
-      border-color: ${props => props.$isCommunity ? '#0ff' : '#fff'};
+      border-color: ${props => getTheme(props.$theme).bright};
       transform: translateY(-2px);
-      box-shadow: 0 0 15px ${props => props.$isCommunity ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255,255,255,0.2)'};
+      box-shadow: 0 0 15px ${props => getTheme(props.$theme).glow};
     }
   }
 `;
@@ -250,31 +260,6 @@ const CreateCard = styled(CaseCard)`
   @media (max-width: 768px) {
     height: 150px;
     min-height: 150px;
-  }
-`;
-
-const DraftCard = styled(CaseCard)`
-  border: 2px solid #a80;
-  
-  @media (min-width: 769px) {
-    &:hover {
-      border-color: #fc0;
-      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
-    }
-  }
-
-  @media (max-width: 768px) {
-    ${props => props.$isActive && `
-      border-color: #fc0;
-      transform: translateY(-2px);
-      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
-    `}
-    
-    &:active {
-      border-color: #fc0;
-      transform: translateY(-2px);
-      box-shadow: 0 0 15px rgba(255, 200, 0, 0.2);
-    }
   }
 `;
 
@@ -499,8 +484,8 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     // Add drafts first, but merge heroImageUrl from published version if local is missing
     localDrafts.forEach(d => {
       const published = publishedMap.get(d.id);
-      if (published && !d.heroImageUrl && published.heroImageUrl) {
-        merged.set(d.id, { ...d, heroImageUrl: published.heroImageUrl });
+      if (published) {
+        merged.set(d.id, { ...d, heroImageUrl: d.heroImageUrl || published.heroImageUrl, isFeatured: published.isFeatured, isUploaded: published.isUploaded ?? d.isUploaded });
       } else {
         merged.set(d.id, d);
       }
@@ -514,30 +499,36 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     if (activeTab === 'mycases') return observeCarousel(myCasesGridRef.current, setActiveMyCaseId);
   }, [activeTab, myCases.length]);
 
-  const renderCaseCardContent = (c: CaseData, isCommunity: boolean) => (
-    <>
-      <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
-        {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
-      </CaseImage>
-      <CardTextContent>
-        <h3 style={{ color: isCommunity ? '#0ff' : '#fff', fontSize: 'var(--type-h3)', margin: '0 0 5px 0' }}>{c.title || "[ NO TITLE ]"}</h3>
-        <div style={{ marginBottom: '10px' }}>
-          <span style={{ background: isCommunity ? '#044' : '#333', color: isCommunity ? '#0ff' : undefined, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
-          <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
-          {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
-        </div>
-        <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
-        <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
-        {caseStats[c.id] && caseStats[c.id].plays > 0 && (
-          <StatsLine>
-            <span>▶ {caseStats[c.id].plays} plays</span>
-            <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
-            <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
-          </StatsLine>
-        )}
-      </CardTextContent>
-    </>
-  );
+  const renderCaseCardContent = (c: CaseData, theme: CardTheme, showFeaturedBadge = false) => {
+    const colors = THEME_COLORS[theme];
+    return (
+      <>
+        <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
+          {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
+        </CaseImage>
+        <CardTextContent>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+            {showFeaturedBadge && c.isFeatured && <span style={{ background: colors.bright, color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>FEATURED</span>}
+            <h3 style={{ color: colors.bright, fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ background: colors.badgeBg, color: colors.bright, padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
+            <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
+            {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
+          </div>
+          <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
+          <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
+          {caseStats[c.id] && caseStats[c.id].plays > 0 && (
+            <StatsLine>
+              <span>▶ {caseStats[c.id].plays} plays</span>
+              <span style={{ color: '#0a0' }}>▲ {caseStats[c.id].upvotes || 0}</span>
+              <span style={{ color: '#a00' }}>▼ {caseStats[c.id].downvotes || 0}</span>
+            </StatsLine>
+          )}
+        </CardTextContent>
+      </>
+    );
+  };
 
   return (
     <Container>
@@ -584,8 +575,8 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
             {featuredCases.map((c) => {
               if (!c.id) return null;
               return (
-                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer" data-case-id={c.id} $isActive={activeFeaturedId === c.id}>
-                  {renderCaseCardContent(c, false)}
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} data-cursor="pointer" data-case-id={c.id} $isActive={activeFeaturedId === c.id} $theme="green">
+                  {renderCaseCardContent(c, 'green')}
                   <AdminControls onClick={(e) => e.stopPropagation()}>
                     {(isAdmin || c.authorId === userId) && onEditCase && (
                       <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
@@ -625,8 +616,8 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
             {sortedNetworkCases.map((c) => {
               if (!c.id) return null;
               return (
-                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $isCommunity data-cursor="pointer" data-case-id={c.id} $isActive={activeNetworkId === c.id}>
-                  {renderCaseCardContent(c, true)}
+                <CaseCard key={c.id} onClick={() => onSelectCase(c.id)} $theme="cyan" data-cursor="pointer" data-case-id={c.id} $isActive={activeNetworkId === c.id}>
+                  {renderCaseCardContent(c, 'cyan', true)}
                   <AdminControls onClick={(e) => e.stopPropagation()}>
                     {(isAdmin || c.authorId === userId) && onEditCase && (
                       <AdminButton key={`edit-${c.id}`} onClick={() => onEditCase(c.id)}>EDIT {c.version ? `v${c.version}` : ''}</AdminButton>
@@ -665,24 +656,26 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
               if (!c.id) return null;
               const isPublished = c.isUploaded;
               return (
-                <DraftCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer" data-case-id={c.id} $isActive={activeMyCaseId === c.id}>
+                <CaseCard key={c.id} onClick={() => isPublished ? onSelectCase(c.id) : onPlayDraft?.(c)} data-cursor="pointer" data-case-id={c.id} $isActive={activeMyCaseId === c.id} $theme="gold">
                   <CaseImage $src={c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl}>
                     {!(c.heroImageUrl || c.initialEvidence?.[0]?.imageUrl) && "[ NO IMAGE ]"}
                   </CaseImage>
                   <CardTextContent>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
                       {isPublished
-                        ? <span style={{ background: '#0a5', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
+                        ? <span style={{ background: '#fc0', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>LIVE</span>
                         : <DraftBadge>DRAFT</DraftBadge>
                       }
-                      <h3 style={{ color: isPublished ? '#0f0' : '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
+                      {c.isFeatured && <span style={{ background: '#a80', color: '#000', padding: '2px 8px', fontSize: 'var(--type-small)', fontWeight: 'bold', textTransform: 'uppercase' }}>FEATURED</span>}
+                      <h3 style={{ color: '#fc0', fontSize: 'var(--type-h3)', margin: 0 }}>{c.title || "[ NO TITLE ]"}</h3>
                     </div>
                     <div style={{ marginBottom: '10px' }}>
                       <span style={{ background: '#442', color: '#fc0', padding: '2px 8px', fontSize: 'var(--type-small)' }}>{c.type}</span>
                       <span style={{ marginLeft: '10px', color: c.difficulty === 'Hard' ? 'red' : c.difficulty === 'Medium' ? '#fa0' : 'green', fontSize: 'var(--type-small)' }}>{c.difficulty}</span>
                       {c.version && <span style={{ marginLeft: '10px', color: '#555', fontSize: 'var(--type-small)' }}>v{c.version}</span>}
                     </div>
-                    <p style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
+                    <AuthorLine>by {c.authorDisplayName || 'Unknown Author'}</AuthorLine>
+                    <p style={{ color: '#aaa', margin: '5px 0 0 0', fontSize: 'var(--type-body)', lineHeight: '1.4' }}>{c.description}</p>
                     {isPublished && caseStats[c.id] && caseStats[c.id].plays > 0 && (
                       <StatsLine>
                         <span>▶ {caseStats[c.id].plays} plays</span>
@@ -708,7 +701,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
                       <AdminButton $variant="delete" onClick={() => onDeleteMyCase(c.id)}>DELETE</AdminButton>
                     )}
                   </AdminControls>
-                </DraftCard>
+                </CaseCard>
               );
             })}
           </NetworkGrid>
