@@ -211,7 +211,7 @@ const App: React.FC = () => {
     return saved !== null ? parseFloat(saved) : 0.7;
   });
   const [mobileIntelOpen, setMobileIntelOpen] = useState(false);
-  const [unreadSuspects, setUnreadSuspects] = useState<Set<string>>(new Set());
+  const [unreadSuspects, setUnreadSuspects] = useState<Map<string, number>>(new Map());
   const [caseSelectionTab, setCaseSelectionTab] = useState<'featured' | 'network' | 'mycases'>('featured');
   const [boardAccordionTab, setBoardAccordionTab] = useState<string>('evidence');
 
@@ -662,7 +662,7 @@ const App: React.FC = () => {
         });
 
         // Mark suspect as having unread message (badge appears when user switches away)
-        setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
+        setUnreadSuspects(prev => { const next = new Map(prev); next.set(currentSuspectId, (next.get(currentSuspectId) || 0) + 1); return next; });
         // TTS playback is handled by Interrogation.tsx
 
     } catch (e: any) {
@@ -824,7 +824,7 @@ const App: React.FC = () => {
       });
 
       // Mark suspect as having unread message (badge appears when user switches away)
-      setUnreadSuspects(prev => new Set(prev).add(currentSuspectId));
+      setUnreadSuspects(prev => { const next = new Map(prev); next.set(currentSuspectId, (next.get(currentSuspectId) || 0) + 1); return next; });
       // TTS playback is handled by Interrogation.tsx
 
       setCurrentSuggestions(response.hints);
@@ -1464,6 +1464,7 @@ const App: React.FC = () => {
               onNavigate={navigateTo}
               onSendOfficerMessage={handleSendOfficerMessage}
               unreadSuspectIds={unreadSuspects}
+              thinkingSuspectId={thinkingSuspectId}
               initialMobileTab={previousScreenRef.current === ScreenState.INTERROGATION || previousScreenRef.current === ScreenState.ACCUSATION ? 'BOARD' : 'HQ'}
               initialAccordion={boardAccordionTab}
               onAccordionChange={setBoardAccordionTab}
@@ -1500,9 +1501,10 @@ const App: React.FC = () => {
               isAdmin={isAdmin}
               userId={user?.uid}
               unreadSuspectIds={unreadSuspects}
+              thinkingSuspectId={thinkingSuspectId}
               onClearUnread={(suspectId) => {
                 setUnreadSuspects(prev => {
-                  const next = new Set(prev);
+                  const next = new Map(prev);
                   next.delete(suspectId);
                   return next;
                 });

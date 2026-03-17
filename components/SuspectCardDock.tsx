@@ -87,19 +87,46 @@ const NotificationBadge = styled.div`
   position: absolute;
   top: 0;
   right: 0;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
   background: #0f0;
-  border-radius: 50%;
+  border-radius: 10px;
   border: 2px solid #000;
   z-index: 30;
   box-shadow: 0 0 8px #0f0, 0 0 16px rgba(0, 255, 0, 0.4);
   animation: notif-pulse 1.5s ease-in-out infinite;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: bold;
+  font-family: 'VT323', monospace;
+  padding: 0 4px;
 
   @keyframes notif-pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.3); opacity: 0.7; }
+  }
+`;
+
+const LoadingBadge = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #0f0;
+  border-top-color: transparent;
+  z-index: 30;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  pointer-events: none;
+  animation: spin 0.8s linear infinite;
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 `;
 
@@ -126,7 +153,8 @@ interface SuspectCardDockProps {
   onSelectSuspect: (id: string) => void;
   onFlipCard?: (flipped: boolean) => void;
   inactiveActionLabel?: string;
-  unreadSuspectIds?: Set<string>;
+  unreadSuspectIds?: Map<string, number>;
+  thinkingSuspectId?: string | null;
 }
 
 /* ─── Transform-based drag scroll hook ─── */
@@ -240,7 +268,8 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
   onSelectSuspect,
   onFlipCard,
   inactiveActionLabel = 'SWITCH',
-  unreadSuspectIds = new Set(),
+  unreadSuspectIds = new Map(),
+  thinkingSuspectId = null,
 }) => {
   const { hitRef, visualInnerRef, hitInnerRef } = useDragTranslate();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -291,7 +320,8 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
         <DockRowInner ref={visualInnerRef}>
           {inactiveSuspects.map(s => (
             <DockSlot key={`visual-${s.id}`} $hovered={hoveredId === s.id}>
-              {unreadSuspectIds.has(s.id) && <NotificationBadge />}
+              {(unreadSuspectIds.get(s.id) || 0) > 0 && <NotificationBadge>{unreadSuspectIds.get(s.id)}</NotificationBadge>}
+              {thinkingSuspectId === s.id && !(unreadSuspectIds.get(s.id)) && <LoadingBadge />}
               <motion.div
                 layoutId={`suspect-dock-${s.id}`}
                 transition={springTransition}

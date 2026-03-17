@@ -58,6 +58,14 @@ const GlobalStyle = createGlobalStyle`
     overflow: hidden;
     text-align: pretty;
   }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes notif-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+  }
   
   /* Ensure inputs and buttons use the font */
   button, input, textarea, select {
