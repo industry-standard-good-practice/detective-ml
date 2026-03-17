@@ -1298,7 +1298,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         duration: 5000,
         icon: '⌨️',
         position: 'bottom-center',
-        style: { marginBottom: '120px', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' },
+        style: { marginBottom: '150px', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' },
       });
       return;
     }

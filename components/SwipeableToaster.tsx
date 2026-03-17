@@ -67,18 +67,14 @@ const getPositionStyle = (
   offset: number
 ): React.CSSProperties => {
   const isTop = position.includes('top');
-  const isCenter = position.includes('center');
-  const isLeft = position.includes('left');
 
   return {
     position: 'absolute',
     [isTop ? 'top' : 'bottom']: offset,
-    ...(isCenter
-      ? { left: 10, right: 10, justifyContent: 'center' }
-      : isLeft
-        ? { left: 10 }
-        : { right: 10 }),
+    left: 10,
+    right: 10,
     display: 'flex',
+    justifyContent: 'center',
     pointerEvents: 'auto',
   };
 };
