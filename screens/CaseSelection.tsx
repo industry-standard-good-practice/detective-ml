@@ -492,7 +492,15 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     }
   }, [sortMode]);
 
-  const featuredCases = communityCases.filter(c => c.isFeatured && c.isUploaded === true);
+  const featuredCases = useMemo(() => {
+    const featured = communityCases.filter(c => c.isFeatured && c.isUploaded === true);
+    // Featured: sorted by popularity (most plays first)
+    return [...featured].sort((a, b) => {
+      const aPlays = caseStats[a.id]?.plays || 0;
+      const bPlays = caseStats[b.id]?.plays || 0;
+      return bPlays - aPlays;
+    });
+  }, [communityCases, caseStats]);
 
   const sortedNetworkCases = useMemo(() => {
     // CRITICAL: Only show explicitly published cases on the network tab
@@ -504,7 +512,7 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
         return bPlays - aPlays;
       });
     } else {
-      return [...cases].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return [...cases].sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
     }
   }, [communityCases, caseStats, sortMode]);
 
@@ -534,7 +542,8 @@ const CaseSelection: React.FC<CaseSelectionProps> = ({
     });
     // Add published cases that aren't already in drafts
     publishedByMe.forEach(c => { if (!merged.has(c.id)) merged.set(c.id, c); });
-    return Array.from(merged.values());
+    // My Cases: sorted by last edited (updatedAt, falling back to createdAt)
+    return Array.from(merged.values()).sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   }, [localDrafts, communityCases, userId]);
 
   useEffect(() => {

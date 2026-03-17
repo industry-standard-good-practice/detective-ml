@@ -85,7 +85,8 @@ export const publishCase = async (caseData: CaseData, authorId?: string, authorD
       version: caseData.version || 1,
       authorId: finalAuthorId,
       authorDisplayName: finalDisplayName,
-      createdAt: caseData.createdAt || Date.now()
+      createdAt: caseData.createdAt || Date.now(),
+      updatedAt: Date.now()
     };
     await set(caseRef, dataToPublish);
     console.log("[DEBUG] publishCase: Success");
@@ -170,13 +171,14 @@ export const updateCase = async (caseId: string, updates: Partial<CaseData>): Pr
         finalUpdates.version = (currentData.version || 1) + 1;
       }
       // Strip undefined and update
-      await update(caseRef, stripUndefined(finalUpdates));
+      await update(caseRef, stripUndefined({ ...finalUpdates, updatedAt: Date.now() }));
     } else {
       // New case — use set() to create it
       // CRITICAL: New cases are NEVER published
       finalUpdates.version = finalUpdates.version || 1;
       finalUpdates.createdAt = finalUpdates.createdAt || Date.now();
       finalUpdates.isUploaded = false;
+      finalUpdates.updatedAt = Date.now();
       
       // GUARD: Require authorDisplayName for new cases
       if (!finalUpdates.authorDisplayName) {
@@ -299,11 +301,12 @@ const DRAFTS_KEY = 'detectiveml_drafts';
 
 export const saveLocalDraft = (caseData: CaseData): void => {
   const drafts = fetchLocalDrafts();
+  const toSave = { ...caseData, updatedAt: Date.now() };
   const existing = drafts.findIndex(d => d.id === caseData.id);
   if (existing >= 0) {
-    drafts[existing] = caseData;
+    drafts[existing] = toSave;
   } else {
-    drafts.unshift(caseData);
+    drafts.unshift(toSave);
   }
   localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
 };

@@ -112,7 +112,8 @@ export interface CaseData {
   version?: number; // New: Tracks the version of the case
   authorId?: string; // New: Tracks the UID of the user who created the case
   authorDisplayName?: string; // Display name from Google Auth
-  createdAt?: number; // Epoch timestamp for sorting by recent
+  createdAt?: number; // Epoch timestamp for when the case was first created
+  updatedAt?: number; // Epoch timestamp for when the case was last edited
 }
 
 export interface CaseStats {

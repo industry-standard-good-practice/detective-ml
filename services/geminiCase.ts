@@ -496,12 +496,36 @@ export const enforceStartTimeAlignment = (caseData: any) => {
 /**
  * Ensures the initialTimeline always ends with a "suspects brought in for questioning" entry.
  * If missing, one is appended. If present but not last, it's moved to the end.
+ * The entry's time is guaranteed to be AFTER all other dayOffset 0 events.
  */
 export const ensureBroughtInEntry = (caseData: any) => {
     if (!caseData.initialTimeline) caseData.initialTimeline = [];
 
+    // Helper: parse "8:30 PM" → minutes-since-midnight (or null)
+    const parseTime12h = (t: string): number | null => {
+        if (!t) return null;
+        const m = t.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!m) return null;
+        let h = parseInt(m[1], 10);
+        const min = parseInt(m[2], 10);
+        const period = m[3].toUpperCase();
+        if (period === 'AM' && h === 12) h = 0;
+        if (period === 'PM' && h !== 12) h += 12;
+        return h * 60 + min;
+    };
+
+    // Helper: minutes-since-midnight → "10:30 PM"
+    const formatTime = (mins: number): string => {
+        let h = Math.floor(mins / 60) % 24;
+        const m = mins % 60;
+        const period = h >= 12 ? 'PM' : 'AM';
+        if (h === 0) h = 12;
+        else if (h > 12) h -= 12;
+        return `${h}:${String(m).padStart(2, '0')} ${period}`;
+    };
+
     // Try to extract a time string from startTime
-    let timeStr = 'Late Evening'; // fallback
+    let timeStr = ''; // will be determined below
     if (caseData.startTime) {
         // Try parsing as a real date first
         const parsed = new Date(caseData.startTime);
@@ -522,14 +546,39 @@ export const ensureBroughtInEntry = (caseData: any) => {
         }
     }
 
-    // Check if a "brought in" entry already exists
+    // Find the latest time among all OTHER dayOffset 0 events in initialTimeline
     const broughtInPatterns = /brought in|gathered.*for.*question|assembled.*for.*interview|arrive.*for.*question|called in.*for.*question/i;
+    let latestMinutes = -1;
+    for (const entry of caseData.initialTimeline) {
+        if ((entry.dayOffset ?? 0) !== 0) continue;
+        if (broughtInPatterns.test(entry.activity || '')) continue; // skip existing brought-in entries
+        const mins = parseTime12h(entry.time);
+        if (mins !== null && mins > latestMinutes) {
+            latestMinutes = mins;
+        }
+    }
+
+    // Ensure brought-in time is AFTER all other dayOffset 0 events
+    const broughtInMinutes = parseTime12h(timeStr);
+    if (latestMinutes >= 0) {
+        if (broughtInMinutes === null || broughtInMinutes <= latestMinutes) {
+            // The extracted time is earlier than or equal to existing events — shift forward
+            timeStr = formatTime(Math.min(latestMinutes + 30, 23 * 60 + 59));
+        }
+    }
+
+    // If we still don't have a parseable time, use a sensible fallback
+    if (!timeStr) {
+        timeStr = latestMinutes >= 0 ? formatTime(Math.min(latestMinutes + 30, 23 * 60 + 59)) : 'Late Evening';
+    }
+
+    // Check if a "brought in" entry already exists
     const existingIdx = caseData.initialTimeline.findIndex((e: any) =>
         broughtInPatterns.test(e.activity || '')
     );
 
     if (existingIdx !== -1) {
-        // Entry exists — ensure it's last, has correct day/dayOffset, and time matches startTime
+        // Entry exists — ensure it's last, has correct day/dayOffset, and time is correct
         const entry = caseData.initialTimeline[existingIdx];
         entry.day = 'Today';
         entry.dayOffset = 0;
