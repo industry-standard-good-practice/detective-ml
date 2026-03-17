@@ -972,7 +972,7 @@ interface InterrogationProps {
   isAdmin: boolean;
   userId?: string;
   unreadSuspectIds?: Map<string, number>;
-  thinkingSuspectId?: string | null;
+  thinkingSuspectIds?: Set<string>;
   onClearUnread?: (suspectId: string) => void;
 }
 
@@ -1003,7 +1003,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
   isAdmin,
   userId,
   unreadSuspectIds = new Map(),
-  thinkingSuspectId = null,
+  thinkingSuspectIds = new Set(),
   onClearUnread
 }) => {
   const [inputVal, setInputVal] = useState('');
@@ -1606,7 +1606,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         onSelectSuspect={onSwitchSuspect}
         inactiveActionLabel="SWITCH"
         unreadSuspectIds={unreadSuspectIds}
-        thinkingSuspectId={thinkingSuspectId}
+        thinkingSuspectIds={thinkingSuspectIds}
         onFlipCard={(flipped) => {
           if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
         }}

@@ -198,7 +198,7 @@ const App: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [pendingPublishDraftId, setPendingPublishDraftId] = useState<string | null>(null);
-  const [thinkingSuspectId, setThinkingSuspectId] = useState<string | null>(null);
+  const [thinkingSuspectIds, setThinkingSuspectIds] = useState<Set<string>>(new Set());
   const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
   const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
   const draftCheckConsistencyFnRef = useRef<(() => void) | null>(null);
@@ -458,7 +458,7 @@ const App: React.FC = () => {
       // ADVANCE TIME
       const newGameTime = gameTime + TIME_INCREMENT_MS;
       
-      setThinkingSuspectId(currentSuspectId);
+      setThinkingSuspectIds(prev => new Set(prev).add(currentSuspectId));
 
       // Reaction Logic
       let newPartnerEmotion = Emotion.NEUTRAL;
@@ -553,13 +553,13 @@ const App: React.FC = () => {
                 suspectEmotions: { ...prev.suspectEmotions, [currentSuspectId]: examResponse.emotion }
             }));
             
-            setThinkingSuspectId(null);
+            setThinkingSuspectIds(prev => { const next = new Set(prev); next.delete(currentSuspectId); return next; });
             return;
         }
         
         // For alive suspects with non-combat partner actions, just return
         if (suspect.isDeceased) {
-             setThinkingSuspectId(null);
+             setThinkingSuspectIds(prev => { const next = new Set(prev); next.delete(currentSuspectId); return next; });
              return; 
         }
 
@@ -682,7 +682,7 @@ const App: React.FC = () => {
           }
         }));
       } finally {
-        setThinkingSuspectId(null);
+        setThinkingSuspectIds(prev => { const next = new Set(prev); next.delete(currentSuspectId); return next; });
       }
   };
 
@@ -738,7 +738,7 @@ const App: React.FC = () => {
       chatHistory: { ...prev.chatHistory, [currentSuspectId]: [...(chatHistory[currentSuspectId] || []), userMsg] },
     }));
     
-    setThinkingSuspectId(currentSuspectId);
+    setThinkingSuspectIds(prev => new Set(prev).add(currentSuspectId));
 
     try {
       const response = await getSuspectResponse(
@@ -846,7 +846,7 @@ const App: React.FC = () => {
         }
       }));
     } finally {
-      setThinkingSuspectId(null);
+      setThinkingSuspectIds(prev => { const next = new Set(prev); next.delete(currentSuspectId); return next; });
     }
   };
 
@@ -864,7 +864,7 @@ const App: React.FC = () => {
       officerHintsRemaining: prev.officerHintsRemaining - 1
     }));
 
-    setThinkingSuspectId('__officer__');
+    setThinkingSuspectIds(prev => new Set(prev).add('__officer__'));
     
     try {
       const currentCase = findCaseById(gameState.selectedCaseId)!;
@@ -892,7 +892,7 @@ const App: React.FC = () => {
         officerHistory: [...prev.officerHistory, { sender: 'system', text: "[SECURE LINE DISCONNECTED]", timestamp: formatTime(newGameTime) }]
       }));
     } finally {
-      setThinkingSuspectId(null);
+      setThinkingSuspectIds(prev => { const next = new Set(prev); next.delete('__officer__'); return next; });
     }
   };
 
@@ -1467,12 +1467,12 @@ const App: React.FC = () => {
               notes={gameState.notes}
               officerHintsRemaining={gameState.officerHintsRemaining}
               officerHistory={gameState.officerHistory}
-              isThinking={thinkingSuspectId === '__officer__'}
+              isThinking={thinkingSuspectIds.has('__officer__')}
               onStartInterrogation={startInterrogation}
               onNavigate={navigateTo}
               onSendOfficerMessage={handleSendOfficerMessage}
               unreadSuspectIds={unreadSuspects}
-              thinkingSuspectId={thinkingSuspectId}
+              thinkingSuspectIds={thinkingSuspectIds}
               newEvidenceTitles={newEvidenceTitles}
               newTimelineIds={newTimelineIds}
               onClearNewEvidence={(title) => {
@@ -1504,7 +1504,7 @@ const App: React.FC = () => {
               evidenceDiscovered={gameState.evidenceDiscovered}
               timelineStatementsDiscovered={gameState.timelineStatementsDiscovered}
               suggestions={currentSuggestions}
-              isThinking={thinkingSuspectId === gameState.currentSuspectId}
+              isThinking={thinkingSuspectIds.has(gameState.currentSuspectId!)}
               sidekickComment={gameState.sidekickComment}
               partnerCharges={gameState.partnerCharges}
               gameTime={gameState.gameTime}
@@ -1520,7 +1520,7 @@ const App: React.FC = () => {
               isAdmin={isAdmin}
               userId={user?.uid}
               unreadSuspectIds={unreadSuspects}
-              thinkingSuspectId={thinkingSuspectId}
+              thinkingSuspectIds={thinkingSuspectIds}
               onClearUnread={(suspectId) => {
                 setUnreadSuspects(prev => {
                   const next = new Map(prev);

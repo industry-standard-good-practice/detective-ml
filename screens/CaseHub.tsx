@@ -771,7 +771,7 @@ interface CaseHubProps {
   initialAccordion?: string;
   onAccordionChange?: (tab: string) => void;
   scrollToSuspectId?: string | null;
-  thinkingSuspectId?: string | null;
+  thinkingSuspectIds?: Set<string>;
   newEvidenceTitles?: Set<string>;
   newTimelineIds?: Set<string>;
   onClearNewEvidence?: (title: string) => void;
@@ -795,7 +795,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
   initialAccordion = 'evidence',
   onAccordionChange,
   scrollToSuspectId,
-  thinkingSuspectId,
+  thinkingSuspectIds = new Set(),
   newEvidenceTitles = new Set(),
   newTimelineIds = new Set(),
   onClearNewEvidence,
@@ -1091,7 +1091,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                             variant="default"
                             disableTouchRotation
                             notificationCount={unreadSuspectIds.get(s.id) || 0}
-                            isLoading={thinkingSuspectId === s.id}
+                            isLoading={thinkingSuspectIds.has(s.id)}
                             onAction={() => {
                               completeStep(OnboardingStep.SUSPECT_CARDS, true);
                               onStartInterrogation(s.id);
@@ -1274,7 +1274,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
           }}
           inactiveActionLabel="TALK"
           unreadSuspectIds={unreadSuspectIds}
-          thinkingSuspectId={thinkingSuspectId}
+          thinkingSuspectIds={thinkingSuspectIds}
           onFlipCard={(flipped) => {
             if (flipped) completeStep(OnboardingStep.FLIP_CARD, false);
           }}

@@ -154,7 +154,7 @@ interface SuspectCardDockProps {
   onFlipCard?: (flipped: boolean) => void;
   inactiveActionLabel?: string;
   unreadSuspectIds?: Map<string, number>;
-  thinkingSuspectId?: string | null;
+  thinkingSuspectIds?: Set<string>;
 }
 
 /* ─── Transform-based drag scroll hook ─── */
@@ -269,7 +269,7 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
   onFlipCard,
   inactiveActionLabel = 'SWITCH',
   unreadSuspectIds = new Map(),
-  thinkingSuspectId = null,
+  thinkingSuspectIds = new Set(),
 }) => {
   const { hitRef, visualInnerRef, hitInnerRef } = useDragTranslate();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -330,7 +330,7 @@ const SuspectCardDock: React.FC<SuspectCardDockProps> = ({
                   width="200px"
                   height="300px"
                   notificationCount={unreadSuspectIds.get(s.id) || 0}
-                  isLoading={thinkingSuspectId === s.id}
+                  isLoading={thinkingSuspectIds.has(s.id)}
                   onAction={() => onSelectSuspect(s.id)}
                   actionLabel={inactiveActionLabel}
                   onFlip={onFlipCard}
