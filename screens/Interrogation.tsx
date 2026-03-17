@@ -1775,7 +1775,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                     {evidenceDiscovered.length > 0 && (
                       <>
                         <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
-                        {evidenceDiscovered.map((ev) => {
+                        {[...evidenceDiscovered].reverse().map((ev) => {
                           const selected = isEvidenceSelected(ev);
                           return (
                             <EvidenceOption
@@ -1871,7 +1871,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                       {evidenceDiscovered.length > 0 && (
                         <>
                           <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
-                          {evidenceDiscovered.map((ev) => {
+                          {[...evidenceDiscovered].reverse().map((ev) => {
                             const selected = isEvidenceSelected(ev);
                             return (
                               <EvidenceOption

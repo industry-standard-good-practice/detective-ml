@@ -777,6 +777,7 @@ interface CaseHubProps {
   onClearNewEvidence?: (title: string) => void;
   onClearAllNewEvidence?: () => void;
   onClearNewTimeline?: () => void;
+  suspectEmotions?: Record<string, Emotion>;
 }
 
 const CaseHub: React.FC<CaseHubProps> = ({
@@ -800,7 +801,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
   newTimelineIds = new Set(),
   onClearNewEvidence,
   onClearAllNewEvidence,
-  onClearNewTimeline
+  onClearNewTimeline,
+  suspectEmotions = {}
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -1108,6 +1110,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                         <CarouselCardItem key={s.id} data-suspect-id={s.id}>
                           <SuspectCard
                             suspect={s}
+                            emotion={suspectEmotions[s.id] || Emotion.NEUTRAL}
                             width="100%"
                             height="100%"
                             variant="default"

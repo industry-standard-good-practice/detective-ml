@@ -1488,6 +1488,7 @@ const App: React.FC = () => {
               initialAccordion={boardAccordionTab}
               onAccordionChange={setBoardAccordionTab}
               scrollToSuspectId={previousScreenRef.current === ScreenState.INTERROGATION ? gameState.currentSuspectId : undefined}
+              suspectEmotions={gameState.suspectEmotions}
             />
           )}
 
