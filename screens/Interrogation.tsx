@@ -11,7 +11,7 @@ import { generateTTS } from '../services/geminiTTS';
 import { playAudioFromUrl, AudioPlayback } from '../services/audioPlayer';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
 import { OnboardingOverlay, OnboardingHighlight, OnboardingTooltip } from '../components/OnboardingTour';
-import { hasNativeSpeechRecognition, hasMediaRecorderFallback, startFallbackListening, stopFallbackListening } from '../services/geminiSTT';
+import { hasNativeSpeechRecognition } from '../services/geminiSTT';
 
 const Container = styled.div`
   display: flex;

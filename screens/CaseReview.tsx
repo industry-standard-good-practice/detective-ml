@@ -112,6 +112,7 @@ const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
 
   label {
     color: #555;
@@ -127,6 +128,8 @@ const InputGroup = styled.div`
     padding: 8px;
     font-size: var(--type-body);
     border-radius: 4px;
+    box-sizing: border-box;
+    max-width: 100%;
 
     &:focus {
       border-color: #888;
@@ -1588,7 +1591,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         </SuspectList>
 
         {activeSuspect && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px', overflow: 'hidden' }}>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ margin: 0, color: '#aaa', fontSize: 'var(--type-h3)' }}>
@@ -1610,7 +1613,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                 <SuspectPortrait suspect={activeSuspect as any} size={80} style={{ border: '1px solid #555' }} />
                 <RandomizeButton onClick={handleRerollPortrait} disabled={loadingState.visible}>
@@ -1631,7 +1634,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </CameraButton>
               </div>
 
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <InputGroup style={{ flex: 1 }}>
                     <label>Name</label>
