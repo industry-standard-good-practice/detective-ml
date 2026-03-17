@@ -494,6 +494,65 @@ export const enforceStartTimeAlignment = (caseData: any) => {
 };
 
 /**
+ * Ensures the initialTimeline always ends with a "suspects brought in for questioning" entry.
+ * If missing, one is appended. If present but not last, it's moved to the end.
+ */
+export const ensureBroughtInEntry = (caseData: any) => {
+    if (!caseData.initialTimeline) caseData.initialTimeline = [];
+
+    // Try to extract a time string from startTime
+    let timeStr = 'Late Evening'; // fallback
+    if (caseData.startTime) {
+        // Try parsing as a real date first
+        const parsed = new Date(caseData.startTime);
+        if (!isNaN(parsed.getTime())) {
+            timeStr = parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        } else {
+            // Try extracting a time pattern like "10:00 PM" from the string
+            const timeMatch = caseData.startTime.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+            if (timeMatch) {
+                timeStr = timeMatch[1].trim();
+            } else {
+                // Try to extract descriptive time like "late evening", "midnight", etc.
+                const descriptiveMatch = caseData.startTime.match(/(late\s+evening|early\s+morning|midnight|dawn|dusk|noon|midday|evening|morning|afternoon|night)/i);
+                if (descriptiveMatch) {
+                    timeStr = descriptiveMatch[1].charAt(0).toUpperCase() + descriptiveMatch[1].slice(1);
+                }
+            }
+        }
+    }
+
+    // Check if a "brought in" entry already exists
+    const broughtInPatterns = /brought in|gathered.*for.*question|assembled.*for.*interview|arrive.*for.*question|called in.*for.*question/i;
+    const existingIdx = caseData.initialTimeline.findIndex((e: any) =>
+        broughtInPatterns.test(e.activity || '')
+    );
+
+    if (existingIdx !== -1) {
+        // Entry exists — ensure it's last, has correct day/dayOffset, and time matches startTime
+        const entry = caseData.initialTimeline[existingIdx];
+        entry.day = 'Today';
+        entry.dayOffset = 0;
+        entry.time = timeStr;
+        // Move to end if not already last
+        if (existingIdx !== caseData.initialTimeline.length - 1) {
+            caseData.initialTimeline.splice(existingIdx, 1);
+            caseData.initialTimeline.push(entry);
+        }
+    } else {
+        // No entry exists — add one
+        caseData.initialTimeline.push({
+            time: timeStr,
+            activity: 'All persons of interest brought in for questioning by detective',
+            day: 'Today',
+            dayOffset: 0
+        });
+    }
+
+    return caseData;
+};
+
+/**
  * Comprehensive post-processor that validates and fixes EVERY field on every suspect.
  * Comprehensive post-processor that validates every field on every suspect.
  * Instead of patching with placeholder defaults, it CARRIES FORWARD the original
@@ -709,7 +768,14 @@ const PROMPT_RULES = {
   * Estimated time of death or crime window ("Coroner estimates TOD between 8-9 PM")
   * Neutral environmental observations ("Back door found unlocked", "Security cameras offline since 7 PM")
   * General witness reports that don't name guilty suspects ("Neighbors report hearing an argument around 8:30 PM")
-- If the existing initialTimeline contains entries that reveal guilt, REWRITE them to be neutral.`,
+- If the existing initialTimeline contains entries that reveal guilt, REWRITE them to be neutral.
+- **FINAL ENTRY — SUSPECTS BROUGHT IN (MANDATORY):**
+  The LAST entry in the initialTimeline must ALWAYS be about the suspects/persons of interest being brought in for questioning by the detective. This entry:
+  * Must have dayOffset 0 and day "Today" — this is the day of questioning, and it should be the chronologically latest event on the timeline
+  * Its 'time' field should match (or be derived from) the case's 'startTime' field. Extract just the time portion (e.g. if startTime is "Friday, March 14, 1924 at 10:00 PM", use "10:00 PM"). If startTime is a non-standard format (e.g. "5 ABY, late evening"), use the most reasonable time you can infer, or just "Late Evening".
+  * Its 'day' field should be "Today" with dayOffset 0 (this IS the day of questioning)
+  * Its 'activity' should describe the suspects/persons of interest being assembled for questioning (e.g. "All persons of interest brought in for questioning by Detective", "Suspects gathered at the station for interviews")
+  * If this entry already exists, ensure it is LAST and its time matches the startTime. If it doesn't exist, ADD it.`,
 
     /** Naming constraints — used in generation and edit (when changing themes) */
     NAMING_RULES: `**NAMING RULES:**
@@ -1166,7 +1232,7 @@ ${userChangeLog}
             }
         });
 
-        const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
+        const finalData = ensureBroughtInEntry(enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData)));
 
         // --- SAFETY NET: Re-apply user's field-level edits ---
         // The AI was instructed to respect these, but we enforce them as a fallback
@@ -1448,7 +1514,7 @@ ${userChangeLog}
             }
         });
 
-        const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
+        const finalData = ensureBroughtInEntry(enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData)));
 
         // --- SAFETY NET: Re-apply user's field-level edits ---
         if (baseline) {
@@ -1745,6 +1811,6 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     });
 
     // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
-    const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(data))));
+    const finalData = ensureBroughtInEntry(enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(data)))));
     return finalData as CaseData;
 };
