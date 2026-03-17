@@ -11,8 +11,6 @@ const OverlayContainer = styled.div`
   height: 100%;
   z-index: 9999;
   pointer-events: none; /* Let clicks pass through */
-  border-radius: 20px; /* Match parent radius */
-  opacity: .4;
   overflow: hidden;
 `;
 
@@ -80,11 +78,16 @@ const CRTOverlay: React.FC = () => {
           crtUV = crtUV + crtUV * offset * offset;
           uv = crtUV * 0.5 + 0.5;
 
-          // Black out edges outside the curve
+          // Black out edges outside the curve (fully opaque to clip content)
           if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
           }
+          // Subtle edge fade near the curved boundary
+          float edgeFade = smoothstep(0.0, 0.01, uv.x) * smoothstep(0.0, 0.01, uv.y)
+                         * smoothstep(0.0, 0.01, 1.0 - uv.x) * smoothstep(0.0, 0.01, 1.0 - uv.y);
+
+
 
           // 2. Click Distortion (Heavy Glitch Tearing)
           float shake = u_distortion;
@@ -141,18 +144,21 @@ const CRTOverlay: React.FC = () => {
           float n = random(uv + u_time * 10.0);
           color -= n * 0.05; // Reduced noise slightly
 
-          // Alpha calc
+          // Alpha calc — interior effects at reduced opacity, edges fully opaque
           float avgColor = (color.r + color.g + color.b) / 3.0;
-          float alpha = (1.0 - avgColor) * 0.5; 
+          float interiorAlpha = (1.0 - avgColor) * 0.5; 
           
-          alpha += (1.0 - vig);
+          interiorAlpha += (1.0 - vig);
           
           if (shake > 0.0) {
              color += vec3(shake * 0.5);
-             alpha += shake * 0.2;
+             interiorAlpha += shake * 0.2;
           }
 
           vec3 finalColor = mix(vec3(0.0), color, vig);
+
+          float alpha = mix(1.0, interiorAlpha * 0.4, edgeFade);
+          finalColor = mix(vec3(0.0), finalColor, edgeFade);
 
           gl_FragColor = vec4(finalColor, clamp(alpha, 0.0, 1.0));
         }
