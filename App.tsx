@@ -236,6 +236,7 @@ const App: React.FC = () => {
   const draftSaveFnRef = useRef<(() => Promise<void>) | null>(null);
   const draftCheckConsistencyFnRef = useRef<(() => void) | null>(null);
   const draftCloseFnRef = useRef<(() => void) | null>(null);
+  const originalDraftRef = useRef<CaseData | null>(null);
   
   const [currentSuggestions, setCurrentSuggestions] = useState<(string | { label: string; text: string })[]>([]);
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem('isMuted') === 'true');
@@ -964,6 +965,7 @@ const App: React.FC = () => {
         
         // Open edit screen first
         setDraftCase(newCase);
+        originalDraftRef.current = JSON.parse(JSON.stringify(newCase));
         setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_REVIEW }));
     } catch (e: any) {
         console.error("Generation Error:", e);
@@ -1020,6 +1022,7 @@ const App: React.FC = () => {
         selectCase(stamped);
     }
     setDraftCase(null);
+    originalDraftRef.current = null;
   };
 
   // Test Investigation: starts the case without saving
@@ -1055,6 +1058,7 @@ const App: React.FC = () => {
     // Also persist to Firebase
     const success = await doUpdate(stamped.id, stamped);
     setDraftCase(stamped); // Keep stamped version in state
+    originalDraftRef.current = JSON.parse(JSON.stringify(stamped));
     setHasUnsavedDraftChanges(false);
     if (success) {
       toast.success('Case saved successfully!');
@@ -1068,6 +1072,7 @@ const App: React.FC = () => {
     const caseToEdit = communityCases.find(c => c.id === idToEdit) || localDrafts.find(d => d.id === idToEdit);
     if (!caseToEdit) return;
 
+    originalDraftRef.current = JSON.parse(JSON.stringify(caseToEdit));
     setDraftCase(caseToEdit);
     setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_REVIEW }));
   };
@@ -1487,6 +1492,14 @@ const App: React.FC = () => {
                 }}
                 onStart={handleTestInvestigation}
                 onCancel={() => {
+                    // Restore original case data into communityCases/localDrafts
+                    // so that the real-time sync useEffect's dirty edits are reverted
+                    const original = originalDraftRef.current;
+                    if (original) {
+                      setCommunityCases(prev => prev.map(c => c.id === original.id ? original : c));
+                      setLocalDrafts(prev => prev.map(d => d.id === original.id ? original : d));
+                    }
+                    originalDraftRef.current = null;
                     setDraftCase(null);
                     setHasUnsavedDraftChanges(false);
                     setGameState(prev => ({ ...prev, currentScreen: ScreenState.CASE_SELECTION }));
