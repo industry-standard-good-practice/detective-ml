@@ -154,16 +154,10 @@ const InputGroup = styled.div`
   }
 
   textarea {
-    resize: vertical;
-    min-height: 80px;
+    resize: none;
+    overflow: hidden;
     padding: 10px;
     padding-bottom: 4px;
-
-    @media (max-width: 1080px) {
-      resize: none;
-      overflow: hidden;
-      min-height: unset;
-    }
   }
 `;
 
@@ -194,20 +188,14 @@ const StyledTextArea = styled.textarea`
   font-family: inherit;
   padding: 8px;
   font-size: var(--type-body);
-  resize: vertical;
-  min-height: 60px;
+  resize: none;
+  overflow: hidden;
   width: 100%;
   
   &:focus {
     border-bottom-color: #0f0;
     background: #1a1a1a;
     outline: none;
-  }
-
-  @media (max-width: 1080px) {
-    resize: none;
-    overflow: hidden;
-    min-height: unset;
   }
 `;
 
@@ -648,10 +636,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const baselineRef = useRef<CaseData>(JSON.parse(JSON.stringify(draftCase)));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Auto-resize all textareas on mobile to hug their content
+  // Auto-resize all textareas to hug their content
   useEffect(() => {
-    const isMobile = window.matchMedia('(max-width: 1080px)').matches;
-    if (!isMobile || !containerRef.current) return;
+    if (!containerRef.current) return;
 
     const textareas = containerRef.current.querySelectorAll('textarea');
     textareas.forEach((ta) => {

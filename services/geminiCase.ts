@@ -30,6 +30,12 @@ export const calculateDifficulty = (caseData: Partial<CaseData>): "Easy" | "Medi
     // Multiple guilty suspects make deduction harder (each additional beyond 1 adds +5)
     if (guiltyCount > 1) points += (guiltyCount - 1) * 5;
 
+    // Higher base aggravation = more hostile/uncooperative suspects = harder to extract info
+    if (aliveSuspects.length > 0) {
+        const avgAggravation = aliveSuspects.reduce((sum, s) => sum + (s.baseAggravation || 0), 0) / aliveSuspects.length;
+        points += (avgAggravation / 100) * 6;
+    }
+
     if (points > 28) return "Hard";
     if (points >= 20) return "Medium";
     return "Easy";
