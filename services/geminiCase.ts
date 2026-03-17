@@ -481,15 +481,13 @@ export const enforceStartTimeAlignment = (caseData: any) => {
             startDate.setHours(newHours - 24, newMins, 0, 0);
         }
 
-        // Format back to ISO datetime-local string (without seconds/timezone)
-        const year = startDate.getFullYear();
-        const month = String(startDate.getMonth() + 1).padStart(2, '0');
-        const day = String(startDate.getDate()).padStart(2, '0');
-        const hours = String(startDate.getHours()).padStart(2, '0');
-        const minutes = String(startDate.getMinutes()).padStart(2, '0');
-        caseData.startTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        // Format back to a human-readable string
+        const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const formatted = startDate.toLocaleDateString('en-US', options)
+            + ' at ' + startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        caseData.startTime = formatted;
 
-        console.log(`[DEBUG] enforceStartTimeAlignment: Shifted startTime to ${caseData.startTime} (latest crime-day event was at ${latestEvent.hours}:${String(latestEvent.minutes).padStart(2, '0')})`);
+        console.log(`[DEBUG] enforceStartTimeAlignment: Shifted startTime to ${caseData.startTime} (latest same-day event was at ${latestEvent.hours}:${String(latestEvent.minutes).padStart(2, '0')})`);
     }
 
     return caseData;
@@ -770,16 +768,26 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 
     /** Start time alignment with timeline — used in generation, consistency, and edit */
     START_TIME_ALIGNMENT: `**START TIME — TIMELINE ALIGNMENT (CRITICAL):**
-- The 'startTime' field is an ISO datetime string (e.g. "2030-09-12T23:30") representing when the player begins their investigation.
-- The startTime MUST be AFTER all crime-day events in the initialTimeline and suspect timelines. The detective cannot arrive before the crime is discovered.
-- Cross-reference the latest initialTimeline entry on the day of the investigation/questioning (dayOffset: 0). The startTime MUST be at least 30 minutes after this event.
+- The 'startTime' field is a human-readable string representing when the player begins their investigation (e.g. "Friday, September 12, 1924 at 11:30 PM", "Late evening, the night of the gala", "October 3, 2030 at 9:00 PM").
+- **ERA / SETTING AWARENESS (CRITICAL):** The startTime MUST match the time period, setting, and universe of the case. Infer the correct era and dating system from the case title, description, type, and suspect bios:
+  * If the case is set in the 1920s → use a 1920s date (e.g. "Friday, March 14, 1924 at 10:00 PM")
+  * If the case is futuristic → use a future date (e.g. "November 22, 2150 at 11:00 PM")
+  * If the case is contemporary → use a near-future date (e.g. "September 12, 2030 at 11:30 PM")
+  * **FICTIONAL UNIVERSES:** If the case is set in a fictional universe with its own dating system, USE THAT SYSTEM:
+    - Star Wars → use ABY/BBY dating (e.g. "5 ABY, late evening aboard the Corellian station")
+    - Star Trek → use Stardates (e.g. "Stardate 47634.4, 2100 hours")
+    - Fantasy settings → use the world's own calendar (e.g. "Third Age 3019, evening of March 15")
+    - Any other fictional universe → adopt whatever dating convention fits that universe
+  * NEVER default to the current real-world date unless the case is explicitly set in the present day.
+- The startTime MUST be AFTER all events on the day of questioning (dayOffset: 0) in the initialTimeline and suspect timelines. The detective cannot arrive before the crime is discovered.
+- Cross-reference the latest initialTimeline entry on today (dayOffset: 0). The startTime MUST be at least 30 minutes after this event.
 - Cross-reference suspect timeline entries for today. The startTime should be after the crime window.
-- If any timeline events on the crime day have times LATER than startTime, either:
+- If any timeline events today have times LATER than startTime, either:
   (a) Adjust the startTime to be after those events, OR
   (b) Move those events to earlier times if narratively appropriate.
-- The startTime DATE must align with the crime-day date implied by the timeline. If the initialTimeline mentions events on "September 12", the startTime must also be on September 12 (or shortly after midnight on September 13 for very late-night crimes).
-- Choose a startTime that fits the case atmosphere: noir murders → late night; corporate crimes → evening; daytime incidents → afternoon.  
-- The startTime should be close enough to the crime that the trail is still warm.`,
+- Choose a startTime that fits the case atmosphere: noir murders → late night; corporate crimes → evening; daytime incidents → afternoon.
+- The startTime should be close enough to the crime that the trail is still warm.
+- When outputting startTime, prefer a fully spelled out human-readable format appropriate to the universe rather than ISO format.`,
 
     /** Evidence description style — used in generation, consistency, and edit */
     EVIDENCE_DESCRIPTION_STYLE: `**WRITING STYLE RULES (CRITICAL — TWO DISTINCT RULES):**

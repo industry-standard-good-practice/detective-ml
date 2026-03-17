@@ -1316,7 +1316,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               <input
                 type="text"
-                placeholder="e.g. 'September 12, 2030 at 11:30 PM' or 'Late evening, night of the gala'"
+                placeholder="e.g. 'September 12, 1924 at 11:30 PM' or '5 ABY, late evening'"
                 value={draftCase.startTime || ''}
                 onChange={(e) => handleCaseChange('startTime', e.target.value)}
                 style={{ flex: 1 }}
@@ -1327,6 +1327,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 id="startTimePicker"
                 onChange={(e) => {
                   if (!e.target.value) return;
+                  // Only update if the user actually picked a different value
+                  if (e.target.value === e.target.dataset.prevValue) return;
                   const d = new Date(e.target.value);
                   if (isNaN(d.getTime())) return;
                   const formatted = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -1338,7 +1340,11 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 type="button"
                 onClick={() => {
                   const picker = document.getElementById('startTimePicker') as HTMLInputElement;
-                  if (picker) { picker.showPicker?.(); picker.focus(); }
+                  if (picker) {
+                    // Stash current value so onChange can detect if the user actually changed something
+                    picker.dataset.prevValue = picker.value;
+                    picker.showPicker?.();
+                  }
                 }}
                 style={{
                   background: '#222',
@@ -1357,7 +1363,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               </button>
             </div>
             <p style={{ fontSize: 'var(--type-small)', color: '#555', margin: '4px 0 0' }}>
-              Type any format — this is provided as context to suspects. Use the 📅 button for a date picker.
+              Any format works — real dates, fictional calendars (ABY, Stardates), or freeform text. Use 📅 for a date picker.
             </p>
           </InputGroup>
 
