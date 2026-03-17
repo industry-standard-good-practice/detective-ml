@@ -106,39 +106,72 @@ const formatAuthorName = (displayName: string | null | undefined): string => {
 
 /**
  * Fallback timeline extraction: scans the suspect's text response for any
- * mention of their known timeline entries. Returns the first match, or null.
- * This catches cases where the AI mentions a time but forgets to populate
- * the structured `revealedTimelineStatement` field.
+ * mention of their known timeline entries. Returns ALL matches as an array.
+ * This catches cases where the AI mentions times but forgets to populate
+ * the structured `revealedTimelineStatements` field.
+ * Uses the suspect's actual spoken words from the response text.
  */
 // Check if text contains a numerical time reference (e.g. "10:35", "8:00")
 const textHasNumericalTime = (text: string): boolean => /\d{1,2}:\d{2}/.test(text);
 
+// Extract the sentence from response text that contains a given time reference
+const extractSentenceAroundTime = (text: string, timeStr: string): string | null => {
+  const numericPart = timeStr.match(/(\d{1,2}:\d{2})/)?.[1] || timeStr;
+  const idx = text.toLowerCase().indexOf(numericPart.toLowerCase());
+  if (idx === -1) return null;
+
+  // Split on sentence-ending punctuation and find the sentence containing the time
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  let charCount = 0;
+  for (const sentence of sentences) {
+    const sentenceEnd = charCount + sentence.length;
+    if (idx >= charCount && idx < sentenceEnd) {
+      return sentence.trim().replace(/^["']+|["']+$/g, '');
+    }
+    charCount = sentenceEnd + 1; // +1 for the split whitespace
+  }
+  return null;
+};
+
 const extractTimelineFromText = (
   text: string,
   suspectTimeline: { time: string; activity: string; day: string; dayOffset: number }[]
-): { time: string; statement: string; day: string; dayOffset: number } | null => {
-  if (!text || !suspectTimeline || suspectTimeline.length === 0) return null;
+): { time: string; statement: string; day: string; dayOffset: number }[] => {
+  if (!text || !suspectTimeline || suspectTimeline.length === 0) return [];
   
   // CRITICAL: Only extract timeline if the text actually contains a numerical time reference
-  if (!textHasNumericalTime(text)) return null;
+  if (!textHasNumericalTime(text)) return [];
   
   const lowerText = text.toLowerCase();
+  const results: { time: string; statement: string; day: string; dayOffset: number }[] = [];
 
   for (const entry of suspectTimeline) {
     const timeStr = entry.time?.trim();
     if (!timeStr) continue;
 
+    let matched = false;
     if (lowerText.includes(timeStr.toLowerCase())) {
-      return { time: timeStr, statement: entry.activity, day: entry.day, dayOffset: entry.dayOffset };
+      matched = true;
+    } else {
+      const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
+      if (numericMatch && lowerText.includes(numericMatch[1])) {
+        matched = true;
+      }
     }
 
-    const numericMatch = timeStr.match(/(\d{1,2}:\d{2})/);
-    if (numericMatch && lowerText.includes(numericMatch[1])) {
-      return { time: timeStr, statement: entry.activity, day: entry.day, dayOffset: entry.dayOffset };
+    if (matched) {
+      // Use the suspect's actual spoken words, falling back to case data if extraction fails
+      const extractedStatement = extractSentenceAroundTime(text, timeStr);
+      results.push({
+        time: timeStr,
+        statement: extractedStatement || entry.activity,
+        day: entry.day,
+        dayOffset: entry.dayOffset
+      });
     }
   }
 
-  return null;
+  return results;
 };
 
 const DEFAULT_SUGGESTIONS = [
@@ -620,37 +653,42 @@ const App: React.FC = () => {
             const prevHistory = prev.chatHistory[currentSuspectId] || [];
             const newHistory = [...prevHistory, suspectMsg];
 
-            // Timeline extraction for partner action responses (was previously missing!)
+            // Timeline extraction for partner action responses — supports MULTIPLE entries
             let newTimelineStatements = [...prev.timelineStatementsDiscovered];
-            let timelineEntry = response.revealedTimelineStatement;
+            let timelineEntries = response.revealedTimelineStatements;
             // CRITICAL: Only accept if the response text actually contains a numerical time
-            if (timelineEntry && !textHasNumericalTime(response.text)) {
-              console.log("[DEBUG] Rejecting AI timeline (partner) — no numerical time in text", timelineEntry);
-              timelineEntry = null;
+            if (timelineEntries.length > 0 && !textHasNumericalTime(response.text)) {
+              console.log("[DEBUG] Rejecting AI timeline (partner) — no numerical time in text", timelineEntries);
+              timelineEntries = [];
             }
-            if (!timelineEntry && finalAgg < 100) {
-              timelineEntry = extractTimelineFromText(response.text, suspect.timeline || []);
-              if (timelineEntry) {
-                console.log("[DEBUG] Timeline Statement (PARTNER FALLBACK):", timelineEntry);
+            if (timelineEntries.length === 0 && finalAgg < 100) {
+              timelineEntries = extractTimelineFromText(response.text, suspect.timeline || []);
+              if (timelineEntries.length > 0) {
+                console.log("[DEBUG] Timeline Statements (PARTNER FALLBACK):", timelineEntries);
               }
             }
-            if (timelineEntry && finalAgg < 100) {
-              const alreadyExists = newTimelineStatements.some(ts => 
-                ts.suspectId === currentSuspectId && 
-                ts.time === timelineEntry!.time
-              );
-              if (!alreadyExists) {
-                newTimelineStatements.push({
-                  id: `ts-${Date.now()}`,
-                  suspectId: currentSuspectId,
-                  suspectName: suspect.name,
-                  suspectPortrait: suspect.portraits?.[Emotion.NEUTRAL] || undefined,
-                  time: timelineEntry.time,
-                  statement: timelineEntry.statement,
-                  day: timelineEntry.day || 'Day of the Crime',
-                  dayOffset: timelineEntry.dayOffset ?? 0
-                });
-                setNewTimelineIds(prev => new Set(prev).add(`ts-${Date.now()}`));
+            if (finalAgg < 100) {
+              for (let i = 0; i < timelineEntries.length; i++) {
+                const entry = timelineEntries[i];
+                const alreadyExists = newTimelineStatements.some(ts => 
+                  ts.suspectId === currentSuspectId && 
+                  ts.time === entry.time &&
+                  ts.day === (entry.day || 'Day of the Crime')
+                );
+                if (!alreadyExists) {
+                  const tsId = `ts-${Date.now()}-${i}`;
+                  newTimelineStatements.push({
+                    id: tsId,
+                    suspectId: currentSuspectId,
+                    suspectName: suspect.name,
+                    suspectPortrait: suspect.portraits?.[Emotion.NEUTRAL] || undefined,
+                    time: entry.time,
+                    statement: entry.statement,
+                    day: entry.day || 'Day of the Crime',
+                    dayOffset: entry.dayOffset ?? 0
+                  });
+                  setNewTimelineIds(prev => new Set(prev).add(tsId));
+                }
               }
             }
 
@@ -780,40 +818,45 @@ const App: React.FC = () => {
         const updatedHistory = [...prev.chatHistory[currentSuspectId], suspectMsg];
         let newTimelineStatements = [...prev.timelineStatementsDiscovered];
 
-        // Use AI's explicit timeline statement, or fall back to client-side extraction
+        // Use AI's explicit timeline statements, or fall back to client-side extraction
+        // Supports MULTIPLE timeline entries per response
         // CRITICAL: Only accept if the response text actually contains a numerical time
-        let timelineEntry = response.revealedTimelineStatement;
-        if (timelineEntry && !textHasNumericalTime(response.text)) {
-          console.log("[DEBUG] Rejecting AI timeline — no numerical time in text", timelineEntry);
-          timelineEntry = null;
+        let timelineEntries = response.revealedTimelineStatements;
+        if (timelineEntries.length > 0 && !textHasNumericalTime(response.text)) {
+          console.log("[DEBUG] Rejecting AI timeline entries — no numerical time in text", timelineEntries);
+          timelineEntries = [];
         }
-        if (!timelineEntry && newAgg < 100) {
-          timelineEntry = extractTimelineFromText(response.text, currentSuspect.timeline || []);
-          if (timelineEntry) {
-            console.log("[DEBUG] Timeline Statement (FALLBACK extraction):", timelineEntry);
+        if (timelineEntries.length === 0 && newAgg < 100) {
+          timelineEntries = extractTimelineFromText(response.text, currentSuspect.timeline || []);
+          if (timelineEntries.length > 0) {
+            console.log("[DEBUG] Timeline Statements (FALLBACK extraction):", timelineEntries);
           }
         }
 
-        if (timelineEntry && newAgg < 100) {
-          console.log("[DEBUG] Timeline Statement Revealed:", timelineEntry);
-          const alreadyExists = newTimelineStatements.some(ts => 
-            ts.suspectId === currentSuspectId && 
-            ts.time === timelineEntry!.time
-          );
+        if (newAgg < 100) {
+          for (let i = 0; i < timelineEntries.length; i++) {
+            const entry = timelineEntries[i];
+            console.log("[DEBUG] Timeline Statement Revealed:", entry);
+            const alreadyExists = newTimelineStatements.some(ts => 
+              ts.suspectId === currentSuspectId && 
+              ts.time === entry.time &&
+              ts.day === (entry.day || 'Day of the Crime')
+            );
 
-          if (!alreadyExists) {
-            const tsId = `ts-${Date.now()}`;
-            newTimelineStatements.push({
-              id: tsId,
-              suspectId: currentSuspectId,
-              suspectName: currentSuspect.name,
-              suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
-              time: timelineEntry.time,
-              statement: timelineEntry.statement,
-              day: timelineEntry.day || 'Day of the Crime',
-              dayOffset: timelineEntry.dayOffset ?? 0
-            });
-            setNewTimelineIds(prev => new Set(prev).add(tsId));
+            if (!alreadyExists) {
+              const tsId = `ts-${Date.now()}-${i}`;
+              newTimelineStatements.push({
+                id: tsId,
+                suspectId: currentSuspectId,
+                suspectName: currentSuspect.name,
+                suspectPortrait: currentSuspect.portraits?.[Emotion.NEUTRAL] || undefined,
+                time: entry.time,
+                statement: entry.statement,
+                day: entry.day || 'Day of the Crime',
+                dayOffset: entry.dayOffset ?? 0
+              });
+              setNewTimelineIds(prev => new Set(prev).add(tsId));
+            }
           }
         }
 

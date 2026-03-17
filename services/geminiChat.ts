@@ -20,7 +20,7 @@ export const getSuspectResponse = async (
   emotion: Emotion;
   aggravationDelta: number;
   revealedEvidence: string | null;
-  revealedTimelineStatement: { time: string; statement: string; day: string; dayOffset: number } | null;
+  revealedTimelineStatements: { time: string; statement: string; day: string; dayOffset: number }[];
   hints: string[]
 }> => {
 
@@ -277,18 +277,19 @@ export const getSuspectResponse = async (
            - HAPPY and CONTENT are ONLY for genuinely friendly or relaxed responses.
            - Review your text BEFORE choosing the emotion. Ask: "Would a person saying these words be smiling?" If no, don't use HAPPY/CONTENT.
         6. **TIMELINE REVEAL (CONDITIONAL — NOT EVERY TURN!):**
-           - ONLY set 'revealedTimelineStatement' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
-           - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal a timeline entry.
+           - ONLY populate 'revealedTimelineStatements' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
+           - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal timeline entries.
+           - **MULTIPLE ENTRIES:** You may reveal MULTIPLE timeline entries in a SINGLE response if the detective asks about a broad time range or asks you to recount your evening/day. For example, if asked "walk me through your night", you might mention 3-4 different times from your TIMELINE — include ALL of them in the array.
            - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
            - **NATURAL TIMELINE RESPONSES:** When asked about your timeline, respond naturally based on your character:
              - If INNOCENT and COOPERATIVE: Share your timeline willingly. You have nothing to hide.
              - If INNOCENT but GUARDED: Share reluctantly but honestly. You're annoyed but understand why they're asking.
              - If GUILTY or EVASIVE: Deflect, provide vague answers, lie about specifics, or try to redirect the conversation — but NEVER question why the detective is asking. You know exactly why.
              - NEVER say things like "Why do you need to know my schedule?" or "Why does my timeline matter?" — this is a murder investigation and everyone knows the drill.
-           - When you DO set it: 'time' = the EXACT time string from your TIMELINE, 'statement' = short summary of the activity, 'day' = the day label from your TIMELINE (e.g. "Day of the Crime", "1 Day Before"), 'dayOffset' = the numeric offset from your TIMELINE.
-           - If the detective doesn't ask about timing, set this to null. Most responses should have this as null.
-           - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatement.time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
-           - **DAY CONTEXT (CRITICAL):** When mentioning events from days other than the day of the crime, you MUST reference which day it was (e.g. "The day before, around 3:00 PM, I..."). The 'day' and 'dayOffset' fields in the revealedTimelineStatement MUST match your TIMELINE data.
+           - For EACH entry in the array: 'time' = the EXACT time string from your TIMELINE, 'statement' = YOUR EXACT WORDS from your dialogue text about this time (quote what you actually said, not the raw timeline data — the player will see this on the timeline), 'day' = the day label from your TIMELINE (e.g. "Day of the Crime", "1 Day Before"), 'dayOffset' = the numeric offset from your TIMELINE.
+           - If the detective doesn't ask about timing, set this to an EMPTY ARRAY []. Most responses should have this as [].
+           - **NUMERICAL TIMES ONLY (CRITICAL):** ALL times MUST be in 12-hour AM/PM format (e.g. "11:00 PM", "8:30 AM", "2:15 PM"). NEVER use 24-hour military time (e.g. "20:15", "23:00"). NEVER spell out times as words (e.g. "eleven", "quarter past eight", "half past nine"). This applies to BOTH the 'revealedTimelineStatements[].time' field AND your spoken dialogue text. If you mention a time in your response, write it as "11:00 PM", not "23:00" or "eleven o'clock". Follow the format of the timeline entries provided in the TIMELINE field.
+           - **DAY CONTEXT (CRITICAL):** When mentioning events from days other than the day of the crime, you MUST reference which day it was (e.g. "The day before, around 3:00 PM, I..."). The 'day' and 'dayOffset' fields in each revealedTimelineStatements entry MUST match your TIMELINE data.
         7. Hints: Provide 3 short suggested follow-up questions for the player based on your Known Facts or Alibi.
 
         ${isBadCop ? `
@@ -320,14 +321,16 @@ export const getSuspectResponse = async (
           emotion: { type: Type.STRING },
           aggravationDelta: { type: Type.NUMBER },
           revealedEvidence: { type: Type.STRING, nullable: true },
-          revealedTimelineStatement: {
-            type: Type.OBJECT,
-            nullable: true,
-            properties: {
-              time: { type: Type.STRING },
-              statement: { type: Type.STRING },
-              day: { type: Type.STRING },
-              dayOffset: { type: Type.NUMBER }
+          revealedTimelineStatements: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                time: { type: Type.STRING },
+                statement: { type: Type.STRING },
+                day: { type: Type.STRING },
+                dayOffset: { type: Type.NUMBER }
+              }
             }
           },
           hints: { type: Type.ARRAY, items: { type: Type.STRING } }
@@ -344,7 +347,11 @@ export const getSuspectResponse = async (
     emotion: (data.emotion as Emotion) || Emotion.NEUTRAL,
     aggravationDelta: data.aggravationDelta || 0,
     revealedEvidence: data.revealedEvidence || null,
-    revealedTimelineStatement: data.revealedTimelineStatement || null,
+    revealedTimelineStatements: Array.isArray(data.revealedTimelineStatements)
+      ? data.revealedTimelineStatements
+      : data.revealedTimelineStatement
+        ? [data.revealedTimelineStatement]
+        : [],
     hints: data.hints || []
   };
 };
