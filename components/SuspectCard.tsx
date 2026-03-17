@@ -338,12 +338,14 @@ const FlipButton = styled.button<{ $isBack?: boolean }>`
   transition: all 0.1s ease-in-out;
   box-shadow: 0 5px 15px rgba(0,0,0,0.6);
 
-  &:hover {
-    background: #fff;
-    color: #000;
-    transform: translateZ(105px) scale(1.1);
-    box-shadow: 0 0 10px #fff;
-    border-color: #fff;
+  @media (hover: hover) {
+    &:hover {
+      background: #fff;
+      color: #000;
+      transform: translateZ(105px) scale(1.1);
+      box-shadow: 0 0 10px #fff;
+      border-color: #fff;
+    }
   }
 
   &:active {
