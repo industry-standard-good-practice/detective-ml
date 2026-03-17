@@ -130,6 +130,7 @@ const StepIndicator = styled.div`
 interface StepConfig {
   title: string;
   description: string;
+  completedDescription?: string;
   targetId: string;
   position: 'top' | 'bottom' | 'left' | 'right';
   mobilePosition?: 'top' | 'bottom' | 'left' | 'right';
@@ -186,6 +187,7 @@ const STEPS: Record<number, StepConfig> = {
   [OnboardingStep.FLIP_CARD]: {
     title: "Deep Dive",
     description: "Every suspect has information on the back. Click the [Flip Card] button to see their background and role.",
+    completedDescription: "Great! Always check a suspect's profile before interrogating them. Their background, profession, and role can reveal motives and help you ask the right questions.",
     targetId: "flip-card-button",
     completedTargetId: "active-suspect-card",
     position: "right",
@@ -522,7 +524,7 @@ export const OnboardingTour: React.FC = () => {
           transition={{ delay: 0.2 }}
         >
           <Title>{step.title}</Title>
-          <Description>{step.description}</Description>
+          <Description>{(isActionCompleted && step.completedDescription) ? step.completedDescription : step.description}</Description>
 
           <ButtonGroup>
             <NavButton onClick={skipTour}>Skip Tour</NavButton>
