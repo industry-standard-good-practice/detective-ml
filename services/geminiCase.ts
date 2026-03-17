@@ -16,20 +16,20 @@ export const calculateDifficulty = (caseData: Partial<CaseData>): "Easy" | "Medi
     const hiddenEvidenceCount = suspects.reduce((acc, s) => acc + (s.hiddenEvidence?.length || 0), 0);
     const initialTimelineCount = caseData.initialTimeline?.length || 0;
     const totalEvidence = initialEvidenceCount + hiddenEvidenceCount;
-    
+
     // Multiple victims and multiple guilty suspects significantly increase difficulty
     const victimCount = suspects.filter(s => s.isDeceased).length;
     const guiltyCount = suspects.filter(s => s.isGuilty).length;
-    
+
     // Base complexity from suspect count and evidence
     let points = (suspectCount * 2) + totalEvidence - (initialTimelineCount * 0.5);
-    
+
     // Extra victims add complexity (each additional victim beyond 1 adds +4)
     if (victimCount > 1) points += (victimCount - 1) * 4;
-    
+
     // Multiple guilty suspects make deduction harder (each additional beyond 1 adds +5)
     if (guiltyCount > 1) points += (guiltyCount - 1) * 5;
-    
+
     if (points > 28) return "Hard";
     if (points >= 20) return "Medium";
     return "Easy";
@@ -41,7 +41,7 @@ export const calculateDifficulty = (caseData: Partial<CaseData>): "Easy" | "Medi
  */
 export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<string, any> => {
     const diff: Record<string, any> = {};
-    
+
     // Top-level case fields
     const topFields = ['title', 'type', 'description'] as const;
     topFields.forEach(f => {
@@ -49,7 +49,7 @@ export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<s
             diff[f] = (current as any)[f];
         }
     });
-    
+
     // Support characters
     ['officer', 'partner'].forEach(key => {
         const baseChar = (baseline as any)[key];
@@ -62,7 +62,7 @@ export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<s
             if (Object.keys(charDiff).length > 0) diff[`_${key}`] = charDiff;
         }
     });
-    
+
     // Suspects — field-level diff for each suspect by ID
     const suspectDiffs: Record<string, Record<string, any>> = {};
     const suspectFields = [
@@ -88,7 +88,7 @@ export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<s
         }
     });
     if (Object.keys(suspectDiffs).length > 0) diff._suspects = suspectDiffs;
-    
+
     console.log('[DEBUG] computeUserDiff: User manually changed:', Object.keys(diff).length > 0 ? diff : 'nothing');
     return diff;
 };
@@ -100,14 +100,14 @@ export const computeUserDiff = (baseline: CaseData, current: CaseData): Record<s
  */
 export const formatUserChangeLog = (diff: Record<string, any>, baseline: CaseData): string => {
     if (Object.keys(diff).length === 0) return '';
-    
+
     const lines: string[] = [];
-    
+
     // Top-level case fields
     if (diff.title) lines.push(`- Case title changed to: "${diff.title}"`);
     if (diff.type) lines.push(`- Case type changed to: "${diff.type}"`);
     if (diff.description) lines.push(`- Case description was rewritten by the user`);
-    
+
     // Support characters
     ['officer', 'partner'].forEach(key => {
         const charDiff = diff[`_${key}`];
@@ -120,17 +120,17 @@ export const formatUserChangeLog = (diff: Record<string, any>, baseline: CaseDat
             });
         }
     });
-    
+
     // Suspects
     const suspectDiffs = diff._suspects as Record<string, Record<string, any>> | undefined;
     if (suspectDiffs) {
         Object.entries(suspectDiffs).forEach(([suspectId, fields]) => {
             const baselineSuspect = baseline.suspects.find(s => s.id === suspectId);
             const suspectLabel = baselineSuspect?.name || suspectId;
-            
+
             Object.entries(fields).forEach(([field, value]) => {
                 const oldVal = baselineSuspect ? (baselineSuspect as any)[field] : 'unknown';
-                
+
                 if (field === 'name') {
                     lines.push(`- Suspect "${oldVal}" was RENAMED to "${value}" — this is the COMPLETE new name. Use "${value}" EXACTLY and COMPLETELY. Do NOT keep any part of the old name "${oldVal}". Update ALL references to this character everywhere (description, bios, relationships, alibis, evidence, timeline, motives, secrets, witness observations).`);
                 } else if (field === 'isGuilty') {
@@ -147,7 +147,7 @@ export const formatUserChangeLog = (diff: Record<string, any>, baseline: CaseDat
             });
         });
     }
-    
+
     return lines.join('\n');
 };
 
@@ -163,7 +163,7 @@ export const applyUserDiff = (aiCase: CaseData, userDiff: Record<string, any>): 
             (aiCase as any)[f] = userDiff[f];
         }
     });
-    
+
     // Support characters
     ['officer', 'partner'].forEach(key => {
         const charDiff = userDiff[`_${key}`];
@@ -173,7 +173,7 @@ export const applyUserDiff = (aiCase: CaseData, userDiff: Record<string, any>): 
             });
         }
     });
-    
+
     // Suspects
     const suspectDiffs = userDiff._suspects as Record<string, Record<string, any>> | undefined;
     if (suspectDiffs) {
@@ -199,7 +199,7 @@ export const stripImagesFromCase = (caseData: CaseData): { stripped: any, imageM
             ev.imageUrl = "PLACEHOLDER";
         }
     });
-    
+
     // Strip support chars
     if (clone.officer?.portraitUrl) {
         imageMap['officer'] = clone.officer.portraitUrl;
@@ -210,7 +210,7 @@ export const stripImagesFromCase = (caseData: CaseData): { stripped: any, imageM
         imageMap['hero'] = clone.heroImageUrl;
         clone.heroImageUrl = "PLACEHOLDER";
     }
-    
+
     // Support Characters: Handle portraits map for both
     if (clone.officer?.portraits) {
         Object.keys(clone.officer.portraits).forEach(key => {
@@ -261,7 +261,7 @@ export const hydrateImagesToCase = (strippedCase: any, imageMap: Record<string, 
             });
         }
     }
-    
+
     if (strippedCase.partner) {
         if (strippedCase.partner.portraits) {
             Object.keys(strippedCase.partner.portraits).forEach(key => {
@@ -297,7 +297,7 @@ export const enforceRelationships = (caseData: any) => {
     const victim = caseData.suspects.find((s: any) => s.isDeceased);
     const victimName = victim?.name.trim();
     const aliveSuspectNames = caseData.suspects.filter((s: any) => !s.isDeceased).map((s: any) => s.name.trim());
-    
+
     caseData.suspects.forEach((s: any) => {
         if (!s.relationships) s.relationships = [];
         const currentName = s.name.trim();
@@ -315,7 +315,7 @@ export const enforceRelationships = (caseData: any) => {
 
         // 2. Define targets for this specific suspect
         const targets: string[] = [];
-        
+
         if (!isDeceased) {
             // Alive suspects need "The Victim" + other alive suspects
             targets.push("The Victim");
@@ -326,7 +326,7 @@ export const enforceRelationships = (caseData: any) => {
             // The victim needs all alive suspects
             aliveSuspectNames.forEach(name => targets.push(name));
         }
-        
+
         // 3. Ensure relationships with all targets
         targets.forEach((name: string) => {
             const hasRel = s.relationships.some((r: any) => r.targetName.trim() === name);
@@ -334,7 +334,7 @@ export const enforceRelationships = (caseData: any) => {
                 s.relationships.push({
                     targetName: name,
                     type: "Acquaintance",
-                    description: name === "The Victim" 
+                    description: name === "The Victim"
                         ? "I didn't know them personally, just another face in the crowd."
                         : "I've seen them around, but we don't talk much. I don't really have an opinion on them one way or the other."
                 });
@@ -348,11 +348,11 @@ export const enforceRelationships = (caseData: any) => {
 export const enforceTimelines = (caseData: any) => {
     const fixTimeline = (timeline: any[]): any[] => {
         if (!timeline || !Array.isArray(timeline)) return [];
-        
+
         // First pass: try to fix entries
         timeline.forEach((entry: any) => {
             if (!entry.time && !entry.activity) return; // Will be stripped
-            
+
             // If time is missing but activity exists — try to extract time from activity
             if ((!entry.time || entry.time.trim().length === 0) && entry.activity) {
                 const actStr = entry.activity.trim();
@@ -365,7 +365,7 @@ export const enforceTimelines = (caseData: any) => {
                     entry.time = "??:?? ??";
                 }
             }
-            
+
             // If activity is missing but time has a description mashed in
             if (entry.time) {
                 const timeStr = entry.time.trim();
@@ -377,13 +377,13 @@ export const enforceTimelines = (caseData: any) => {
                     }
                 }
             }
-            
+
             // Fix if activity is just a duplicate of the time
             if (entry.activity && entry.time && entry.activity.trim() === entry.time.trim()) {
                 entry.activity = '';
             }
         });
-        
+
         // Second pass: strip entries that are completely empty (no time AND no activity)
         return timeline.filter((entry: any) => {
             const hasTime = entry.time && entry.time.trim().length > 0;
@@ -776,15 +776,24 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - The startTime should be close enough to the crime that the trail is still warm.`,
 
     /** Evidence description style — used in generation, consistency, and edit */
-    EVIDENCE_DESCRIPTION_STYLE: `**EVIDENCE DESCRIPTION STYLE (CRITICAL):**
-- ALL evidence descriptions (both initialEvidence and hiddenEvidence) must NEVER use pronouns (he, she, they, him, her, his, hers, their, them, etc.).
-- ALWAYS use the FULL NAME of the person being referenced instead of a pronoun.
-- This applies to every 'description' field on every evidence item throughout the entire case.
+    EVIDENCE_DESCRIPTION_STYLE: `**WRITING STYLE RULES (CRITICAL — TWO DISTINCT RULES):**
+
+**RULE 1 — EVIDENCE DESCRIPTIONS (Full Names Required):**
+- Applies ONLY to 'description' fields on initialEvidence and hiddenEvidence items.
+- These fields must NEVER use pronouns (he, she, they, him, her, his, hers, their, them).
+- ALWAYS use the FULL NAME of the person being referenced.
 - WRONG: "A letter found in his desk revealing he had been embezzling funds."
 - CORRECT: "A letter found in Robert Chen's desk revealing Robert Chen had been embezzling funds."
-- WRONG: "She was seen leaving the building at 9 PM."
-- CORRECT: "Martha Rodriguez was seen leaving the building at 9 PM."
-- When rewriting existing descriptions, replace ALL pronouns with the appropriate full name. Do not leave any pronoun references.`,
+
+**RULE 2 — ALL OTHER NARRATIVE FIELDS (Natural Prose Required):**
+- Applies to: suspect relationship descriptions, suspect timeline activities, initialTimeline activities, bios, alibis, secrets, motive, witnessObservations, and knownFacts.
+- These fields MUST be written in natural, flowing prose using pronouns (he, she, they, etc.) after the first mention of a name.
+- Do NOT repeat a character's full name multiple times in the same field — use their name once, then switch to pronouns.
+- WRONG (too many names): "Martha Rodriguez went to Martha Rodriguez's office. Martha Rodriguez locked the door behind Martha Rodriguez."
+- CORRECT (natural): "Martha Rodriguez went to her office. She locked the door behind her."
+- WRONG (robotic): "Robert Chen claims Robert Chen was at Robert Chen's apartment during the time of the murder."
+- CORRECT (natural): "Robert Chen claims he was at his apartment during the time of the murder."
+- If fixing existing text that overuses full names, rewrite it to sound natural by replacing repeated names with appropriate pronouns.`,
 } as const;
 
 // --- SCHEMAS ---
@@ -797,35 +806,35 @@ const CASE_SCHEMA = {
         type: { type: Type.STRING },
         description: { type: Type.STRING },
         startTime: { type: Type.STRING },
-        officer: { 
-            type: Type.OBJECT, 
-            properties: { 
+        officer: {
+            type: Type.OBJECT,
+            properties: {
                 id: { type: Type.STRING },
-                name: { type: Type.STRING }, 
-                role: { type: Type.STRING }, 
-                gender: { type: Type.STRING } 
-            } 
+                name: { type: Type.STRING },
+                role: { type: Type.STRING },
+                gender: { type: Type.STRING }
+            }
         },
-        partner: { 
-            type: Type.OBJECT, 
-            properties: { 
+        partner: {
+            type: Type.OBJECT,
+            properties: {
                 id: { type: Type.STRING },
-                name: { type: Type.STRING }, 
-                role: { type: Type.STRING }, 
-                gender: { type: Type.STRING } 
-            } 
+                name: { type: Type.STRING },
+                role: { type: Type.STRING },
+                gender: { type: Type.STRING }
+            }
         },
-        initialEvidence: { 
-            type: Type.ARRAY, 
-            items: { 
-                type: Type.OBJECT, 
-                properties: { 
-                    id: { type: Type.STRING }, 
-                    title: { type: Type.STRING }, 
-                    description: { type: Type.STRING } 
+        initialEvidence: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    id: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING }
                 },
                 required: ["id", "title", "description"]
-            } 
+            }
         },
         initialTimeline: {
             type: Type.ARRAY,
@@ -840,9 +849,9 @@ const CASE_SCHEMA = {
                 required: ["time", "activity", "day", "dayOffset"]
             }
         },
-        suspects: { 
-            type: Type.ARRAY, 
-            items: { 
+        suspects: {
+            type: Type.ARRAY,
+            items: {
                 type: Type.OBJECT,
                 properties: {
                     id: { type: Type.STRING },
@@ -858,23 +867,33 @@ const CASE_SCHEMA = {
                     isDeceased: { type: Type.BOOLEAN },
                     baseAggravation: { type: Type.NUMBER },
                     motive: { type: Type.STRING },
-                    alibi: { type: Type.OBJECT, properties: {
-                        statement: { type: Type.STRING },
-                        isTrue: { type: Type.BOOLEAN },
-                        location: { type: Type.STRING },
-                        witnesses: { type: Type.ARRAY, items: { type: Type.STRING }}
-                    }, required: ["statement", "isTrue", "location", "witnesses"]},
-                    relationships: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                        targetName: { type: Type.STRING },
-                        type: { type: Type.STRING },
-                        description: { type: Type.STRING }
-                    }, required: ["targetName", "type", "description"]}},
-                    timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                        time: { type: Type.STRING },
-                        activity: { type: Type.STRING },
-                        day: { type: Type.STRING },
-                        dayOffset: { type: Type.NUMBER }
-                    }, required: ["time", "activity", "day", "dayOffset"]}},
+                    alibi: {
+                        type: Type.OBJECT, properties: {
+                            statement: { type: Type.STRING },
+                            isTrue: { type: Type.BOOLEAN },
+                            location: { type: Type.STRING },
+                            witnesses: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        }, required: ["statement", "isTrue", "location", "witnesses"]
+                    },
+                    relationships: {
+                        type: Type.ARRAY, items: {
+                            type: Type.OBJECT, properties: {
+                                targetName: { type: Type.STRING },
+                                type: { type: Type.STRING },
+                                description: { type: Type.STRING }
+                            }, required: ["targetName", "type", "description"]
+                        }
+                    },
+                    timeline: {
+                        type: Type.ARRAY, items: {
+                            type: Type.OBJECT, properties: {
+                                time: { type: Type.STRING },
+                                activity: { type: Type.STRING },
+                                day: { type: Type.STRING },
+                                dayOffset: { type: Type.NUMBER }
+                            }, required: ["time", "activity", "day", "dayOffset"]
+                        }
+                    },
                     knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
                     professionalBackground: { type: Type.STRING },
                     witnessObservations: { type: Type.STRING },
@@ -892,24 +911,24 @@ const CASE_SCHEMA = {
                     }
                 },
                 required: [
-                    "id", "name", "gender", "age", "role", "bio", "personality", 
-                    "secret", "physicalDescription", "isGuilty", "isDeceased", 
-                    "baseAggravation", "motive", "alibi", "relationships", 
-                    "timeline", "knownFacts", "professionalBackground", 
+                    "id", "name", "gender", "age", "role", "bio", "personality",
+                    "secret", "physicalDescription", "isGuilty", "isDeceased",
+                    "baseAggravation", "motive", "alibi", "relationships",
+                    "timeline", "knownFacts", "professionalBackground",
                     "witnessObservations", "hiddenEvidence"
                 ]
-            } 
+            }
         }
     },
     required: ["id", "title", "type", "description", "officer", "partner", "initialEvidence", "suspects"]
 };
 
-const REPORT_SCHEMA = { 
+const REPORT_SCHEMA = {
     type: Type.OBJECT,
     properties: {
         issuesFound: { type: Type.STRING, description: "A markdown list of bullet points detailing the logical gaps, timeline errors, or motive inconsistencies found." },
-        changesMade: { 
-            type: Type.ARRAY, 
+        changesMade: {
+            type: Type.ARRAY,
             items: {
                 type: Type.OBJECT,
                 properties: {
@@ -918,7 +937,7 @@ const REPORT_SCHEMA = {
                 },
                 required: ["description"]
             },
-            description: "A list of specific changes made to fix the issues." 
+            description: "A list of specific changes made to fix the issues."
         },
         conclusion: { type: Type.STRING, description: "A final paragraph summarizing the case's current state of consistency." }
     },
@@ -928,26 +947,26 @@ const REPORT_SCHEMA = {
 // --- CORE FUNCTIONS ---
 
 export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
-  console.log(`[DEBUG] checkCaseConsistency: Starting for case "${caseData.title}"`);
-  
-  // Compute user changes from baseline for the AI prompt
-  let userChangeLog = '';
-  if (baseline) {
-      const userDiff = computeUserDiff(baseline, caseData);
-      userChangeLog = formatUserChangeLog(userDiff, baseline);
-      if (userChangeLog) {
-          console.log('[DEBUG] checkCaseConsistency: User change log:\n' + userChangeLog);
-      }
-  }
-  
-  if (onProgress) onProgress("Stripping visual assets for analysis...");
-  const { stripped: lightweightCase, imageMap } = stripImagesFromCase(caseData);
+    console.log(`[DEBUG] checkCaseConsistency: Starting for case "${caseData.title}"`);
 
-  const guiltySuspects = caseData.suspects.filter(s => s.isGuilty);
-  const guiltyNames = guiltySuspects.length > 0 ? guiltySuspects.map(s => s.name).join(', ') : "Unknown";
+    // Compute user changes from baseline for the AI prompt
+    let userChangeLog = '';
+    if (baseline) {
+        const userDiff = computeUserDiff(baseline, caseData);
+        userChangeLog = formatUserChangeLog(userDiff, baseline);
+        if (userChangeLog) {
+            console.log('[DEBUG] checkCaseConsistency: User change log:\n' + userChangeLog);
+        }
+    }
 
-  // Build dynamic user-edits prompt section
-  const userEditsSection = userChangeLog ? `
+    if (onProgress) onProgress("Stripping visual assets for analysis...");
+    const { stripped: lightweightCase, imageMap } = stripImagesFromCase(caseData);
+
+    const guiltySuspects = caseData.suspects.filter(s => s.isGuilty);
+    const guiltyNames = guiltySuspects.length > 0 ? guiltySuspects.map(s => s.name).join(', ') : "Unknown";
+
+    // Build dynamic user-edits prompt section
+    const userEditsSection = userChangeLog ? `
     **0. USER MANUAL EDITS (HIGHEST PRIORITY — DO NOT REVERT):**
        The user has made the following manual changes to the case since the last save.
        These changes are IMMUTABLE and MUST be respected as the EXACT ground truth.
@@ -964,30 +983,30 @@ ${userChangeLog}
        Focus on fixing logical/narrative gaps, timeline conflicts, and structural issues — not on rewriting content that is already consistent.
 `;
 
-  if (onProgress) onProgress("Initializing Narrative Audit...");
+    if (onProgress) onProgress("Initializing Narrative Audit...");
 
-  // Detailed loading sequence
-  const progressSteps = [
-      "Auditing suspect alibis...",
-      "Verifying timeline continuity...",
-      "Checking motive consistency...",
-      "Cross-referencing evidence links...",
-      "Identifying logical narrative gaps...",
-      "Synthesizing forensic findings..."
-  ];
+    // Detailed loading sequence
+    const progressSteps = [
+        "Auditing suspect alibis...",
+        "Verifying timeline continuity...",
+        "Checking motive consistency...",
+        "Cross-referencing evidence links...",
+        "Identifying logical narrative gaps...",
+        "Synthesizing forensic findings..."
+    ];
 
-  let stepIdx = 0;
-  const progressInterval = setInterval(() => {
-      if (onProgress && stepIdx < progressSteps.length) {
-          onProgress(progressSteps[stepIdx]);
-          stepIdx++;
-      }
-  }, 2500);
+    let stepIdx = 0;
+    const progressInterval = setInterval(() => {
+        if (onProgress && stepIdx < progressSteps.length) {
+            onProgress(progressSteps[stepIdx]);
+            stepIdx++;
+        }
+    }, 2500);
 
-  try {
-    const result = await ai.models.generateContent({
-        model: GEMINI_MODELS.CASE_ENGINE,
-        contents: `You are a Master Mystery Editor and Narrative Architect.
+    try {
+        const result = await ai.models.generateContent({
+            model: GEMINI_MODELS.CASE_ENGINE,
+            contents: `You are a Master Mystery Editor and Narrative Architect.
     I will provide a JSON object representing a detective mystery game case.
     
     YOUR MISSION:
@@ -1029,128 +1048,128 @@ ${userChangeLog}
     
     CASE DATA:
     ${JSON.stringify(lightweightCase, null, 2)}`,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    updatedCase: CASE_SCHEMA,
-                    report: REPORT_SCHEMA
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        updatedCase: CASE_SCHEMA,
+                        report: REPORT_SCHEMA
+                    },
+                    required: ["updatedCase", "report"]
                 },
-                required: ["updatedCase", "report"]
-            },
-            thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+                thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+            }
+        });
+
+        clearInterval(progressInterval);
+        if (onProgress) onProgress("Finalizing Narrative Repair...");
+
+        const text = result.text;
+        if (!text) {
+            console.warn("[DEBUG] checkCaseConsistency: No text returned");
+            return { updatedCase: caseData, report: "No changes needed." };
         }
-    });
+        const parsed = JSON.parse(text);
+        const aiCase = parsed.updatedCase;
+        const reportObj = parsed.report;
 
-    clearInterval(progressInterval);
-    if (onProgress) onProgress("Finalizing Narrative Repair...");
+        console.log("[DEBUG] checkCaseConsistency: Success");
 
-    const text = result.text;
-    if (!text) {
-        console.warn("[DEBUG] checkCaseConsistency: No text returned");
-        return { updatedCase: caseData, report: "No changes needed." };
+        if (!aiCase) {
+            console.warn("[DEBUG] checkCaseConsistency: No updatedCase returned");
+            return { updatedCase: caseData, report: reportObj || "Consistency check failed to return case data." };
+        }
+
+        // --- HYDRATE IMAGES BACK INTO THE AI CASE ---
+        const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
+
+        // CRITICAL: Preserve original case identity & metadata — AI only returns narrative fields
+        hydratedCase.id = caseData.id;
+        hydratedCase.authorId = caseData.authorId;
+        hydratedCase.authorDisplayName = caseData.authorDisplayName;
+        hydratedCase.version = caseData.version;
+        hydratedCase.isUploaded = caseData.isUploaded;
+        hydratedCase.isFeatured = caseData.isFeatured;
+        hydratedCase.createdAt = caseData.createdAt;
+        hydratedCase.difficulty = caseData.difficulty;
+        // Prefer the AI's startTime if it returned one (it may have corrected alignment);
+        // only fall back to original if AI returned nothing
+        if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
+        if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
+
+        // Ensure we don't lose non-narrative fields
+
+        // Merge support characters — AI only returns {id, name, role, gender}
+        ['officer', 'partner'].forEach(key => {
+            const aiChar = (hydratedCase as any)[key];
+            const origChar = (caseData as any)[key];
+            if (aiChar && origChar) {
+                const merged = { ...origChar };
+                if (aiChar.name) merged.name = aiChar.name;
+                if (aiChar.role) merged.role = aiChar.role;
+                if (aiChar.gender) merged.gender = aiChar.gender;
+                if (aiChar.personality) merged.personality = aiChar.personality;
+                (hydratedCase as any)[key] = merged;
+            }
+        });
+
+        // Merge suspects
+        hydratedCase.suspects.forEach(s => {
+            const origSuspect = caseData.suspects.find(os => os.id === s.id);
+            if (origSuspect) {
+                if (s.avatarSeed === undefined) s.avatarSeed = origSuspect.avatarSeed;
+                if (s.voice === undefined) s.voice = origSuspect.voice;
+                if (!s.portraits || Object.keys(s.portraits).length === 0) s.portraits = origSuspect.portraits;
+            }
+        });
+
+        const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
+
+        // --- SAFETY NET: Re-apply user's field-level edits ---
+        // The AI was instructed to respect these, but we enforce them as a fallback
+        if (baseline) {
+            const userDiff = computeUserDiff(baseline, caseData);
+            if (Object.keys(userDiff).length > 0) {
+                applyUserDiff(finalData, userDiff);
+                console.log('[DEBUG] checkCaseConsistency: Safety-net re-applied user field values');
+            }
+        }
+
+        // Generate images for any NEW evidence added by the AI
+        if (onProgress) onProgress("Generating images for new evidence...");
+        const userId = caseData.authorId;
+        if (!userId) throw new Error('[CRITICAL] checkCaseConsistency: caseData.authorId is required');
+        const newEvidenceTasks: Promise<void>[] = [];
+
+        const allEvidence = [
+            ...(finalData.initialEvidence || []),
+            ...(finalData.suspects || []).flatMap(s => s.hiddenEvidence || [])
+        ];
+
+        allEvidence.forEach(ev => {
+            if (!ev.imageUrl) {
+                newEvidenceTasks.push((async () => {
+                    try {
+                        const url = await generateEvidenceImage(ev, finalData.id, userId);
+                        if (url) ev.imageUrl = url;
+                    } catch (e) {
+                        console.error(`Failed to generate image for new evidence ${ev.id}:`, e);
+                    }
+                })());
+            }
+        });
+
+        if (newEvidenceTasks.length > 0) {
+            await Promise.all(newEvidenceTasks);
+        }
+
+        return { updatedCase: finalData, report: reportObj };
+    } catch (e) {
+        clearInterval(progressInterval);
+        console.error("Consistency Check Failed:", e);
+        return { updatedCase: caseData, report: "Consistency check failed." };
     }
-    const parsed = JSON.parse(text);
-    const aiCase = parsed.updatedCase;
-    const reportObj = parsed.report;
-    
-    console.log("[DEBUG] checkCaseConsistency: Success");
-    
-    if (!aiCase) {
-        console.warn("[DEBUG] checkCaseConsistency: No updatedCase returned");
-        return { updatedCase: caseData, report: reportObj || "Consistency check failed to return case data." };
-    }
-
-    // --- HYDRATE IMAGES BACK INTO THE AI CASE ---
-    const hydratedCase = hydrateImagesToCase(aiCase, imageMap);
-
-    // CRITICAL: Preserve original case identity & metadata — AI only returns narrative fields
-    hydratedCase.id = caseData.id;
-    hydratedCase.authorId = caseData.authorId;
-    hydratedCase.authorDisplayName = caseData.authorDisplayName;
-    hydratedCase.version = caseData.version;
-    hydratedCase.isUploaded = caseData.isUploaded;
-    hydratedCase.isFeatured = caseData.isFeatured;
-    hydratedCase.createdAt = caseData.createdAt;
-    hydratedCase.difficulty = caseData.difficulty;
-    // Prefer the AI's startTime if it returned one (it may have corrected alignment);
-    // only fall back to original if AI returned nothing
-    if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
-    if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
-
-    // Ensure we don't lose non-narrative fields
-
-    // Merge support characters — AI only returns {id, name, role, gender}
-    ['officer', 'partner'].forEach(key => {
-        const aiChar = (hydratedCase as any)[key];
-        const origChar = (caseData as any)[key];
-        if (aiChar && origChar) {
-            const merged = { ...origChar };
-            if (aiChar.name) merged.name = aiChar.name;
-            if (aiChar.role) merged.role = aiChar.role;
-            if (aiChar.gender) merged.gender = aiChar.gender;
-            if (aiChar.personality) merged.personality = aiChar.personality;
-            (hydratedCase as any)[key] = merged;
-        }
-    });
-
-    // Merge suspects
-    hydratedCase.suspects.forEach(s => {
-        const origSuspect = caseData.suspects.find(os => os.id === s.id);
-        if (origSuspect) {
-            if (s.avatarSeed === undefined) s.avatarSeed = origSuspect.avatarSeed;
-            if (s.voice === undefined) s.voice = origSuspect.voice;
-            if (!s.portraits || Object.keys(s.portraits).length === 0) s.portraits = origSuspect.portraits;
-        }
-    });
-
-    const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(hydratedCase)), caseData));
-    
-    // --- SAFETY NET: Re-apply user's field-level edits ---
-    // The AI was instructed to respect these, but we enforce them as a fallback
-    if (baseline) {
-        const userDiff = computeUserDiff(baseline, caseData);
-        if (Object.keys(userDiff).length > 0) {
-            applyUserDiff(finalData, userDiff);
-            console.log('[DEBUG] checkCaseConsistency: Safety-net re-applied user field values');
-        }
-    }
-
-    // Generate images for any NEW evidence added by the AI
-    if (onProgress) onProgress("Generating images for new evidence...");
-    const userId = caseData.authorId;
-    if (!userId) throw new Error('[CRITICAL] checkCaseConsistency: caseData.authorId is required');
-    const newEvidenceTasks: Promise<void>[] = [];
-
-    const allEvidence = [
-        ...(finalData.initialEvidence || []),
-        ...(finalData.suspects || []).flatMap(s => s.hiddenEvidence || [])
-    ];
-
-    allEvidence.forEach(ev => {
-        if (!ev.imageUrl) {
-            newEvidenceTasks.push((async () => {
-                try {
-                    const url = await generateEvidenceImage(ev, finalData.id, userId);
-                    if (url) ev.imageUrl = url;
-                } catch (e) {
-                    console.error(`Failed to generate image for new evidence ${ev.id}:`, e);
-                }
-            })());
-        }
-    });
-
-    if (newEvidenceTasks.length > 0) {
-        await Promise.all(newEvidenceTasks);
-    }
-
-    return { updatedCase: finalData, report: reportObj };
-  } catch (e) {
-    clearInterval(progressInterval);
-    console.error("Consistency Check Failed:", e);
-    return { updatedCase: caseData, report: "Consistency check failed." };
-  }
 };
 
 /**
@@ -1159,7 +1178,7 @@ ${userChangeLog}
  */
 export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
     console.log(`[DEBUG] editCaseWithPrompt: Starting with prompt "${userPrompt}"`);
-    
+
     // Compute user changes from baseline for the AI prompt
     let userChangeLog = '';
     if (baseline) {
@@ -1169,7 +1188,7 @@ export const editCaseWithPrompt = async (caseData: CaseData, userPrompt: string,
             console.log('[DEBUG] editCaseWithPrompt: User change log:\n' + userChangeLog);
         }
     }
-    
+
     if (onProgress) onProgress("Stripping visual assets for transformation...");
     const { stripped: lightweightCase, imageMap } = stripImagesFromCase(caseData);
 
@@ -1312,24 +1331,24 @@ ${userChangeLog}
                 // The AI schema only returns {id, name, role, gender} for support chars.
                 // We must merge the original's full data first, then overlay AI's narrative changes.
                 const merged = { ...origChar };
-                
+
                 // Overlay AI fields that are in the schema
                 if (aiChar.name) merged.name = aiChar.name;
                 if (aiChar.role) merged.role = aiChar.role;
                 if (aiChar.gender) merged.gender = aiChar.gender;
                 if (aiChar.personality) merged.personality = aiChar.personality;
-                
+
                 const roleChanged = merged.role !== origChar.role;
                 const personalityChanged = merged.personality !== origChar.personality;
                 const nameChanged = merged.name !== origChar.name;
-                
+
                 if (themeChanged || roleChanged || personalityChanged || nameChanged) {
                     // Character meaningfully changed — clear portraits for regeneration
                     merged.portraits = {};
                     merged.avatarSeed = Math.floor(Math.random() * 1000000);
                 }
                 // Otherwise merged already has origChar.portraits, avatarSeed, voice, etc.
-                
+
                 (hydratedCase as any)[key] = merged;
             }
         });
@@ -1341,7 +1360,7 @@ ${userChangeLog}
                 const roleChanged = s.role !== origSuspect.role;
                 const descChanged = s.physicalDescription !== origSuspect.physicalDescription;
                 const nameChanged = s.name !== origSuspect.name;
-                
+
                 if (themeChanged || roleChanged || descChanged || nameChanged) {
                     s.portraits = {};
                     s.avatarSeed = Math.floor(Math.random() * 1000000);
@@ -1467,20 +1486,20 @@ ${userChangeLog}
 };
 
 export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolean = false): Promise<CaseData> => {
-  let finalPrompt = userPrompt;
+    let finalPrompt = userPrompt;
 
-  // If user hit "I'm Feeling Lucky" without a prompt, ask AI to generate a random theme
-  if (!finalPrompt && isLucky) {
-      finalPrompt = "Generate a completely unique, creative, and random mystery theme. It could be any genre (Sci-Fi, Fantasy, Historical, Cyberpunk, Western, Horror, Comedy, etc). Do not use a generic noir theme unless random chance dictates it.";
-  }
+    // If user hit "I'm Feeling Lucky" without a prompt, ask AI to generate a random theme
+    if (!finalPrompt && isLucky) {
+        finalPrompt = "Generate a completely unique, creative, and random mystery theme. It could be any genre (Sci-Fi, Fantasy, Historical, Cyberpunk, Western, Horror, Comedy, etc). Do not use a generic noir theme unless random chance dictates it.";
+    }
 
-  // Fallback if still empty
-  finalPrompt = finalPrompt || "A classic noir murder mystery";
+    // Fallback if still empty
+    finalPrompt = finalPrompt || "A classic noir murder mystery";
 
-  const seed = Math.floor(Math.random() * 1000000); 
-  console.log(`[DEBUG] generateCaseFromPrompt: "${finalPrompt}" (Lucky: ${isLucky}, Seed: ${seed})`);
-  
-  const systemPrompt = `
+    const seed = Math.floor(Math.random() * 1000000);
+    console.log(`[DEBUG] generateCaseFromPrompt: "${finalPrompt}" (Lucky: ${isLucky}, Seed: ${seed})`);
+
+    const systemPrompt = `
     Create a detective case JSON.
     Theme: ${finalPrompt}.
     Difficulty: Calculated automatically based on complexity.
@@ -1521,139 +1540,169 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     
     Output JSON structure matching CaseData interface.
   `;
-  
-  const res = await ai.models.generateContent({
-    model: GEMINI_MODELS.CASE_GENERATION,
-    contents: systemPrompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-            id: { type: Type.STRING },
-            title: { type: Type.STRING },
-            type: { type: Type.STRING },
-            description: { type: Type.STRING },
-            startTime: { type: Type.STRING },
-            officer: { type: Type.OBJECT, properties: {
-                id: { type: Type.STRING },
-                name: { type: Type.STRING },
-                gender: { type: Type.STRING },
-                role: { type: Type.STRING },
-                personality: { type: Type.STRING }
-            }, required: ["name", "gender", "role", "personality"] },
-            partner: { type: Type.OBJECT, properties: {
-                id: { type: Type.STRING },
-                name: { type: Type.STRING },
-                gender: { type: Type.STRING },
-                role: { type: Type.STRING },
-                personality: { type: Type.STRING }
-            }, required: ["name", "gender", "role", "personality"] },
-            initialEvidence: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                id: { type: Type.STRING },
-                title: { type: Type.STRING },
-                description: { type: Type.STRING }
-            }, required: ["title", "description"] }},
-            initialTimeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                time: { type: Type.STRING },
-                activity: { type: Type.STRING },
-                day: { type: Type.STRING },
-                dayOffset: { type: Type.NUMBER }
-            }, required: ["time", "activity", "day", "dayOffset"] }},
-            suspects: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                id: { type: Type.STRING },
-                name: { type: Type.STRING },
-                gender: { type: Type.STRING },
-                age: { type: Type.NUMBER },
-                role: { type: Type.STRING },
-                bio: { type: Type.STRING },
-                personality: { type: Type.STRING },
-                secret: { type: Type.STRING },
-                physicalDescription: { type: Type.STRING },
-                professionalBackground: { type: Type.STRING },
-                isGuilty: { type: Type.BOOLEAN },
-                isDeceased: { type: Type.BOOLEAN },
-                baseAggravation: { type: Type.NUMBER },
-                avatarSeed: { type: Type.NUMBER },
-                motive: { type: Type.STRING },
-                witnessObservations: { type: Type.STRING },
-                alibi: { type: Type.OBJECT, properties: {
-                    statement: { type: Type.STRING },
-                    isTrue: { type: Type.BOOLEAN },
-                    location: { type: Type.STRING },
-                    witnesses: { type: Type.ARRAY, items: { type: Type.STRING }}
-                }, required: ["statement", "isTrue", "location", "witnesses"] },
-                relationships: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                    targetName: { type: Type.STRING },
-                    type: { type: Type.STRING },
-                    description: { type: Type.STRING }
-                }, required: ["targetName", "type", "description"] }},
-                timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
-                    time: { type: Type.STRING },
-                    activity: { type: Type.STRING },
-                    day: { type: Type.STRING },
-                    dayOffset: { type: Type.NUMBER }
-                }, required: ["time", "activity", "day", "dayOffset"] }},
-                knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
-                hiddenEvidence: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+
+    const res = await ai.models.generateContent({
+        model: GEMINI_MODELS.CASE_GENERATION,
+        contents: systemPrompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
                     id: { type: Type.STRING },
                     title: { type: Type.STRING },
-                    description: { type: Type.STRING }
-                }, required: ["title", "description"] }}
-            }, required: ["name", "gender", "role", "bio", "personality", "secret", "isGuilty", "baseAggravation", "motive", "alibi", "relationships", "knownFacts", "hiddenEvidence", "timeline", "professionalBackground", "witnessObservations"] }}
-        },
-        required: ["title", "description", "initialEvidence", "suspects", "officer", "partner"]
-      }
-    }
-  });
+                    type: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    startTime: { type: Type.STRING },
+                    officer: {
+                        type: Type.OBJECT, properties: {
+                            id: { type: Type.STRING },
+                            name: { type: Type.STRING },
+                            gender: { type: Type.STRING },
+                            role: { type: Type.STRING },
+                            personality: { type: Type.STRING }
+                        }, required: ["name", "gender", "role", "personality"]
+                    },
+                    partner: {
+                        type: Type.OBJECT, properties: {
+                            id: { type: Type.STRING },
+                            name: { type: Type.STRING },
+                            gender: { type: Type.STRING },
+                            role: { type: Type.STRING },
+                            personality: { type: Type.STRING }
+                        }, required: ["name", "gender", "role", "personality"]
+                    },
+                    initialEvidence: {
+                        type: Type.ARRAY, items: {
+                            type: Type.OBJECT, properties: {
+                                id: { type: Type.STRING },
+                                title: { type: Type.STRING },
+                                description: { type: Type.STRING }
+                            }, required: ["title", "description"]
+                        }
+                    },
+                    initialTimeline: {
+                        type: Type.ARRAY, items: {
+                            type: Type.OBJECT, properties: {
+                                time: { type: Type.STRING },
+                                activity: { type: Type.STRING },
+                                day: { type: Type.STRING },
+                                dayOffset: { type: Type.NUMBER }
+                            }, required: ["time", "activity", "day", "dayOffset"]
+                        }
+                    },
+                    suspects: {
+                        type: Type.ARRAY, items: {
+                            type: Type.OBJECT, properties: {
+                                id: { type: Type.STRING },
+                                name: { type: Type.STRING },
+                                gender: { type: Type.STRING },
+                                age: { type: Type.NUMBER },
+                                role: { type: Type.STRING },
+                                bio: { type: Type.STRING },
+                                personality: { type: Type.STRING },
+                                secret: { type: Type.STRING },
+                                physicalDescription: { type: Type.STRING },
+                                professionalBackground: { type: Type.STRING },
+                                isGuilty: { type: Type.BOOLEAN },
+                                isDeceased: { type: Type.BOOLEAN },
+                                baseAggravation: { type: Type.NUMBER },
+                                avatarSeed: { type: Type.NUMBER },
+                                motive: { type: Type.STRING },
+                                witnessObservations: { type: Type.STRING },
+                                alibi: {
+                                    type: Type.OBJECT, properties: {
+                                        statement: { type: Type.STRING },
+                                        isTrue: { type: Type.BOOLEAN },
+                                        location: { type: Type.STRING },
+                                        witnesses: { type: Type.ARRAY, items: { type: Type.STRING } }
+                                    }, required: ["statement", "isTrue", "location", "witnesses"]
+                                },
+                                relationships: {
+                                    type: Type.ARRAY, items: {
+                                        type: Type.OBJECT, properties: {
+                                            targetName: { type: Type.STRING },
+                                            type: { type: Type.STRING },
+                                            description: { type: Type.STRING }
+                                        }, required: ["targetName", "type", "description"]
+                                    }
+                                },
+                                timeline: {
+                                    type: Type.ARRAY, items: {
+                                        type: Type.OBJECT, properties: {
+                                            time: { type: Type.STRING },
+                                            activity: { type: Type.STRING },
+                                            day: { type: Type.STRING },
+                                            dayOffset: { type: Type.NUMBER }
+                                        }, required: ["time", "activity", "day", "dayOffset"]
+                                    }
+                                },
+                                knownFacts: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                hiddenEvidence: {
+                                    type: Type.ARRAY, items: {
+                                        type: Type.OBJECT, properties: {
+                                            id: { type: Type.STRING },
+                                            title: { type: Type.STRING },
+                                            description: { type: Type.STRING }
+                                        }, required: ["title", "description"]
+                                    }
+                                }
+                            }, required: ["name", "gender", "role", "bio", "personality", "secret", "isGuilty", "baseAggravation", "motive", "alibi", "relationships", "knownFacts", "hiddenEvidence", "timeline", "professionalBackground", "witnessObservations"]
+                        }
+                    }
+                },
+                required: ["title", "description", "initialEvidence", "suspects", "officer", "partner"]
+            }
+        }
+    });
 
-  const data = JSON.parse(res.text!);
-  console.log(`[DEBUG] generateCaseFromPrompt: Parsed JSON`, data);
-  
-  // Post-process to ensure IDs and defaults if AI missed something despite schema
-  data.id = `custom-${Date.now()}`;
-  data.initialEvidence = data.initialEvidence || [];
-  data.initialEvidence.forEach((e: any, i: number) => e.id = `ie-${i}`);
-  
-  // Robustness for Support Characters
-  data.initialTimeline = data.initialTimeline || [];
-  data.difficulty = calculateDifficulty(data);
-  if (!data.startTime) data.startTime = '2030-09-12T23:30';
-  if (!data.officer) data.officer = { id: 'officer', name: "Chief", gender: "Male", role: "Police Chief", personality: "Gruff" };
-  data.officer.id = 'officer';
-  data.officer.avatarSeed = Math.floor(Math.random() * 100000);
-  data.officer.portraits = {};
+    const data = JSON.parse(res.text!);
+    console.log(`[DEBUG] generateCaseFromPrompt: Parsed JSON`, data);
 
-  if (!data.partner) data.partner = { id: 'partner', name: "Al", gender: "Male", role: "Junior Detective", personality: "Eager" };
-  data.partner.id = 'partner';
-  data.partner.avatarSeed = Math.floor(Math.random() * 100000);
-  data.partner.portraits = {};
+    // Post-process to ensure IDs and defaults if AI missed something despite schema
+    data.id = `custom-${Date.now()}`;
+    data.initialEvidence = data.initialEvidence || [];
+    data.initialEvidence.forEach((e: any, i: number) => e.id = `ie-${i}`);
 
-  data.suspects = data.suspects || [];
-  data.suspects.forEach((s: any, i: number) => {
-      s.id = `s-${i}`;
-      s.portraits = {};
-      s.hiddenEvidence = s.hiddenEvidence || [];
-      s.hiddenEvidence.forEach((e: any, j: number) => e.id = `he-${s.id}-${j}`);
-      
-      // Assign voice
-      if (s.isDeceased) {
-          s.voice = "None";
-      } else if (!s.voice || s.voice === "None") {
-          s.voice = getRandomVoice(s.gender);
-      }
-      
-      // Fallbacks for robustness
-      if (!s.gender) s.gender = "Unknown";
-      if (!s.alibi) s.alibi = { statement: "I was home.", isTrue: true, location: "Home", witnesses: [] };
-      if (!s.knownFacts) s.knownFacts = [];
-      if (!s.timeline) s.timeline = [];
-      if (!s.motive) s.motive = "Unknown";
-      if (!s.professionalBackground) s.professionalBackground = "Unknown";
-      if (!s.witnessObservations) s.witnessObservations = "None";
-  });
-  
-  // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
-  const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(data))));
-  return finalData as CaseData;
+    // Robustness for Support Characters
+    data.initialTimeline = data.initialTimeline || [];
+    data.difficulty = calculateDifficulty(data);
+    if (!data.startTime) data.startTime = '2030-09-12T23:30';
+    if (!data.officer) data.officer = { id: 'officer', name: "Chief", gender: "Male", role: "Police Chief", personality: "Gruff" };
+    data.officer.id = 'officer';
+    data.officer.avatarSeed = Math.floor(Math.random() * 100000);
+    data.officer.portraits = {};
+
+    if (!data.partner) data.partner = { id: 'partner', name: "Al", gender: "Male", role: "Junior Detective", personality: "Eager" };
+    data.partner.id = 'partner';
+    data.partner.avatarSeed = Math.floor(Math.random() * 100000);
+    data.partner.portraits = {};
+
+    data.suspects = data.suspects || [];
+    data.suspects.forEach((s: any, i: number) => {
+        s.id = `s-${i}`;
+        s.portraits = {};
+        s.hiddenEvidence = s.hiddenEvidence || [];
+        s.hiddenEvidence.forEach((e: any, j: number) => e.id = `he-${s.id}-${j}`);
+
+        // Assign voice
+        if (s.isDeceased) {
+            s.voice = "None";
+        } else if (!s.voice || s.voice === "None") {
+            s.voice = getRandomVoice(s.gender);
+        }
+
+        // Fallbacks for robustness
+        if (!s.gender) s.gender = "Unknown";
+        if (!s.alibi) s.alibi = { statement: "I was home.", isTrue: true, location: "Home", witnesses: [] };
+        if (!s.knownFacts) s.knownFacts = [];
+        if (!s.timeline) s.timeline = [];
+        if (!s.motive) s.motive = "Unknown";
+        if (!s.professionalBackground) s.professionalBackground = "Unknown";
+        if (!s.witnessObservations) s.witnessObservations = "None";
+    });
+
+    // Run logic to enforce relationships existence (Suspects only, as victim is a suspect)
+    const finalData = enforceStartTimeAlignment(enforceSuspectSchema(enforceTimelines(enforceRelationships(data))));
+    return finalData as CaseData;
 };

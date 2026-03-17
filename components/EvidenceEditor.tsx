@@ -166,6 +166,12 @@ const DescInput = styled.textarea`
   
   &:focus { outline: none; color: #ddd; }
   &::placeholder { color: #444; }
+
+  @media (max-width: 1080px) {
+    resize: none;
+    overflow: hidden;
+    min-height: unset;
+  }
 `;
 
 interface EvidenceEditorProps {

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
+import SwipeableToaster from './SwipeableToaster';
 import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import { ScreenState } from '../types';
 import CRTOverlay from './CRTOverlay';
@@ -690,10 +690,25 @@ const Layout: React.FC<LayoutProps> = ({
                     )}
                   </NavGroup>
 
-                  {/* MOBILE CUSTOM ACTION */}
-                  {mobileAction && (
+                  {/* MOBILE CUSTOM ACTION — always occupy grid-column 3 for consistent title width */}
+                  {mobileAction ? (
                     <MobileActionButton id="mobile-action-button" onClick={mobileAction.onClick} $active={mobileAction.active}>
                       [{mobileAction.label}]
+                    </MobileActionButton>
+                  ) : isCaseReview && hasUnsavedChanges ? (
+                    <MobileActionButton as="div" style={{ pointerEvents: 'none' }}>
+                      <span style={{
+                        color: '#fa0', fontSize: '0.75rem',
+                        textTransform: 'uppercase', letterSpacing: '1px',
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                        UNSAVED
+                      </span>
+                    </MobileActionButton>
+                  ) : (
+                    <MobileActionButton as="div" style={{ pointerEvents: 'none', visibility: 'hidden' }}>
+                      [_]
                     </MobileActionButton>
                   )}
 
@@ -886,34 +901,7 @@ const Layout: React.FC<LayoutProps> = ({
               {children}
             </ScreenContent>
 
-            <Toaster
-              position="bottom-right"
-              containerStyle={{
-                position: 'absolute',
-                bottom: 30,
-                right: 30,
-                zIndex: 50,
-              }}
-              toastOptions={{
-                style: {
-                  background: '#111',
-                  color: '#0f0',
-                  border: '1px solid #333',
-                  fontFamily: "'VT323', monospace",
-                  fontSize: '1rem',
-                  boxShadow: '0 0 15px rgba(0,255,0,0.1)',
-                },
-                success: {
-                  iconTheme: { primary: '#0f0', secondary: '#111' },
-                  duration: 3000,
-                },
-                error: {
-                  style: { color: '#f55', borderColor: '#500' },
-                  iconTheme: { primary: '#f55', secondary: '#111' },
-                  duration: 6000,
-                },
-              }}
-            />
+            <SwipeableToaster />
 
           </ContentInset>
         </Screen>

@@ -156,6 +156,12 @@ const InputGroup = styled.div`
   textarea {
     resize: vertical;
     min-height: 80px;
+
+    @media (max-width: 1080px) {
+      resize: none;
+      overflow: hidden;
+      min-height: unset;
+    }
   }
 `;
 
@@ -194,6 +200,12 @@ const StyledTextArea = styled.textarea`
     border-bottom-color: #0f0;
     background: #1a1a1a;
     outline: none;
+  }
+
+  @media (max-width: 1080px) {
+    resize: none;
+    overflow: hidden;
+    min-height: unset;
   }
 `;
 
@@ -628,10 +640,23 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const [mobileTab, setMobileTab] = useState<'case' | 'suspects'>('case');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const initialDraftCase = useRef(draftCase);
   const baselineRef = useRef<CaseData>(JSON.parse(JSON.stringify(draftCase)));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Auto-resize all textareas on mobile to hug their content
+  useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 1080px)').matches;
+    if (!isMobile || !containerRef.current) return;
+
+    const textareas = containerRef.current.querySelectorAll('textarea');
+    textareas.forEach((ta) => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+  });
 
   useEffect(() => {
     const changed = JSON.stringify(draftCase) !== JSON.stringify(initialDraftCase.current);
@@ -1182,7 +1207,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   };
 
   return (
-    <Container>
+    <Container ref={containerRef}>
       {loadingState.visible && (
         <Overlay>
           {loadingState.step && (
@@ -1849,7 +1874,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                             value={t.time}
                             onChange={(e) => updateTimeline(i, 'time', e.target.value)}
                           />
-                          <StyledInput
+                          <StyledTextArea
                             placeholder="Activity"
                             value={t.activity}
                             onChange={(e) => updateTimeline(i, 'activity', e.target.value)}
@@ -1934,28 +1959,34 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       </Panel>
       {consistencyModal.visible && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: '30px 20px',
         }}>
           <div style={{
             background: '#111',
-            padding: '25px',
             border: '1px solid #444',
             maxWidth: '800px',
             width: '95%',
-            maxHeight: '85vh',
+            maxHeight: '100%',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 0 50px rgba(0,0,0,0.5)',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            overflow: 'hidden',
           }}>
-            <h2 style={{ color: '#fff', marginTop: 0, borderBottom: '1px solid #333', paddingBottom: '15px', fontSize: '1.5rem' }}>Narrative Audit Report</h2>
+            <h2 style={{
+              color: '#fff', marginTop: 0, marginBottom: 0,
+              borderBottom: '1px solid #333', padding: '20px 25px',
+              fontSize: '1.5rem', flexShrink: 0,
+              background: '#111', position: 'relative', zIndex: 1,
+            }}>Narrative Audit Report</h2>
 
             <div style={{
               flex: 1,
               overflowY: 'auto',
-              paddingRight: '10px',
-              margin: '15px 0'
+              padding: '20px 25px',
+              minHeight: 0,
             }}>
               {consistencyModal.report && typeof consistencyModal.report === 'object' ? (
                 <>
@@ -2017,7 +2048,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '15px', borderTop: '1px solid #333', padding: '20px 25px', justifyContent: 'flex-end', flexShrink: 0 }}>
               <SaveButton onClick={() => setConsistencyModal({ visible: false, report: null, updatedCase: null })} style={{ background: '#333', padding: '10px 20px' }}>Discard</SaveButton>
               <SaveButton onClick={applyConsistencyChanges} style={{ padding: '10px 25px', background: '#0f0', color: '#000' }}>Apply All Changes</SaveButton>
             </div>
