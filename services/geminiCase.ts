@@ -946,7 +946,7 @@ const REPORT_SCHEMA = {
 
 // --- CORE FUNCTIONS ---
 
-export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void, baseline?: CaseData): Promise<{ updatedCase: CaseData, report: any }> => {
+export const checkCaseConsistency = async (caseData: CaseData, onProgress?: (msg: string) => void, baseline?: CaseData, editContext?: string): Promise<{ updatedCase: CaseData, report: any }> => {
     console.log(`[DEBUG] checkCaseConsistency: Starting for case "${caseData.title}"`);
 
     // Compute user changes from baseline for the AI prompt
@@ -983,6 +983,17 @@ ${userChangeLog}
        Focus on fixing logical/narrative gaps, timeline conflicts, and structural issues — not on rewriting content that is already consistent.
 `;
 
+    // If this consistency check is running after an AI edit, include the user's original request
+    const editContextSection = editContext ? `
+    **IMPORTANT — EDIT CONTEXT (DO NOT REVERT INTENTIONAL CHANGES):**
+       This case was JUST transformed by an AI edit with the following user request:
+       "${editContext}"
+       
+       All changes made by that edit are INTENTIONAL and should be PRESERVED. Do NOT flag them as issues.
+       For example, if the user asked to change the setting to a different time period, do NOT flag the startTime as "too far in the past".
+       Your job is to ensure the EDITED case is internally consistent — not to undo the edit.
+` : '';
+
     if (onProgress) onProgress("Initializing Narrative Audit...");
 
     // Detailed loading sequence
@@ -1011,6 +1022,7 @@ ${userChangeLog}
     
     YOUR MISSION:
     Perform a deep narrative audit and structural repair. The case must be perfectly consistent, logically sound, and satisfyingly solvable.
+    ${editContextSection}
     ${userEditsSection}
     1. **NARRATIVE INTEGRITY & SOLVABILITY (CRITICAL):**
        - **GROUND TRUTH:** The 'isGuilty' flags in the provided JSON are the ABSOLUTE SOURCE OF TRUTH.

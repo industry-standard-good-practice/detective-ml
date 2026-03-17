@@ -1136,11 +1136,12 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         setLoadingState({ visible: true, message: msg, step: 'Step 1/2', stepDetail: 'Applying Edits' });
       }, baselineRef.current);
 
-      // Run consistency check on the edited result
+      // Run consistency check on the edited result — pass the original case as baseline
+      // and the user's edit prompt so the consistency checker knows what was intentional
       setLoadingState({ visible: true, message: "Running full consistency audit...", step: 'Step 2/2', stepDetail: 'Consistency Check' });
       const { updatedCase, report: consistencyReport } = await checkCaseConsistency(editedCase, (msg) => {
         setLoadingState({ visible: true, message: msg, step: 'Step 2/2', stepDetail: 'Consistency Check' });
-      });
+      }, draftCase, editPrompt);
 
       // Use the consistency report for the modal — it has the expected shape (issuesFound, changesMade, conclusion)
       setConsistencyModal({ visible: true, report: consistencyReport, updatedCase });
