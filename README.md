@@ -1,205 +1,230 @@
-# 🔍 DetectiveML
+# Detective ML
 
-**DetectiveML** is an AI-powered murder mystery game where you play as a detective solving procedurally generated cases. Interrogate suspects, gather evidence, uncover contradictions, and make your accusation.
-
-## How It Works
-
-### 🎮 Gameplay
-
-1. **Select a Case** — Browse featured cases or community-created mysteries from the Network. You can also create your own.
-2. **Review the Evidence Board** — Read the mission briefing, examine initial evidence, and study the crime scene.
-3. **Interrogate Suspects** — Question persons of interest using natural language. Each suspect has a unique personality, backstory, secrets, and an AI-driven conversational engine.
-4. **Discover Hidden Evidence** — Push suspects with the right questions to unlock hidden clues. Present evidence to challenge alibis and expose lies.
-5. **Monitor Aggravation** — Be careful how hard you push. If a suspect's aggravation meter hits 100%, they'll call their lawyer and shut down.
-6. **Use Your Partner** — Your junior detective partner can run interference. Use "Good Cop" to calm suspects or "Bad Cop" to force evidence (at a cost).
-7. **Build a Timeline** — Track everyone's movements and spot contradictions between alibis.
-8. **Make Your Accusation** — When you're ready, accuse a suspect and present your evidence.
-
-### 🛠️ Case Creation
-
-DetectiveML includes a full case editor where you can:
-- Design crime scenarios with custom suspects, evidence, and timelines
-- Generate pixel art portraits and crime scene images via AI
-- Set difficulty levels, hidden evidence chains, and partner characters
-- Publish to the Network for other players
-
-## Tech Stack
-
-- **Frontend**: React, TypeScript, Styled Components, Framer Motion
-- **AI**: Google Gemini (interrogation, TTS, case generation, image generation)
-- **Backend**: Express + Vite dev server
-- **Database**: Firebase (Realtime Database, Auth, Storage)
-- **Art Style**: Retro CRT terminal aesthetic with pixel art
-
-## Run Locally
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18+)
-- A [Google Gemini API key](https://aistudio.google.com/apikey)
-- A [Firebase project](https://console.firebase.google.com/) (for auth, database, and storage)
-
-### Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/detective-ml.git
-   cd detective-ml
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables:**
-
-   Create a `.env.local` file in the root directory with the following:
-
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key
-
-   VITE_FIREBASE_API_KEY=your_firebase_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   VITE_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   ```
-
-4. **Run the dev server:**
-   ```bash
-   npm run dev
-   ```
-
-   The app will be available at `http://localhost:3000`.
-
-### Other Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the dev server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview the production build |
-| `npm run lint` | Type-check with TypeScript |
+A detective mystery game powered by AI. Players investigate crime scenes, interrogate suspects, gather evidence, and make accusations — all driven by Google's Gemini AI. Built as a monorepo with a React frontend and an Express backend.
 
 ## Project Structure
 
 ```
 detective-ml/
-├── components/       # Reusable UI components (SuspectCard, OnboardingTour, etc.)
-├── contexts/         # React contexts (Onboarding, Game State)
-├── hooks/            # Custom hooks (useDragScroll, etc.)
-├── screens/          # Main screens (CaseHub, Interrogation, CaseSelection, etc.)
-├── services/         # API clients (Gemini, Firebase, TTS, persistence)
-├── types.ts          # TypeScript type definitions
-├── server.ts         # Express + Vite dev server
-├── public/           # PWA assets (manifest, service worker, icons)
-└── index.tsx         # App entry point
+├── frontend/     ← React + Vite web application (port 3000)
+├── backend/      ← Express API server — Firebase proxy (port 4000)
+├── docs/         ← Reference documentation
+├── .env.local    ← Root env file (frontend vars, loaded by Vite)
+└── package.json  ← npm workspaces root
 ```
 
-## PWA Mobile Testing
+---
 
-DetectiveML is an installable PWA on both Android and iOS. Both platforms open in **standalone mode** (no browser UI).
+## Prerequisites
 
-### Find Your PC's LAN IP
+| Tool | Minimum Version | Check |
+|------|----------------|-------|
+| **Node.js** | v18+ (v20 LTS recommended) | `node -v` |
+| **npm** | v9+ (ships with Node 18+) | `npm -v` |
+| **Git** | Any recent version | `git --version` |
 
-You'll need this for iOS testing. Run in a terminal:
+You will also need accounts / access to:
+
+- **Google Cloud / Firebase** — for authentication, Realtime Database, and Cloud Storage
+- **Google AI Studio** — for a Gemini API key (powers AI game features)
+
+---
+
+## First-Time Setup
+
+### 1. Clone the Repository
+
 ```bash
-# Windows
-ipconfig
-# Look for "IPv4 Address" under your active adapter (e.g. 192.168.86.244)
-
-# macOS
-ipconfig getifaddr en0
+git clone <repo-url>
+cd detective-ml
 ```
 
-### Android (Chrome USB Port Forwarding)
+### 2. Install Dependencies
 
-Chrome on Android requires a secure context (`localhost` or HTTPS) for standalone PWA install. USB port forwarding maps your PC's `localhost:3000` to `localhost:3000` on your phone.
+The project uses [npm workspaces](https://docs.npmjs.com/cli/v9/using-npm/workspaces). A single install from the root fetches dependencies for both `frontend/` and `backend/`:
 
-#### Prerequisites
+```bash
+npm install
+```
 
-1. **Install ADB** (one-time — required for Chrome to communicate with your phone):
-   ```bash
-   # Windows
-   winget install Google.PlatformTools
+### 3. Set Up Firebase Project
 
-   # macOS
-   brew install android-platform-tools
-   ```
+If you don't already have a Firebase project, create one:
 
-2. **Enable Developer Mode on your Android phone:**
-   - `Settings → About phone` → tap **Build number** 7 times
+1. Go to the [Firebase Console](https://console.firebase.google.com/) and click **Add project**
+2. Enable **Google sign-in** under **Authentication → Sign-in method**
+3. Create a **Realtime Database** (start in test mode for local dev)
+4. Enable **Cloud Storage** (start in test mode for local dev)
 
-3. **Enable USB Debugging:**
-   - `Settings → Developer options` → toggle on **USB debugging**
+#### 3a. Get Firebase Web Config (for the frontend)
 
-#### Testing Workflow
+1. In Firebase Console → **Project Settings → General**
+2. Under **Your apps**, click the web icon (`</>`) to register a web app (if not already registered)
+3. Copy the config values — you'll need: `apiKey`, `authDomain`, `projectId`, `messagingSenderId`, `appId`
 
-1. **Start the dev server:**
-   ```bash
-   npm run dev
-   ```
+#### 3b. Generate a Service Account Key (for the backend)
 
-2. **Connect your phone via USB** (must be a data cable, not charge-only)
-   - Accept the **"Allow USB debugging?"** prompt on your phone
-   - Verify with `adb devices` — your device should show as `device` (not `unauthorized`)
+1. In Firebase Console → **Project Settings → Service Accounts**
+2. Click **Generate new private key** → download the JSON file
+3. Save it as `backend/.auth/serviceAccountKey.json`
 
-3. **Set up port forwarding:**
-   - On your computer, open Chrome → `chrome://inspect/#devices`
-   - Your phone should appear (with a green dot if port forwarding is active)
-   - Click **"Port forwarding..."** → add rule: `3000` → `localhost:3000`
-   - Check **"Enable port forwarding"** → **Done**
+> ⚠️ **Never commit this file.** It is already in `.gitignore`.
 
-4. **On your phone:**
-   - Open Chrome → `localhost:3000`
-   - Wait ~30 seconds → tap **Install**
-   - The app opens in **standalone mode** (no address bar) ✅
+### 4. Get a Gemini API Key
 
-#### Bonus: Remote Debugging
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Click **Create API key**
+3. Copy the key — you'll use it in the frontend env file
 
-Click **"inspect"** next to your phone's tab in `chrome://inspect` to get full Chrome DevTools — Elements, Console, Network, and more.
+### 5. Configure Environment Files
 
-### iOS (Safari over LAN)
+The project requires **two** `.env` files — one for the frontend and one for the backend.
 
-Safari respects the `apple-mobile-web-app-capable` meta tag over HTTP, so you can install directly over your local network — no USB cable or HTTPS setup needed.
+#### 5a. Frontend — `.env.local` (project root)
 
-#### Testing Workflow
+Copy the example and fill in your values:
 
-1. **Start the dev server:**
-   ```bash
-   npm run dev
-   ```
+```bash
+cp .env.example .env.local
+```
 
-2. **On your iPhone/iPad** (same WiFi network as your computer):
-   - Open **Safari** → go to `http://<your-lan-ip>:3000` (e.g. `http://192.168.86.244:3000`)
-   - Tap **Share** (square with arrow) → **"Add to Home Screen"** → **Add**
-   - The app opens in **standalone mode** (no Safari UI) ✅
+Edit `.env.local`:
 
-#### Voice Input on iOS
+```env
+# Gemini API Key (required for AI-powered game features)
+GEMINI_API_KEY=AIzaSy...your_key_here
 
-iOS Safari doesn't support the Web Speech API in non-secure contexts (HTTP over LAN). Instead, DetectiveML uses **iOS's built-in keyboard dictation** — tap the 🎙 microphone icon on your keyboard to speak your questions. This works reliably without any HTTPS certificates or additional setup.
+# Firebase Configuration (Auth only — DB/Storage go through backend)
+VITE_FIREBASE_API_KEY=AIzaSy...your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789012
+VITE_FIREBASE_APP_ID=1:123456789012:web:abc123def456
 
-#### Remote Debugging (macOS only)
+# Backend API URL (default works for local development)
+VITE_API_BASE_URL=http://localhost:4000
+```
 
-1. On your iPhone: `Settings → Safari → Advanced → Web Inspector` → enable
-2. Connect iPhone to Mac via USB
-3. In Safari on Mac: `Develop → [Your iPhone] → [Your Page]`
+> **Note:** Vite loads `.env.local` from the project root. The frontend workspace also symlinks to this file. Variables prefixed with `VITE_` are exposed to the browser; `GEMINI_API_KEY` is injected at build time via `vite.config.ts`.
 
-### Troubleshooting
+#### 5b. Backend — `backend/.env`
 
-| Issue | Solution |
-|-------|----------|
-| **Android:** `adb devices` shows nothing | Unplug and replug the USB cable. Accept the debugging prompt on your phone. Try a different cable |
-| **Android:** Phone shows "Offline" in `chrome://inspect` | Revoke USB debugging authorizations in Developer options, reconnect |
-| **Android:** Install banner doesn't appear | Wait 30 seconds (Chrome engagement threshold). Ensure manifest and service worker are valid |
-| **Android:** Port forwarding indicator isn't green | Make sure the dev server is running on port 3000 |
-| **iOS:** Can't reach `http://<ip>:3000` | Ensure phone and computer are on the same network. Check your firewall allows Node.js (Windows Firewall / macOS firewall in System Settings → Network) |
-| **iOS:** App opens in Safari instead of standalone | Delete the shortcut, clear Safari cache (`Settings → Safari → Clear History`), re-add |
-| **Both:** App opens with browser UI after install | Uninstall/remove the app, clear site data, re-install |
+Copy the example and fill in your values:
 
-## License
+```bash
+cp backend/.env.example backend/.env
+```
 
-This project is not currently licensed for redistribution. All rights reserved.
+Edit `backend/.env`:
+
+```env
+# Firebase Admin SDK — path to your service account key
+GOOGLE_APPLICATION_CREDENTIALS=.auth/serviceAccountKey.json
+
+# Firebase Configuration
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+
+# Server Configuration
+PORT=4000
+CORS_ORIGIN=http://localhost:3000
+```
+
+| Variable | Required | Default | Description |
+|----------|:--------:|---------|-------------|
+| `GOOGLE_APPLICATION_CREDENTIALS` | ✅ | — | Path to service account JSON key file (relative to `backend/`) |
+| `FIREBASE_SERVICE_ACCOUNT` | — | — | Alternative: JSON string of the service account (for cloud deploys) |
+| `FIREBASE_DATABASE_URL` | ✅ | — | Firebase Realtime Database URL |
+| `FIREBASE_STORAGE_BUCKET` | ✅ | — | Firebase Cloud Storage bucket name |
+| `PORT` | — | `4000` | Backend server port |
+| `CORS_ORIGIN` | — | `http://localhost:3000` | Allowed frontend origin for CORS |
+
+### 6. Verify Service Account Key
+
+Make sure the service account key file exists at:
+
+```
+backend/.auth/serviceAccountKey.json
+```
+
+If you saved it somewhere else, update `GOOGLE_APPLICATION_CREDENTIALS` in `backend/.env` accordingly.
+
+---
+
+## Running the App
+
+### Development (recommended)
+
+Start both frontend and backend concurrently:
+
+```bash
+npm run dev:all
+```
+
+This runs:
+- **Frontend** → [http://localhost:3000](http://localhost:3000)
+- **Backend** → [http://localhost:4000](http://localhost:4000)
+- **API Docs** → [http://localhost:4000/api-docs](http://localhost:4000/api-docs) (Swagger UI)
+
+### Individual Services
+
+```bash
+# Frontend only
+npm run dev
+
+# Backend only
+npm run dev:backend
+```
+
+### Health Check
+
+Verify the backend is running:
+
+```bash
+curl http://localhost:4000/api/health
+# → { "status": "ok", "timestamp": "..." }
+```
+
+---
+
+## Environment Files Summary
+
+| File | Purpose | Git-tracked? |
+|------|---------|:------------:|
+| `.env.example` | Template for root env vars | ✅ |
+| `.env.local` | **Your** root env vars (frontend) | ❌ |
+| `backend/.env.example` | Template for backend env vars | ✅ |
+| `backend/.env` | **Your** backend env vars | ❌ |
+| `backend/.auth/serviceAccountKey.json` | Firebase Admin service account key | ❌ |
+| `frontend/.env.example` | Legacy template (same vars as root) | ✅ |
+
+---
+
+## Troubleshooting
+
+### "Missing or invalid Authorization header"
+The backend requires a Firebase ID token on every API request (except `/api/health`). Make sure:
+- You're signed in on the frontend via Google
+- The Firebase project config in `.env.local` matches your Firebase project
+
+### "Firebase: Error (auth/configuration-not-found)"
+Your `VITE_FIREBASE_*` variables are missing or incorrect. Double-check them against the values in Firebase Console → Project Settings.
+
+### "Could not load default credentials"
+The backend can't find your service account key. Ensure:
+- `backend/.auth/serviceAccountKey.json` exists
+- `GOOGLE_APPLICATION_CREDENTIALS` in `backend/.env` points to the correct path
+
+### Backend returns CORS errors
+Make sure `CORS_ORIGIN` in `backend/.env` matches the URL your frontend is running on (default: `http://localhost:3000`).
+
+### Gemini AI features not working
+Ensure `GEMINI_API_KEY` is set in `.env.local` and is a valid key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+---
+
+## Documentation
+
+- [Backend API Reference](./backend/README.md) — full endpoint docs with curl examples
+- [API Spec (OpenAPI)](./backend/openapi.yaml) — machine-readable API specification
+- [Firebase Migration Notes](./docs/FIREBASE_MIGRATION.md) — architecture decisions and migration history
