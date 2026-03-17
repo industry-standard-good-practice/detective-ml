@@ -843,6 +843,16 @@ const CaseHub: React.FC<CaseHubProps> = ({
       return key;
     });
   }, []);
+
+  // Clear notification dots when navigating AWAY from a panel
+  const prevAccordionRef = useRef(openAccordion);
+  useEffect(() => {
+    const prev = prevAccordionRef.current;
+    prevAccordionRef.current = openAccordion;
+    if (prev === openAccordion) return;
+    if (prev === 'evidence') onClearAllNewEvidence?.();
+    if (prev === 'timeline') onClearNewTimeline?.();
+  }, [openAccordion]);
   const logRef = useRef<HTMLDivElement>(null);
   const { startTour, completeStep, currentStep } = useOnboarding();
 
@@ -948,7 +958,6 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 $isOpen={openAccordion === 'evidence'}
                 onClick={() => {
                   toggleAccordion('evidence');
-                  onClearAllNewEvidence?.();
                 }}
                 id="accordion-evidence"
                 data-open={openAccordion === 'evidence' ? 'true' : 'false'}
@@ -981,7 +990,16 @@ const CaseHub: React.FC<CaseHubProps> = ({
                     <InlineEvidenceWrap>
                       <EvidenceGrid>
                         {evidenceDiscovered.map((ev, i) => (
-                          <EvidenceItemBase key={ev.id || i}>
+                          <EvidenceItemBase key={ev.id || i} style={{ position: 'relative' }}>
+                            {newEvidenceTitles.has(ev.title) && (
+                              <span style={{
+                                position: 'absolute', top: -4, right: -4, zIndex: 10,
+                                width: 10, height: 10, borderRadius: '50%',
+                                background: '#fa0',
+                                boxShadow: '0 0 6px #fa0, 0 0 12px rgba(255,170,0,0.4)',
+                                animation: 'notif-pulse 1.5s ease-in-out infinite',
+                              }} />
+                            )}
                             <PolaroidImage $src={ev.imageUrl}>
                               {!ev.imageUrl && 'No IMG'}
                             </PolaroidImage>
@@ -1011,7 +1029,6 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 $isOpen={openAccordion === 'timeline'}
                 onClick={() => {
                   toggleAccordion('timeline');
-                  onClearNewTimeline?.();
                 }}
                 id="accordion-timeline"
                 data-open={openAccordion === 'timeline' ? 'true' : 'false'}
@@ -1046,6 +1063,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                         suspects={caseData.suspects}
                         onClose={() => setOpenAccordion('evidence')}
                         inline
+                        newTimelineIds={newTimelineIds}
                       />
                     </InlineTimelineWrap>
                   </AccordionInner>
@@ -1240,7 +1258,6 @@ const CaseHub: React.FC<CaseHubProps> = ({
 
               <TimelineButton id="timeline-button" onClick={() => {
                 setIsTimelineOpen(true);
-                onClearNewTimeline?.();
               }} style={{ position: 'relative' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
@@ -1317,7 +1334,8 @@ const CaseHub: React.FC<CaseHubProps> = ({
           <TimelineModal
             statements={timelineStatements}
             suspects={caseData.suspects}
-            onClose={() => setIsTimelineOpen(false)}
+            onClose={() => { setIsTimelineOpen(false); onClearNewTimeline?.(); }}
+            newTimelineIds={newTimelineIds}
           />
         )}
 

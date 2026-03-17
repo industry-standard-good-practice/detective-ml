@@ -231,6 +231,7 @@ const StatementCard = styled.div<{ $isInitial?: boolean }>`
   flex-direction: column;
   gap: 6px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
 `;
 
 const CardHeader = styled.div`
@@ -259,6 +260,24 @@ const StatementText = styled.p`
   font-size: 0.95rem;
 `;
 
+const NewEntryDot = styled.div`
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4af;
+  box-shadow: 0 0 6px #4af, 0 0 12px rgba(68,170,255,0.4);
+  animation: notif-pulse 1.5s ease-in-out infinite;
+  z-index: 5;
+
+  @keyframes notif-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+  }
+`;
+
 const EmptyState = styled.div`
   display: flex;
   flex-direction: column;
@@ -283,6 +302,7 @@ interface TimelineModalProps {
   suspects: Suspect[];
   onClose: () => void;
   inline?: boolean;
+  newTimelineIds?: Set<string>;
 }
 
 /**
@@ -354,7 +374,7 @@ const DayLabel = styled.div`
   }
 `;
 
-const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose, inline = false }) => {
+const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeline = [], suspects, onClose, inline = false, newTimelineIds = new Set() }) => {
   // Combine discovered statements with initial timeline events
   const allEvents = [
     ...statements.map(s => ({
@@ -417,6 +437,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
     const suspect = e.suspectId ? suspects.find(sus => sus.id === e.suspectId) : null;
     return (
       <StatementCard key={e.id} $isInitial={e.isInitial}>
+        {newTimelineIds.has(e.id) && <NewEntryDot />}
         <CardHeader>
           {suspect ? (
             <SuspectInfo>
