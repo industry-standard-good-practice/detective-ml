@@ -1048,7 +1048,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                     >
                       {caseData.suspects.map(s => (
                         <CarouselCardItem key={s.id} data-suspect-id={s.id}>
-                          <div style={{ position: 'relative' }}>
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                             {(unreadSuspectIds.get(s.id) || 0) > 0 && (
                               <div style={{
                                 position: 'absolute', top: 8, right: 8, zIndex: 30,
