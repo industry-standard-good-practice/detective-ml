@@ -93,7 +93,7 @@ export const getSuspectResponse = async (
     const isGuilty = suspect.isGuilty;
     const dispositionStr = isGuilty
       ? `You ARE guilty. You committed the crime or were directly involved. You need to protect yourself.
-        Your goal is to avoid suspicion — lie, deflect, redirect blame, or stonewall as fits your personality.
+        You don't know if the detective suspects you specifically — as far as you know, they're talking to everyone involved. Your goal is to seem cooperative and normal while avoiding anything that could point suspicion at you.
         
         **CONFESSION RULE (ABSOLUTE):** You must NEVER confess. NEVER say "I did it", "It was me", "I killed them", or anything equivalent.
         - Even when confronted with overwhelming evidence, you DENY, RATIONALIZE, DEFLECT, or GO SILENT.
@@ -108,10 +108,11 @@ export const getSuspectResponse = async (
         - If you are aggressive, you may become threatening, hostile, and try to intimidate the detective into backing off.
         - If you are calm, calculated, or charming, you stay cool and collected — you cooperate just enough to seem helpful, redirect conversations smoothly, and never show cracks. You are the hardest type to catch.`
       : `You are INNOCENT. You did NOT commit this crime and you know it.
+        You don't think of yourself as a "suspect" — the detective is just asking around and you're one of many people being spoken to.
         Your personality (${suspect.personality}) determines how you handle being questioned:
         - If you are cooperative, helpful, or kind: You WANT to help the detective solve this. You may volunteer useful information, share what you saw, and point the detective toward leads. You are an ally, not an obstacle.
-        - If you are nervous or anxious: You are worried about being wrongly accused, but you still want to help. You may ramble or over-explain out of fear.
-        - If you are arrogant or proud: You are offended at being treated as a suspect and may be difficult despite being innocent.
+        - If you are nervous or anxious: You are worried about being wrongly blamed, but you still want to help. You may ramble or over-explain out of nervousness.
+        - If you are arrogant or proud: You find being questioned annoying or beneath you, but you tolerate it.
         - If you are guarded or private: You cooperate minimally but honestly. You answer what's asked but don't volunteer extras.
         Regardless of personality, you have NO reason to lie about the facts of the case. You may have personal secrets unrelated to the crime, but your account of events should be truthful.`;
 
@@ -137,14 +138,12 @@ export const getSuspectResponse = async (
           : `${Math.floor(elapsedMins / 60)} hour${Math.floor(elapsedMins / 60) > 1 ? 's' : ''} and ${elapsedMins % 60} minutes`;
 
         interrogationContextStr = `
-          --- INTERROGATION SITUATION ---
-          You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
-          The interrogation began on ${formattedDate} at ${formattedTime}.
-          The current time is now ${currentFormattedTime} on ${currentFormattedDate}. You have been in this interrogation room for approximately ${elapsedStr}.
-          The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
-          You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
-          You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
-          **TIME AWARENESS:** You know roughly what time it is. If you've been sitting here for a long time, you may be tired, irritable, or impatient. You can reference the time naturally (e.g. "It's almost midnight and I've been here for two hours", "Can we wrap this up?").
+          --- SITUATION ---
+          A detective ("Detective Mel") has come to speak with you about a crime. You may address them by name.
+          The conversation began on ${formattedDate} at ${formattedTime}.
+          The current time is now ${currentFormattedTime} on ${currentFormattedDate}. You have been talking with the detective for approximately ${elapsedStr}.
+          You do NOT know whether you are considered a suspect. As far as you know, the detective is talking to everyone connected to the case.
+          **TIME AWARENESS:** You know roughly what time it is. If you've been talking for a long time, you may be tired, irritable, or impatient. You can reference the time naturally (e.g. "It's getting late, detective", "Can we wrap this up?").
 
           --- YOUR DISPOSITION ---
           ${dispositionStr}
@@ -152,12 +151,10 @@ export const getSuspectResponse = async (
       } else {
         // startTime is a custom string (e.g. "Late evening, night of the gala") — pass it as-is
         interrogationContextStr = `
-          --- INTERROGATION SITUATION ---
-          You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
+          --- SITUATION ---
+          A detective ("Detective Mel") has come to speak with you about a crime. You may address them by name.
           The investigation started: ${caseData.startTime}.
-          The crime occurred recently — you are being questioned shortly after it happened, while details are still fresh.
-          You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
-          You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+          You do NOT know whether you are considered a suspect. As far as you know, the detective is talking to everyone connected to the case.
 
           --- YOUR DISPOSITION ---
           ${dispositionStr}
@@ -165,11 +162,10 @@ export const getSuspectResponse = async (
       }
     } else {
       interrogationContextStr = `
-        --- INTERROGATION SITUATION ---
-        You are currently a SUSPECT in a criminal investigation. You have been brought in for questioning.
-        The crime occurred recently and you are being questioned shortly after it happened.
-        You are sitting in an interrogation room at a police station. The detective questioning you is "Detective Mel". You may address them by name.
-        You KNOW you are a suspect. You understand this is a formal interrogation about a serious crime.
+        --- SITUATION ---
+        A detective ("Detective Mel") has come to speak with you about a crime. You may address them by name.
+        
+        You do NOT know whether you are considered a suspect. As far as you know, the detective is talking to everyone connected to the case.
 
         --- YOUR DISPOSITION ---
         ${dispositionStr}
@@ -220,12 +216,12 @@ export const getSuspectResponse = async (
         
         --- CONVERSATION TRANSCRIPT ---
         ${conversationHistory.map(msg => {
-          if (msg.sender === 'player') return 'DETECTIVE: "' + msg.text + '"';
-          if (msg.sender === 'suspect') return 'YOU (' + suspect.name + '): "' + msg.text + '"';
-          if (msg.sender === 'partner') return 'PARTNER: "' + msg.text + '"';
-          if (msg.sender === 'system') return '[SYSTEM NOTE: ' + msg.text + ']';
-          return '';
-        }).filter(Boolean).join('\n        ')}
+      if (msg.sender === 'player') return 'DETECTIVE: "' + msg.text + '"';
+      if (msg.sender === 'suspect') return 'YOU (' + suspect.name + '): "' + msg.text + '"';
+      if (msg.sender === 'partner') return 'PARTNER: "' + msg.text + '"';
+      if (msg.sender === 'system') return '[SYSTEM NOTE: ' + msg.text + ']';
+      return '';
+    }).filter(Boolean).join('\n        ')}
         --- END TRANSCRIPT ---
         `}
         
@@ -297,7 +293,7 @@ export const getSuspectResponse = async (
            - ONLY populate 'revealedTimelineStatements' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
            - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal timeline entries.
            - **MULTIPLE ENTRIES:** You may reveal MULTIPLE timeline entries in a SINGLE response if the detective asks about a broad time range or asks you to recount your evening/day. For example, if asked "walk me through your night", you might mention 3-4 different times from your TIMELINE — include ALL of them in the array.
-           - Do NOT proactively mention specific times unless directly asked. You are a suspect, not writing a report.
+           - Do NOT proactively mention specific times unless directly asked. You are a person being questioned, not writing a report.
            - **NATURAL TIMELINE RESPONSES:** When asked about your timeline, respond naturally based on your character:
              - If INNOCENT and COOPERATIVE: Share your timeline willingly. You have nothing to hide.
              - If INNOCENT but GUARDED: Share reluctantly but honestly. You're annoyed but understand why they're asking.

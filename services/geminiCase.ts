@@ -667,11 +667,27 @@ const PROMPT_RULES = {
 - Every timeline entry has FOUR separate fields: 'time', 'activity', 'day', and 'dayOffset'.
 - The 'time' field must contain ONLY the timestamp (e.g. "8:00 PM", "11:30 AM"). Do NOT put the activity description in the time field.
 - The 'activity' field must contain the description of what happened (e.g. "Arrived at the lab to begin shift").
-- The 'day' field is a human-readable label for which day this event occurred RELATIVE TO THE INVESTIGATION (today = when suspects are being questioned). Examples: "Today", "Yesterday", "2 Days Ago", "Last Week", "3 Months Ago", "40 Years Ago". Use natural, conversational labels.
-- The 'dayOffset' field is a NUMBER used for sorting. 0 = today (day of questioning), -1 = yesterday, -2 = 2 days ago, -7 = last week, -365 = 1 year ago. Must be consistent with the 'day' label. Negative numbers = past. Most crime events will be on dayOffset 0 (today) or -1 (yesterday).
+- **DAY LABELS — RELATIVE TO THE INVESTIGATION, NOT THE CRIME (CRITICAL):**
+  The 'day' field labels when an event occurred relative to TODAY — the day the detective is questioning people. NOT relative to when the crime happened.
+  - dayOffset 0 = "Today" (the day of questioning — this is always the anchor point)
+  - dayOffset -1 = "Yesterday"
+  - dayOffset -2 = "2 Days Ago"
+  - dayOffset -7 = "Last Week"
+  - dayOffset -30 = "Last Month"
+  - dayOffset -365 = "1 Year Ago"
+  - Use natural, conversational labels. Negative numbers = past.
+  - The crime itself may have happened today, yesterday, last week, or even years ago — the day labels should reflect when events occurred relative to the day of questioning, NOT relative to the crime.
+  - Example: If the crime happened yesterday and the detective is questioning people today, then crime events should have day="Yesterday" (dayOffset=-1), and anything the suspect did today should have day="Today" (dayOffset=0).
+- **MIGRATION — RENAME OLD LABELS:** If any existing timeline entries use old crime-relative labels like "Day of the Crime", "1 Day Before", "2 Days Before", "1 Week Before", etc., you MUST convert them to investigation-relative labels:
+  - "Day of the Crime" → determine when the crime occurred relative to the investigation's startTime, then use the appropriate label (e.g. "Today" if same day, "Yesterday" if day before, etc.)
+  - "1 Day Before" → one day before the crime, which is two days before today if the crime was yesterday, etc.
+  - Use the case's startTime and description to infer the correct mapping.
+  - When in doubt, assume the crime happened the same day as the investigation (dayOffset 0 = "Today" for crime events).
+- The 'dayOffset' field is a NUMBER used for sorting. Must be consistent with the 'day' label.
 - **12-HOUR FORMAT ONLY:** ALL times MUST use 12-hour AM/PM format. NEVER use 24-hour military time (e.g. "20:00", "23:30"). Always write "8:00 PM", not "20:00".
 - WRONG: { time: "8:00 PM: Arrived at the lab", activity: "", day: "", dayOffset: 0 }
 - WRONG: { time: "20:00", activity: "Arrived at the lab", day: "Today", dayOffset: 0 }
+- WRONG: { day: "Day of the Crime", dayOffset: 0 } ← OLD FORMAT, do not use
 - CORRECT: { time: "8:00 PM", activity: "Arrived at the lab to begin shift", day: "Today", dayOffset: 0 }
 - CORRECT: { time: "3:00 PM", activity: "Had a heated argument with the victim", day: "Yesterday", dayOffset: -1 }
 - CORRECT: { time: "10:00 AM", activity: "Signed the insurance policy", day: "2 Weeks Ago", dayOffset: -14 }
