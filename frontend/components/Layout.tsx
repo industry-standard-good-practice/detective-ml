@@ -960,7 +960,7 @@ const Layout: React.FC<LayoutProps> = ({
 
                   {isGameplay && (
                     <AccentNavButton onClick={() => handleMenuNav(() => setShowExitDialog(true))} $accentColor="var(--color-accent-red-bright)">
-                      [Exit Game]
+                      [Exit Case]
                     </AccentNavButton>
                   )}
 
