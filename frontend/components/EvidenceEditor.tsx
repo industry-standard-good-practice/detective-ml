@@ -2,50 +2,42 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Evidence, Suspect } from '../types';
+import { TextInput, TextArea, Select, Button } from './ui';
+import { ImageSlot } from './ui/PixelImage';
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: calc(var(--space) * 1.25);
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
-  
+  margin-bottom: calc(var(--space) * 0.625);
+
   label {
-    color: #555;
+    color: var(--color-text-disabled);
     font-size: var(--type-small);
     text-transform: uppercase;
   }
 `;
 
-const AddButton = styled.button`
-  background: transparent;
-  color: #0f0;
-  border: 1px solid #0f0;
-  cursor: pointer;
-  padding: 4px 10px;
-  font-family: inherit;
+const AddButton = styled(Button).attrs({ $variant: 'accent' as const })`
+  padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
   font-size: var(--type-small);
-  font-weight: bold;
-  text-transform: uppercase;
   border-radius: 4px;
-  transition: all 0.2s;
-  
-  &:hover { background: rgba(0, 255, 0, 0.1); }
 `;
 
 const EvidenceCard = styled.div`
   background: #151515;
-  padding: 10px;
+  padding: calc(var(--space) * 1.25);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border-bottom: 1px dashed #333;
-  
+  gap: var(--space);
+  border-bottom: 1px dashed var(--color-border);
+
   &:hover {
     background: #1a1a1a;
   }
@@ -53,34 +45,19 @@ const EvidenceCard = styled.div`
 
 const CardTop = styled.div`
   display: flex;
-  gap: 10px;
-`;
-
-const ImageSlot = styled.div<{ $src?: string }>`
-  width: 60px;
-  height: 60px;
-  background-color: #000;
-  background-image: ${props => props.$src ? `url(${props.$src})` : 'none'};
-  background-size: cover;
-  background-position: center;
-  border: 1px solid #444;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  image-rendering: pixelated;
+  gap: calc(var(--space) * 1.25);
 `;
 
 const RerollButton = styled.button`
   background: rgba(0,0,0,0.7);
-  color: #fff;
+  color: var(--color-text-bright);
   border: none;
   font-size: var(--type-small);
   padding: 2px;
   cursor: pointer;
   width: 100%;
   text-align: center;
-  
+
   &:hover { background: rgba(50,50,50,0.9); }
 `;
 
@@ -88,92 +65,41 @@ const ContentCol = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: calc(var(--space) * 0.625);
   min-width: 0;
-`;
-
-const TitleInput = styled.input`
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #333;
-  color: #fff;
-  font-family: inherit;
-  font-weight: bold;
-  font-size: var(--type-body);
-  width: 100%;
-  padding: 2px 0;
-  
-  &:focus { outline: none; border-bottom-color: #0f0; }
-  &::placeholder { color: #444; }
-`;
-
-const DescInput = styled.textarea`
-  background: transparent;
-  border: none;
-  color: #aaa;
-  font-family: inherit;
-  font-size: var(--type-small);
-  resize: none;
-  padding: 2px 0;
-  field-sizing: content;
-  
-  &:focus { outline: none; color: #ddd; }
-  &::placeholder { color: #444; }
 `;
 
 const CardBottom = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 10px;
+  gap: calc(var(--space) * 1.25);
 `;
 
-const OwnerSelect = styled.select`
-  background: #0a0a0a;
-  color: #888;
-  border: 1px solid #333;
-  font-family: inherit;
+const RemoveButton = styled(Button).attrs({ $variant: 'ghost' as const })`
+  color: var(--color-text-disabled);
+  border: 1px solid var(--color-border);
+  padding: calc(var(--space) * 0.5) calc(var(--space) * 1.25);
   font-size: var(--type-small);
-  padding: 3px 22px 3px 6px;
-  border-radius: 3px;
-  cursor: pointer;
-  max-width: 180px;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23888888' d='M4 5L0 0h8z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  background-size: 8px;
-
-  &:focus { outline: none; border-color: #0f0; color: #ccc; }
-`;
-
-const RemoveButton = styled.button`
-  background: transparent;
-  color: #555;
-  border: 1px solid #333;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--type-small);
-  padding: 4px 10px;
   border-radius: 4px;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  font-weight: bold;
-  white-space: nowrap;
-  flex-shrink: 0;
-  
+
   &:hover {
-    color: #f55;
-    border-color: #f55;
+    color: var(--color-accent-red-bright);
+    border-color: var(--color-accent-red-bright);
     background: rgba(255, 85, 85, 0.15);
   }
   
   @media (max-width: 768px) {
-    color: #f55;
-    border-color: #f55;
+    color: var(--color-accent-red-bright);
+    border-color: var(--color-accent-red-bright);
   }
+`;
+
+const EmptyState = styled.div`
+  color: var(--color-text-dim);
+  font-style: italic;
+  padding: calc(var(--space) * 1.25);
+  border: 1px dashed var(--color-border);
 `;
 
 /** Ownership key: 'initial' for initial evidence, or the suspect's ID */
@@ -243,13 +169,13 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({
             </ImageSlot>
 
             <ContentCol>
-              <TitleInput 
-                value={ev.title} 
-                onChange={(e) => handleChange(i, 'title', e.target.value)} 
+              <TextInput
+                value={ev.title}
+                onChange={(e) => handleChange(i, 'title', e.target.value)}
                 placeholder="Title"
               />
-              <DescInput 
-                value={ev.description} 
+              <TextArea
+                value={ev.description}
                 onChange={(e) => handleChange(i, 'description', e.target.value)}
                 placeholder="Description..."
               />
@@ -258,7 +184,7 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({
 
           <CardBottom>
             {showOwnership ? (
-              <OwnerSelect
+              <Select
                 value={ownerKey}
                 onChange={(e) => {
                   const newOwner = e.target.value as OwnerKey;
@@ -274,7 +200,7 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({
                     {s.name}{s.isDeceased ? ' (Victim)' : ''}{s.isGuilty ? ' ★' : ''}
                   </option>
                 ))}
-              </OwnerSelect>
+              </Select>
             ) : (
               <span />
             )}
@@ -285,9 +211,7 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({
         </EvidenceCard>
       ))}
       {evidenceList.length === 0 && (
-          <div style={{ color: '#444', fontStyle: 'italic', padding: '10px', border: '1px dashed #333' }}>
-              No evidence items listed.
-          </div>
+        <EmptyState>No evidence items listed.</EmptyState>
       )}
     </Container>
   );

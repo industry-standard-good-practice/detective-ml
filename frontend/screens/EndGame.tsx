@@ -341,7 +341,87 @@ const CompareValues = styled.div`
   margin-bottom: 4px;
   
   .you { color: #0ff; }
-  .avg { color: #666; }
+  .avg { color: var(--color-text-dim); }
+`;
+
+/* ─── Inline style replacements ─── */
+
+const ReportLine = styled.div`
+  min-height: 1.2em;
+  margin-bottom: 4px;
+`;
+
+const FoundTag = styled.span`
+  color: var(--color-accent-green);
+  font-weight: bold;
+`;
+
+const MissedTag = styled.span`
+  color: var(--color-accent-red-bright);
+  font-weight: bold;
+`;
+
+const BoldTag = styled.span`
+  color: var(--color-text-bright);
+  font-weight: bold;
+`;
+
+const AccusedPortraitGrid = styled.div`
+  text-align: center;
+  margin-bottom: calc(var(--space) * 1.25);
+`;
+
+const PortraitRow = styled.div`
+  display: flex;
+  gap: calc(var(--space) * 1.25);
+  justify-content: center;
+  flex-wrap: wrap;
+`;
+
+const SubjectHeading = styled.h2`
+  margin-top: calc(var(--space) * 1.25);
+  font-size: var(--type-h2);
+`;
+
+const DesktopOnly = styled.div`
+  @media (max-width: 768px) { display: none; }
+`;
+
+const MobileOnly = styled.div`
+  display: none;
+  @media (max-width: 768px) { display: block; }
+`;
+
+const VoteDividerLabel = styled.span`
+  color: var(--color-text-disabled);
+  font-size: var(--type-small);
+  text-transform: uppercase;
+`;
+
+const IntelValue = styled.span<{ $color: string }>`
+  color: ${props => props.$color};
+  font-weight: bold;
+`;
+
+const EvidenceLogTitle = styled.h3`
+  border-bottom: 1px solid var(--color-border-strong);
+  padding-bottom: 5px;
+  margin-top: calc(var(--space) * 1.25);
+  font-size: var(--type-small);
+`;
+
+const EvidenceInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const EvidenceTitle = styled.span`
+  font-weight: bold;
+`;
+
+const EvidenceMissedHint = styled.span`
+  font-size: var(--type-small);
+  font-style: italic;
 `;
 
 interface EndGameProps {
@@ -401,22 +481,22 @@ const EndGame: React.FC<EndGameProps> = ({
     return text.split('\n').map((line, i) => {
         const parts = line.split(/(\{\{FOUND:.*?\}\}|\{\{MISSED:.*?\}\}|\*\*.*?\*\*)/g);
         return (
-            <div key={i} style={{ minHeight: '1.2em', marginBottom: '4px' }}>
+            <ReportLine key={i}>
                 {parts.map((part, j) => {
                     if (part.startsWith('{{FOUND:')) {
                         const content = part.slice(8, -2);
-                        return <span key={j} style={{ color: '#0f0', fontWeight: 'bold' }}>{content}</span>;
+                        return <FoundTag key={j}>{content}</FoundTag>;
                     }
                     if (part.startsWith('{{MISSED:')) {
                         const content = part.slice(9, -2);
-                        return <span key={j} style={{ color: '#f55', fontWeight: 'bold' }}>{content}</span>;
+                        return <MissedTag key={j}>{content}</MissedTag>;
                     }
                     if (part.startsWith('**') && part.endsWith('**')) {
-                        return <span key={j} style={{ color: '#fff', fontWeight: 'bold' }}>{part.slice(2, -2)}</span>;
+                        return <BoldTag key={j}>{part.slice(2, -2)}</BoldTag>;
                     }
                     return <span key={j}>{part}</span>;
                 })}
-            </div>
+            </ReportLine>
         );
     });
   };
@@ -446,52 +526,43 @@ const EndGame: React.FC<EndGameProps> = ({
             </SummaryBox>
         </ReportWrapper>
 
-        <div className="desktop-only" style={{ display: window.innerWidth > 768 ? 'block' : 'none' }}>
+        <DesktopOnly>
             <ResetButton onClick={onReset}>RETURN TO HQ</ResetButton>
-        </div>
+        </DesktopOnly>
       </LeftPanel>
 
       <RightPanel>
         <Stamp $gameResult={gameResult}>
             {gameResult === 'SUCCESS' ? "SUCCESS" : gameResult === 'PARTIAL' ? "PARTIAL" : "FAILURE"}
         </Stamp>
-        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+        <AccusedPortraitGrid>
             {accusedSuspects.length > 0 ? (
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <PortraitRow>
                     {accusedSuspects.map(s => (
                         <SuspectPortrait 
                             key={s.id}
                             suspect={s} 
                             size={120} 
-                            style={{ 
-                                border: `4px solid ${resultColor}`, 
-                                filter: gameResult === 'SUCCESS' ? 'none' : 'grayscale(100%) contrast(1.2)'
-                            }} 
                         />
                     ))}
-                </div>
+                </PortraitRow>
             ) : (
                 <SuspectPortrait 
                     suspect={caseData.suspects[0]} 
                     size={200} 
-                    style={{ 
-                        border: `4px solid ${resultColor}`, 
-                        margin: '0 auto',
-                        filter: gameResult === 'SUCCESS' ? 'none' : 'grayscale(100%) contrast(1.2)'
-                    }} 
                 />
             )}
-            <h2 style={{ marginTop: '10px', fontSize: 'var(--type-h2)' }}>
+            <SubjectHeading>
                 {accusedSuspects.length > 0 ? `SUBJECTS: ${accusedSuspects.map(s => s.name).join(', ')}` : "SUBJECT: None"}
-            </h2>
-        </div>
+            </SubjectHeading>
+        </AccusedPortraitGrid>
 
         {/* VOTING */}
         <VoteRow>
           <VoteButton $active={userVote === 'up'} $type="up" onClick={() => onVote('up')}>
             ▲ <VoteCount>{caseStats?.upvotes || 0}</VoteCount>
           </VoteButton>
-          <span style={{ color: '#555', fontSize: 'var(--type-small)', textTransform: 'uppercase' }}>Rate this case</span>
+          <VoteDividerLabel>Rate this case</VoteDividerLabel>
           <VoteButton $active={userVote === 'down'} $type="down" onClick={() => onVote('down')}>
             ▼ <VoteCount>{caseStats?.downvotes || 0}</VoteCount>
           </VoteButton>
@@ -502,15 +573,15 @@ const EndGame: React.FC<EndGameProps> = ({
           <IntelTitle>▸ GLOBAL INTEL</IntelTitle>
           <IntelRow>
             <label>Total Plays</label>
-            <span style={{ color: '#0ff', fontWeight: 'bold' }}>{plays}</span>
+            <IntelValue $color="#0ff">{plays}</IntelValue>
           </IntelRow>
           <IntelRow>
             <label>Success Rate</label>
-            <span style={{ color: '#0f0' }}>{successRate}%</span>
+            <IntelValue $color="var(--color-accent-green)">{successRate}%</IntelValue>
           </IntelRow>
           <IntelRow>
             <label>Failure Rate</label>
-            <span style={{ color: '#f55' }}>{failRate}%</span>
+            <IntelValue $color="var(--color-accent-red-bright)">{failRate}%</IntelValue>
           </IntelRow>
         </IntelSection>
 
@@ -568,25 +639,25 @@ const EndGame: React.FC<EndGameProps> = ({
             <span>{foundHiddenCount} / {totalHiddenEvidence} SECRETS FOUND</span>
         </StatItem>
 
-        <h3 style={{ borderBottom: '1px solid #444', paddingBottom: '5px', marginTop: '10px', fontSize: 'var(--type-small)' }}>EVIDENCE LOG</h3>
+        <EvidenceLogTitle>EVIDENCE LOG</EvidenceLogTitle>
         <EvidenceList>
             {caseData.suspects.flatMap(s => s.hiddenEvidence || []).map((ev, i) => {
                 const isFound = evidenceDiscovered.some(e => e.title === ev.title);
                 return (
                     <EvidenceRow key={i} $found={isFound}>
                         <span className="icon">{isFound ? '✓' : '✗'}</span>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 'bold' }}>{ev.title}</span>
-                            {!isFound && <span style={{ fontSize: 'var(--type-small)', fontStyle: 'italic' }}>Held by: {caseData.suspects.find(s => (s.hiddenEvidence || []).includes(ev))?.name}</span>}
-                        </div>
+                        <EvidenceInfo>
+                            <EvidenceTitle>{ev.title}</EvidenceTitle>
+                            {!isFound && <EvidenceMissedHint>Held by: {caseData.suspects.find(s => (s.hiddenEvidence || []).includes(ev))?.name}</EvidenceMissedHint>}
+                        </EvidenceInfo>
                     </EvidenceRow>
                 );
             })}
         </EvidenceList>
 
-        <div className="mobile-only" style={{ display: window.innerWidth <= 768 ? 'block' : 'none' }}>
+        <MobileOnly>
             <ResetButton onClick={onReset}>RETURN TO HQ</ResetButton>
-        </div>
+        </MobileOnly>
       </RightPanel>
     </Container>
   );

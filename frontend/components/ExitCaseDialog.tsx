@@ -1,76 +1,53 @@
 
 import React from 'react';
 import styled from 'styled-components';
+import { Overlay, ModalBox, ModalTitle, ModalText, ModalButtonRow, Button } from './ui';
 
-const Overlay = styled.div`
+const FixedOverlay = styled(Overlay)`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 999;
 `;
 
-const DialogBox = styled.div`
-  background: #111;
-  border: 2px solid #f00;
-  padding: 30px;
+const DialogBox = styled(ModalBox)`
   max-width: 400px;
-  width: 90%;
-  text-align: center;
+  border-color: var(--color-accent-red);
   box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
 `;
 
-const Title = styled.h3`
-  color: #f44;
-  margin: 0 0 15px 0;
+const DialogTitle = styled(ModalTitle)`
   font-size: var(--type-h3);
-  text-transform: uppercase;
+  color: var(--color-accent-red-bright);
+  text-shadow: none;
 `;
 
-const Text = styled.p`
-  color: #aaa;
-  margin: 0 0 25px 0;
+const DialogText = styled(ModalText)`
+  color: var(--color-text-muted);
   font-size: var(--type-body);
-  line-height: 1.5;
+  margin-bottom: calc(var(--space) * 1.25);
 `;
 
 const UnsavedWarning = styled.div`
   background: rgba(255, 170, 0, 0.1);
   border: 1px solid rgba(255, 170, 0, 0.3);
-  color: #fa0;
-  padding: 10px 15px;
-  margin-bottom: 20px;
+  color: var(--color-accent-orange);
+  padding: calc(var(--space) * 1.25) calc(var(--space) * 2);
+  margin-bottom: calc(var(--space) * 2.5);
   font-size: var(--type-small);
   text-transform: uppercase;
   letter-spacing: 1px;
 `;
 
-const Buttons = styled.div`
-  display: flex;
-  gap: 15px;
-  justify-content: center;
+const CancelBtn = styled(Button).attrs({ $variant: 'ghost' as const })`
+  background: var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
+  font-size: var(--type-body);
+  &:hover { background: var(--color-border); color: var(--color-text-bright); }
 `;
 
-const Button = styled.button<{ $danger?: boolean }>`
-  background: ${p => p.$danger ? '#500' : '#222'};
-  color: ${p => p.$danger ? '#f55' : '#ccc'};
-  border: 1px solid ${p => p.$danger ? '#f00' : '#555'};
-  padding: 10px 25px;
-  font-family: inherit;
+const DangerBtn = styled(Button).attrs({ $variant: 'danger' as const })`
   font-size: var(--type-body);
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: all 0.2s;
-
-  &:hover {
-    background: ${p => p.$danger ? '#700' : '#333'};
-    color: #fff;
-  }
+  color: var(--color-accent-red-bright);
+  &:hover { color: var(--color-text-bright); }
 `;
 
 interface ExitCaseDialogProps {
@@ -81,25 +58,25 @@ interface ExitCaseDialogProps {
 
 const ExitCaseDialog: React.FC<ExitCaseDialogProps> = ({ onConfirm, onCancel, hasUnsavedChanges }) => {
   return (
-    <Overlay onClick={onCancel}>
+    <FixedOverlay onClick={onCancel}>
       <DialogBox onClick={e => e.stopPropagation()}>
-        <Title>⚠ Exit Case</Title>
+        <DialogTitle>⚠ Exit Case</DialogTitle>
         {hasUnsavedChanges && (
           <UnsavedWarning>
             ⚠ You have unsaved changes to this case that will be lost.
           </UnsavedWarning>
         )}
-        <Text>
+        <DialogText>
           {hasUnsavedChanges
             ? 'Any unsaved edits to suspects, evidence, timelines, and case details will be permanently lost.'
             : 'All case progress will be lost. Evidence gathered, interrogation history, and timeline entries will not be saved.'}
-        </Text>
-        <Buttons>
-          <Button onClick={onCancel}>Cancel</Button>
-          <Button $danger onClick={onConfirm}>Exit Case</Button>
-        </Buttons>
+        </DialogText>
+        <ModalButtonRow>
+          <CancelBtn onClick={onCancel}>Cancel</CancelBtn>
+          <DangerBtn onClick={onConfirm}>Exit Case</DangerBtn>
+        </ModalButtonRow>
       </DialogBox>
-    </Overlay>
+    </FixedOverlay>
   );
 };
 

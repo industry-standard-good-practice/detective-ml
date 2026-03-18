@@ -9,6 +9,7 @@ import { fetchCommunityCases, fetchUserCases, publishCase, deleteCase, updateCas
 import { CaseStats } from './types';
 import { auth, logout } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { Overlay, ModalBox, ModalTitle, ModalText, ModalButtonRow, Button } from './components/ui';
 
 // Import Modular Components
 import Layout from './components/Layout';
@@ -22,70 +23,15 @@ import CaseReview from './screens/CaseReview';
 import BootSequence from './components/BootSequence';
 import Login from './components/Login';
 
-
-// --- STYLES FOR MODAL ---
-const Overlay = styled.div`
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.95);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  flex-direction: column;
-  gap: 20px;
-`;
-
-const ConfirmBox = styled.div`
-  background: #050505;
-  border: 2px solid #f00;
-  padding: 30px;
-  width: 500px;
-  max-width: 90%;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  box-shadow: 0 0 30px #500;
-  text-align: center;
-`;
-
-const WarningTitle = styled.h2`
-  color: #f00;
-  margin: 0;
-  text-transform: uppercase;
-  font-size: var(--type-h2);
-  text-shadow: 0 0 10px #f00;
-`;
-
-const WarningText = styled.p`
-  color: #ddd;
-  font-size: var(--type-body-lg);
-  line-height: 1.5;
-  margin: 0;
-`;
-
-const ButtonRow = styled.div`
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 10px;
-`;
-
-const ModalButton = styled.button<{ $variant: 'cancel' | 'confirm' }>`
-  background: ${props => props.$variant === 'confirm' ? '#500' : '#222'};
-  color: #fff;
-  border: 1px solid ${props => props.$variant === 'confirm' ? '#f00' : '#555'};
-  padding: 10px 20px;
-  font-family: inherit;
-  font-size: var(--type-body-lg);
-  cursor: pointer;
+// --- MODAL BUTTON VARIANTS ---
+const ConfirmButton = styled(Button).attrs({ $variant: 'danger' as const })`
   flex: 1;
-  text-transform: uppercase;
-
-  &:hover {
-    background: ${props => props.$variant === 'confirm' ? '#f00' : '#444'};
-    box-shadow: ${props => props.$variant === 'confirm' ? '0 0 15px #f00' : 'none'};
-  }
+`;
+const CancelButton = styled(Button).attrs({ $variant: 'ghost' as const })`
+  flex: 1;
+  background: var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
+  &:hover { background: var(--color-border-strong); }
 `;
 
 const TIME_INCREMENT_MS = 5 * 60 * 1000; // 5 minutes per action
@@ -1632,77 +1578,61 @@ const App: React.FC = () => {
 
       {showPublishConfirm && (
         <Overlay>
-          <ConfirmBox>
-            <WarningTitle>⚠ WARNING ⚠</WarningTitle>
-            <WarningText>
+          <ModalBox>
+            <ModalTitle>⚠ WARNING ⚠</ModalTitle>
+            <ModalText>
               Uploading this case to the Network will make it <strong>PUBLICLY AVAILABLE</strong>.
-            </WarningText>
-            <ButtonRow>
-              <ModalButton $variant="cancel" onClick={() => setShowPublishConfirm(false)}>
-                [ Cancel ]
-              </ModalButton>
-              <ModalButton $variant="confirm" onClick={executePublish}>
-                [ CONFIRM UPLOAD ]
-              </ModalButton>
-            </ButtonRow>
-          </ConfirmBox>
+            </ModalText>
+            <ModalButtonRow>
+              <CancelButton onClick={() => setShowPublishConfirm(false)}>[ Cancel ]</CancelButton>
+              <ConfirmButton onClick={executePublish}>[ CONFIRM UPLOAD ]</ConfirmButton>
+            </ModalButtonRow>
+          </ModalBox>
         </Overlay>
       )}
 
       {pendingPublishDraftId && (
         <Overlay>
-          <ConfirmBox>
-            <WarningTitle>⚠ WARNING ⚠</WarningTitle>
-            <WarningText>
+          <ModalBox>
+            <ModalTitle>⚠ WARNING ⚠</ModalTitle>
+            <ModalText>
               Uploading this case to the Network will make it <strong>PUBLICLY AVAILABLE</strong>.
-            </WarningText>
-            <ButtonRow>
-              <ModalButton $variant="cancel" onClick={() => setPendingPublishDraftId(null)}>
-                [ Cancel ]
-              </ModalButton>
-              <ModalButton $variant="confirm" onClick={executePublishDraft}>
-                [ CONFIRM UPLOAD ]
-              </ModalButton>
-            </ButtonRow>
-          </ConfirmBox>
+            </ModalText>
+            <ModalButtonRow>
+              <CancelButton onClick={() => setPendingPublishDraftId(null)}>[ Cancel ]</CancelButton>
+              <ConfirmButton onClick={executePublishDraft}>[ CONFIRM UPLOAD ]</ConfirmButton>
+            </ModalButtonRow>
+          </ModalBox>
         </Overlay>
       )}
 
       {caseToDelete && (
         <Overlay>
-          <ConfirmBox>
-            <WarningTitle>⚠ DELETE CASE ⚠</WarningTitle>
-            <WarningText>
+          <ModalBox>
+            <ModalTitle>⚠ DELETE CASE ⚠</ModalTitle>
+            <ModalText>
               Are you sure you want to delete this case permanently? This action cannot be undone.
-            </WarningText>
-            <ButtonRow>
-              <ModalButton $variant="cancel" onClick={() => setCaseToDelete(null)}>
-                [ Cancel ]
-              </ModalButton>
-              <ModalButton $variant="confirm" onClick={confirmDeleteCase}>
-                [ DELETE ]
-              </ModalButton>
-            </ButtonRow>
-          </ConfirmBox>
+            </ModalText>
+            <ModalButtonRow>
+              <CancelButton onClick={() => setCaseToDelete(null)}>[ Cancel ]</CancelButton>
+              <ConfirmButton onClick={confirmDeleteCase}>[ DELETE ]</ConfirmButton>
+            </ModalButtonRow>
+          </ModalBox>
         </Overlay>
       )}
 
       {myCaseToDelete && (
         <Overlay>
-          <ConfirmBox>
-            <WarningTitle>⚠ DELETE CASE ⚠</WarningTitle>
-            <WarningText>
+          <ModalBox>
+            <ModalTitle>⚠ DELETE CASE ⚠</ModalTitle>
+            <ModalText>
               Are you sure you want to permanently delete this case? If it's published, it will also be removed from the Network. <strong>This cannot be undone.</strong>
-            </WarningText>
-            <ButtonRow>
-              <ModalButton $variant="cancel" onClick={() => setMyCaseToDelete(null)}>
-                [ Cancel ]
-              </ModalButton>
-              <ModalButton $variant="confirm" onClick={confirmDeleteMyCase}>
-                [ DELETE PERMANENTLY ]
-              </ModalButton>
-            </ButtonRow>
-          </ConfirmBox>
+            </ModalText>
+            <ModalButtonRow>
+              <CancelButton onClick={() => setMyCaseToDelete(null)}>[ Cancel ]</CancelButton>
+              <ConfirmButton onClick={confirmDeleteMyCase}>[ DELETE PERMANENTLY ]</ConfirmButton>
+            </ModalButtonRow>
+          </ModalBox>
         </Overlay>
       )}
 

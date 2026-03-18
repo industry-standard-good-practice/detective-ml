@@ -86,7 +86,7 @@ const ScrollInner = styled.div`
   }
 `;
 
-const SuspectItem = styled.div`
+const SuspectItem = styled.div<{ $selected?: boolean }>`
   cursor: pointer;
   text-align: center;
   flex: 0 0 auto; /* Prevent shrinking, forces scroll */
@@ -94,6 +94,9 @@ const SuspectItem = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform: ${props => props.$selected ? 'scale(1.1)' : 'scale(1)'};
+  border: ${props => props.$selected ? '4px solid var(--color-accent-red)' : 'none'};
+  border-radius: 8px;
 
   &:hover {
     transform: scale(1.1);
@@ -102,7 +105,7 @@ const SuspectItem = styled.div`
   
   h3 {
     margin-top: 15px;
-    color: #fff;
+    color: var(--color-text-bright);
     text-transform: uppercase;
     font-size: var(--type-h3);
     text-shadow: 0 2px 4px #000;
@@ -114,8 +117,8 @@ const SuspectItem = styled.div`
 
 const CancelButton = styled.button`
   background: transparent;
-  color: #888;
-  border: 1px solid #444;
+  color: var(--color-text-subtle);
+  border: 1px solid var(--color-border-strong);
   padding: 10px 30px;
   cursor: pointer;
   font-family: inherit;
@@ -125,10 +128,16 @@ const CancelButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    color: #fff;
-    border-color: #fff;
+    color: var(--color-text-bright);
+    border-color: var(--color-text-bright);
     background: rgba(255,255,255,0.1);
   }
+`;
+
+const AccuseButton = styled(CancelButton)`
+  background: #800;
+  color: var(--color-text-bright);
+  border-color: var(--color-accent-red);
 `;
 
 const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) => {
@@ -159,22 +168,11 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
               key={s.id} 
               onClick={() => toggleSuspect(s.id)}
               data-cursor="pointer"
-              style={{ 
-                transform: selectedSuspectIds.includes(s.id) ? 'scale(1.1)' : 'scale(1)',
-                border: selectedSuspectIds.includes(s.id) ? '4px solid #f00' : 'none',
-                borderRadius: '8px'
-              }}
+              $selected={selectedSuspectIds.includes(s.id)}
             >
               <SuspectPortrait 
                 suspect={s} 
                 size={250} 
-                style={{ 
-                  border: '4px solid #fff', 
-                  width: '250px', 
-                  height: '250px', 
-                  objectFit: 'cover', 
-                  boxShadow: '0 0 30px rgba(0,0,0,0.8)' 
-                }} 
               />
               <h3>{s.name}</h3>
             </SuspectItem>
@@ -182,12 +180,12 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
         </ScrollInner>
       </ScrollContainer>
       
-      <CancelButton onClick={handleAccuse} style={{ background: '#800', color: '#fff', borderColor: '#f00' }}>
+      <AccuseButton onClick={handleAccuse}>
         {selectedSuspectIds.length > 0 
           ? `[ ACCUSE ${selectedSuspectIds.length} SUSPECT(S) ]`
           : '[ ACCUSE NOBODY ]'
         }
-      </CancelButton>
+      </AccuseButton>
       
       <CancelButton onClick={onBack}>
         [ CANCEL ]

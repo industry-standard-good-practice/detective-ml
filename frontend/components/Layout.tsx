@@ -5,6 +5,7 @@ import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import { ScreenState } from '../types';
 import CRTOverlay from './CRTOverlay';
 import { User } from 'firebase/auth';
+import { cssTokens, media } from '../theme';
 
 import { useOnboarding } from '../contexts/OnboardingContext';
 import ExitCaseDialog from './ExitCaseDialog';
@@ -26,6 +27,9 @@ const GlobalStyle = createGlobalStyle`
     --type-body-lg: 1.2rem;
     --type-body: 1rem;
     --type-small: 0.85rem;
+
+    /* Design Tokens (from theme.ts) */
+    ${cssTokens}
   }
 
   @media (max-width: 768px) {
@@ -483,13 +487,153 @@ const UserInfo = styled.div`
   align-items: flex-end;
   margin-left: auto;
   flex-shrink: 0;
-  
+
   @media (max-width: 768px) {
     position: absolute;
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
   }
+`;
+
+/* ─── Layout Inline-Style Replacements ─── */
+
+const NavGroupLeft = styled(NavGroup)`
+  justify-content: flex-start;
+  min-width: auto;
+`;
+
+const NavGroupRight = styled(NavGroup)`
+  justify-content: flex-end;
+  min-width: auto;
+  position: absolute;
+  right: var(--screen-edge-horizontal);
+`;
+
+const UnsavedBadge = styled.span`
+  color: var(--color-accent-orange);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+`;
+
+const UnsavedDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-orange);
+  display: inline-block;
+`;
+
+const AccentNavButton = styled(NavButton)<{ $accentColor?: string }>`
+  color: ${props => props.$accentColor || 'var(--color-accent-green)'};
+  ${props => props.$accentColor === 'var(--color-accent-green)' ? 'font-weight: bold;' : ''}
+`;
+
+const VolumeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: calc(var(--space) * 1.25);
+  padding: 4px 0 var(--space) 0;
+  border-bottom: 1px solid #1a1a1a;
+`;
+
+const VolumeLabel = styled.span`
+  color: var(--color-text-disabled);
+  font-size: 0.8rem;
+  min-width: 50px;
+`;
+
+const VolumeSlider = styled.input`
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--color-border);
+  outline: none;
+  accent-color: var(--color-accent-green);
+`;
+
+const VolumeValue = styled.span`
+  color: var(--color-text-disabled);
+  font-size: 0.8rem;
+  min-width: 30px;
+  text-align: right;
+`;
+
+const MenuDivider = styled.div`
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: calc(var(--space) * 1.25);
+  margin-top: calc(var(--space) * 1.25);
+`;
+
+const MenuSectionLabel = styled.div`
+  color: var(--color-text-subtle);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: calc(var(--space) * 0.625);
+`;
+
+const UserSection = styled.div`
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: calc(var(--space) * 1.25);
+  margin-top: auto;
+`;
+
+const UserName = styled.div`
+  color: var(--color-accent-green);
+  font-size: 0.9rem;
+  margin-bottom: calc(var(--space) * 0.625);
+`;
+
+const MenuUnsavedBadge = styled.div`
+  color: var(--color-accent-orange);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 5px;
+`;
+
+const MobileActionPlaceholder = styled(MobileActionButton).attrs({ as: 'div' as const })`
+  pointer-events: none;
+  visibility: hidden;
+`;
+
+const MobileUnsavedAction = styled(MobileActionButton).attrs({ as: 'div' as const })`
+  pointer-events: none;
+`;
+
+const MarqueeWrapper = styled.div<{ $width?: number }>`
+  width: ${props => props.$width && props.$width > 0 ? props.$width + 'px' : '100%'};
+  overflow: hidden;
+`;
+
+const MarqueeSpan = styled.span<{ $animName?: string }>`
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text-bright);
+  text-shadow: 0 0 5px var(--color-text-bright);
+  line-height: 1.1;
+  font-family: inherit;
+  padding: 0 calc(var(--space) * 1.25);
+  animation: ${props => props.$animName ? `${props.$animName} 8s ease-in-out infinite alternate` : 'none'};
+`;
+
+const HiddenTitle = styled(Title)`
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
 `;
 
 interface LayoutProps {
@@ -651,7 +795,7 @@ const Layout: React.FC<LayoutProps> = ({
               <>
                 <TopBar>
                   {/* LEFT SIDE — hamburger or case-review desktop buttons */}
-                  <NavGroup style={{ justifyContent: 'flex-start', minWidth: 'auto' }}>
+                  <NavGroupLeft>
                     {/* Desktop CaseReview: show Close + Check Consistency inline */}
                     {isCaseReview ? (
                       <>
@@ -697,7 +841,7 @@ const Layout: React.FC<LayoutProps> = ({
                         })()}
                       </HamburgerButton>
                     )}
-                  </NavGroup>
+                  </NavGroupLeft>
 
                   {/* MOBILE CUSTOM ACTION — always occupy grid-column 3 for consistent title width */}
                   {mobileAction ? (
@@ -705,67 +849,46 @@ const Layout: React.FC<LayoutProps> = ({
                       [{mobileAction.label}]
                     </MobileActionButton>
                   ) : isCaseReview && hasUnsavedChanges ? (
-                    <MobileActionButton as="div" style={{ pointerEvents: 'none' }}>
-                      <span style={{
-                        color: '#fa0', fontSize: '0.75rem',
-                        textTransform: 'uppercase', letterSpacing: '1px',
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                    <MobileUnsavedAction>
+                      <UnsavedBadge>
+                        <UnsavedDot />
                         UNSAVED
-                      </span>
-                    </MobileActionButton>
+                      </UnsavedBadge>
+                    </MobileUnsavedAction>
                   ) : (
-                    <MobileActionButton as="div" style={{ pointerEvents: 'none', visibility: 'hidden' }}>
+                    <MobileActionPlaceholder>
                       [_]
-                    </MobileActionButton>
+                    </MobileActionPlaceholder>
                   )}
 
                   {/* CENTER TITLE */}
                   <TitleContainer $marquee={isTitleOverflowing}>
-                    <Title
-                      ref={titleRef}
-                      title={caseTitle || 'DetectiveML'}
-                      style={isTitleOverflowing ? { position: 'absolute', visibility: 'hidden', pointerEvents: 'none' } : undefined}
-                    >
-                      {caseTitle || 'DetectiveML'}
-                    </Title>
+                    {isTitleOverflowing ? (
+                      <HiddenTitle ref={titleRef} title={caseTitle || 'DetectiveML'}>
+                        {caseTitle || 'DetectiveML'}
+                      </HiddenTitle>
+                    ) : (
+                      <Title ref={titleRef} title={caseTitle || 'DetectiveML'}>
+                        {caseTitle || 'DetectiveML'}
+                      </Title>
+                    )}
                     {isTitleOverflowing && (
-                      <div style={{
-                        width: marqueeWidth > 0 ? marqueeWidth + 'px' : '100%',
-                        overflow: 'hidden',
-                      }}>
-                        <span ref={marqueeSpanRef} style={{
-                          display: 'inline-block',
-                          whiteSpace: 'nowrap',
-                          fontSize: '1.4rem',
-                          letterSpacing: '2px',
-                          textTransform: 'uppercase',
-                          color: '#fff',
-                          textShadow: '0 0 5px #fff',
-                          lineHeight: '1.1',
-                          fontFamily: 'inherit',
-                          padding: '0 10px',
-                          animation: marqueeAnimName ? `${marqueeAnimName} 8s ease-in-out infinite alternate` : 'none',
-                        } as React.CSSProperties}>
+                      <MarqueeWrapper $width={marqueeWidth}>
+                        <MarqueeSpan ref={marqueeSpanRef} $animName={marqueeAnimName || undefined}>
                           {caseTitle || 'DetectiveML'}
-                        </span>
-                      </div>
+                        </MarqueeSpan>
+                      </MarqueeWrapper>
                     )}
                     <SubTitle>v1.0.0 // SYSTEM READY</SubTitle>
                   </TitleContainer>
 
                   {/* RIGHT — always-visible key items */}
-                  <NavGroup className="hide-on-mobile" style={{ justifyContent: 'flex-end', minWidth: 'auto', position: 'absolute', right: 'var(--screen-edge-horizontal)' }}>
+                  <NavGroupRight className="hide-on-mobile">
                     {hasUnsavedChanges && (
-                      <span style={{
-                        color: '#fa0', fontSize: '0.75rem',
-                        textTransform: 'uppercase', letterSpacing: '1px',
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                      <UnsavedBadge>
+                        <UnsavedDot />
                         UNSAVED
-                      </span>
+                      </UnsavedBadge>
                     )}
                     {isGameplay && screenState !== ScreenState.ENDGAME && (
                       <NavButton id="hub-button" className="hide-on-mobile" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
@@ -774,14 +897,14 @@ const Layout: React.FC<LayoutProps> = ({
                     {isCaseReview && (
                       <>
                         {onTestInvestigation && (
-                          <NavButton className="hide-on-mobile" onClick={onTestInvestigation} style={{ color: '#0f0' }}>[Play Case]</NavButton>
+                          <AccentNavButton className="hide-on-mobile" onClick={onTestInvestigation}>[Play Case]</AccentNavButton>
                         )}
                         {onSaveCase && (
-                          <NavButton className="hide-on-mobile" onClick={onSaveCase} style={{ color: '#0f0', fontWeight: 'bold' }}>[Save]</NavButton>
+                          <AccentNavButton className="hide-on-mobile" onClick={onSaveCase} $accentColor="var(--color-accent-green)">[Save]</AccentNavButton>
                         )}
                       </>
                     )}
-                  </NavGroup>
+                  </NavGroupRight>
                 </TopBar>
 
                 {/* SLIDE-OUT MENU */}
@@ -789,17 +912,12 @@ const Layout: React.FC<LayoutProps> = ({
                 <SlideMenu $isOpen={menuOpen}>
                   {hasUnsavedChanges && (
                     <>
-                      <div style={{
-                        color: '#fa0', fontSize: '0.9rem',
-                        textTransform: 'uppercase', letterSpacing: '1px',
-                        display: 'flex', alignItems: 'center', gap: '5px',
-                        padding: '5px 0', borderBottom: '1px solid #333', marginBottom: '5px'
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fa0', display: 'inline-block' }} />
+                      <MenuUnsavedBadge>
+                        <UnsavedDot />
                         UNSAVED CHANGES
-                      </div>
+                      </MenuUnsavedBadge>
                       {onSaveCase && !isCaseReview && (
-                        <NavButton onClick={() => handleMenuNav(onSaveCase)} style={{ color: '#0f0', fontWeight: 'bold' }}>[Save Case]</NavButton>
+                        <AccentNavButton onClick={() => handleMenuNav(onSaveCase)} $accentColor="var(--color-accent-green)">[Save Case]</AccentNavButton>
                       )}
                     </>
                   )}
@@ -810,43 +928,36 @@ const Layout: React.FC<LayoutProps> = ({
                     </NavButton>
                   )}
 
-                  <NavButton onClick={onToggleMute} style={{ color: isMuted ? '#777' : '#0f0' }}>
+                  <AccentNavButton onClick={onToggleMute} $accentColor={isMuted ? 'var(--color-text-dim)' : 'var(--color-accent-green)'}>
                     {isMuted ? '[Sound: OFF]' : '[Sound: ON]'}
-                  </NavButton>
+                  </AccentNavButton>
 
                   {!isMuted && onVolumeChange && (
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '4px 0 8px 0', borderBottom: '1px solid #1a1a1a'
-                    }}>
-                      <span style={{ color: '#555', fontSize: '0.8rem', minWidth: '50px' }}>VOL</span>
-                      <input
+                    <VolumeRow>
+                      <VolumeLabel>VOL</VolumeLabel>
+                      <VolumeSlider
                         type="range"
                         min="0" max="1" step="0.05"
                         value={volume}
                         onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
                         data-cursor="pointer"
-                        style={{
-                          flex: 1, height: '4px', appearance: 'none', background: '#333',
-                          outline: 'none', accentColor: '#0f0'
-                        }}
                       />
-                      <span style={{ color: '#555', fontSize: '0.8rem', minWidth: '30px', textAlign: 'right' }}>
+                      <VolumeValue>
                         {Math.round(volume * 100)}%
-                      </span>
-                    </div>
+                      </VolumeValue>
+                    </VolumeRow>
                   )}
 
                   {screenState === ScreenState.CASE_HUB && (
-                    <NavButton onClick={() => handleMenuNav(startTour)} style={{ color: '#0f0' }}>
+                    <AccentNavButton onClick={() => handleMenuNav(startTour)}>
                       [Tutorial]
-                    </NavButton>
+                    </AccentNavButton>
                   )}
 
                   {canEdit && (
-                    <NavButton onClick={() => handleMenuNav(onEdit!)} style={{ color: '#eb0' }}>
+                    <AccentNavButton onClick={() => handleMenuNav(onEdit!)} $accentColor="var(--color-accent-gold)">
                       [Edit Case]
-                    </NavButton>
+                    </AccentNavButton>
                   )}
 
                   {canPublish && (
@@ -856,20 +967,20 @@ const Layout: React.FC<LayoutProps> = ({
                   )}
 
                   {isGameplay && (
-                    <NavButton onClick={() => handleMenuNav(() => setShowExitDialog(true))} style={{ color: '#f55' }}>
+                    <AccentNavButton onClick={() => handleMenuNav(() => setShowExitDialog(true))} $accentColor="var(--color-accent-red-bright)">
                       [Exit Game]
-                    </NavButton>
+                    </AccentNavButton>
                   )}
 
                   {isCaseReview && (
                     <>
-                      <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: '10px' }}>
-                        <div style={{ color: '#888', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Case Editor</div>
-                      </div>
+                      <MenuDivider>
+                        <MenuSectionLabel>Case Editor</MenuSectionLabel>
+                      </MenuDivider>
                       {onSaveCase && (
-                        <NavButton onClick={() => handleMenuNav(onSaveCase)} style={{ color: '#0f0' }}>
+                        <AccentNavButton onClick={() => handleMenuNav(onSaveCase)} $accentColor="var(--color-accent-green)">
                           [Save]
-                        </NavButton>
+                        </AccentNavButton>
                       )}
                       {onCheckConsistency && (
                         <NavButton onClick={() => handleMenuNav(onCheckConsistency)}>
@@ -877,23 +988,23 @@ const Layout: React.FC<LayoutProps> = ({
                         </NavButton>
                       )}
                       {onTestInvestigation && (
-                        <NavButton onClick={() => handleMenuNav(onTestInvestigation)} style={{ color: '#0ff' }}>
+                        <AccentNavButton onClick={() => handleMenuNav(onTestInvestigation)} $accentColor="var(--color-accent-cyan)">
                           [Case Hub]
-                        </NavButton>
+                        </AccentNavButton>
                       )}
                       {onCloseCase && (
-                        <NavButton onClick={() => handleMenuNav(onCloseCase)} style={{ color: '#f55' }}>
+                        <AccentNavButton onClick={() => handleMenuNav(onCloseCase)} $accentColor="var(--color-accent-red-bright)">
                           [Close]
-                        </NavButton>
+                        </AccentNavButton>
                       )}
                     </>
                   )}
 
                   {user && (
-                    <div style={{ borderTop: '1px solid #222', paddingTop: '10px', marginTop: 'auto' }}>
-                      <div style={{ color: '#0f0', fontSize: '0.9rem', marginBottom: '5px' }}>User: {user.displayName}</div>
+                    <UserSection>
+                      <UserName>User: {user.displayName}</UserName>
                       <NavButton onClick={onLogout}>[Logout]</NavButton>
-                    </div>
+                    </UserSection>
                   )}
                 </SlideMenu>
               </>

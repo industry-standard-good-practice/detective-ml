@@ -91,9 +91,9 @@ const LoadingText = styled.div`
 const ProgressBar = styled.div`
   width: 400px;
   height: 10px;
-  background: #222;
-  border: 1px solid #444;
-  margin-top: 10px;
+  background: var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
+  margin-top: calc(var(--space) * 1.25);
   position: relative;
   overflow: hidden;
 
@@ -102,7 +102,7 @@ const ProgressBar = styled.div`
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 30%;
-    background: #0f0;
+    background: var(--color-accent-green);
     animation: slide 1.5s infinite ease-in-out;
   }
 
@@ -110,6 +110,33 @@ const ProgressBar = styled.div`
     0% { transform: translateX(-100%); }
     100% { transform: translateX(400%); }
   }
+`;
+
+const DescriptionText = styled.p`
+  color: var(--color-text-subtle);
+  max-width: 600px;
+  text-align: center;
+  font-size: var(--type-body-lg);
+`;
+
+const SmallCancelButton = styled(ActionButton)`
+  margin-top: calc(var(--space) * 1.25);
+  font-size: var(--type-body);
+  padding: var(--space) calc(var(--space) * 2.5);
+`;
+
+const LoadingWrapper = styled.div`
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const NoteText = styled.p`
+  color: var(--color-text-dim);
+  margin-top: calc(var(--space) * 2.5);
+  font-style: italic;
+  max-width: 400px;
 `;
 
 interface CreateCaseProps {
@@ -128,13 +155,13 @@ const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, onCancel, isLoading
 
       {!isLoading ? (
         <>
-          <p style={{ color: '#888', maxWidth: '600px', textAlign: 'center', fontSize: 'var(--type-body-lg)' }}>
+          <DescriptionText>
             Describe the crime you want to solve. Be as specific or as vague as you like.
             <br /><br />
             <i>"A murder at a jazz club in 1920s New York."</i>
             <br />
             <i>"Theft of a cybernetic arm on Mars."</i>
-          </p>
+          </DescriptionText>
 
           <PromptInput
             value={prompt}
@@ -152,22 +179,22 @@ const CreateCase: React.FC<CreateCaseProps> = ({ onGenerate, onCancel, isLoading
             </ActionButton>
           </ButtonGroup>
 
-          <ActionButton onClick={onCancel} style={{ marginTop: '10px', fontSize: 'var(--type-body)', padding: '8px 20px' }}>
+          <SmallCancelButton onClick={onCancel}>
             Cancel
-          </ActionButton>
+          </SmallCancelButton>
         </>
       ) : (
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <LoadingWrapper>
           <LoadingText>
             {loadingStatus || "ANALYZING CRIME SCENE DATA..."}
           </LoadingText>
 
           <ProgressBar />
 
-          <p style={{ color: '#666', marginTop: '20px', fontStyle: 'italic', maxWidth: '400px' }}>
+          <NoteText>
             Note: Generating case details and descriptions for every suspect takes quite a bit of time. Time for a cup of coffee, Detective. This is gonna take a minute or two.
-          </p>
-        </div>
+          </NoteText>
+        </LoadingWrapper>
       )}
     </Container>
   );
