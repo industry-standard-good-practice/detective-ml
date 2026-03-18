@@ -121,7 +121,8 @@ const extractSentenceAroundTime = (text: string, timeStr: string): string | null
   if (idx === -1) return null;
 
   // Split on sentence-ending punctuation and find the sentence containing the time
-  const sentences = text.split(/(?<=[.!?])\s+/);
+  // Avoid lookbehind (?<=) which is unsupported on older iOS Safari
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
   let charCount = 0;
   for (const sentence of sentences) {
     const sentenceEnd = charCount + sentence.length;

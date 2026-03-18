@@ -56,9 +56,29 @@ function createServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 4000;
 
-  // Middleware
+  // CORS — auto-detects dev vs production:
+  //  • CORS_ORIGIN set to a real domain (e.g. https://detectiveml.com) → strict, production-only
+  //  • CORS_ORIGIN is localhost / 127.0.0.1, or not set → permissive, allows LAN IPs too
+  const corsOrigin = process.env.CORS_ORIGIN;
+  const isLocalOrigin = !corsOrigin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(corsOrigin);
+
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. server-to-server, Postman, same-origin)
+      if (!origin) return callback(null, true);
+
+      if (isLocalOrigin) {
+        // --- DEV MODE: allow localhost and any private/LAN IP ---
+        if (/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+          return callback(null, true);
+        }
+      } else {
+        // --- PRODUCTION: only allow the exact configured origin ---
+        if (origin === corsOrigin) return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   }));
   // Increase body size limit for base64 image uploads (up to 50MB)

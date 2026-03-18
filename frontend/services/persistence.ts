@@ -1,10 +1,7 @@
 import { CaseData, CaseStats } from '../types';
 import { auth } from './firebase';
 import toast from 'react-hot-toast';
-
-// --- API HELPER ---
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+import { API_BASE } from './apiBase';
 
 /**
  * Makes an authenticated API call to the backend.
