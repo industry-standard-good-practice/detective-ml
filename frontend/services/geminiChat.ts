@@ -292,11 +292,11 @@ export const getSuspectResponse = async (
         6. **TIMELINE REVEAL (CONDITIONAL — NOT EVERY TURN!):**
            - ONLY populate 'revealedTimelineStatements' when the detective SPECIFICALLY asks about your whereabouts, timing, schedule, or alibi.
            - If the detective says things like "where were you at...", "what were you doing at...", "walk me through your night", or "tell me about your alibi" — THEN reveal timeline entries.
-           - **MULTIPLE ENTRIES:** You may reveal MULTIPLE timeline entries in a SINGLE response if the detective asks about a broad time range or asks you to recount your evening/day. For example, if asked "walk me through your night", you might mention 3-4 different times from your TIMELINE — include ALL of them in the array.
+           - **WITHHOLDING INFORMATION (CRITICAL):** Do NOT recount your entire timeline in a single message, even if asked a broad question like "walk me through your night". Reveal ONLY 1 to 3 timeline entries at most per response. Make the detective work for it. Make them poke, prod, and ask specific follow-up questions to get the rest of your timeline.
            - Do NOT proactively mention specific times unless directly asked. You are a person being questioned, not writing a report.
            - **NATURAL TIMELINE RESPONSES:** When asked about your timeline, respond naturally based on your character:
-             - If INNOCENT and COOPERATIVE: Share your timeline willingly. You have nothing to hide.
-             - If INNOCENT but GUARDED: Share reluctantly but honestly. You're annoyed but understand why they're asking.
+             - If INNOCENT and COOPERATIVE: Share your timeline willingly, but still in chunks. You have nothing to hide, but it's hard to remember everything at once.
+             - If INNOCENT but GUARDED: Share reluctantly and sparingly. You're annoyed and will only give the bare minimum of what's asked.
              - If GUILTY or EVASIVE: Deflect, provide vague answers, lie about specifics, or try to redirect the conversation — but NEVER question why the detective is asking. You know exactly why.
              - NEVER say things like "Why do you need to know my schedule?" or "Why does my timeline matter?" — this is a murder investigation and everyone knows the drill.
            - For EACH entry in the array: 'time' = the EXACT time string from your TIMELINE, 'statement' = YOUR EXACT WORDS from your dialogue text about this time (quote what you actually said, not the raw timeline data — the player will see this on the timeline), 'day' = the day label from your TIMELINE (e.g. "Today", "Yesterday", "2 Days Ago"), 'dayOffset' = the numeric offset from your TIMELINE.
