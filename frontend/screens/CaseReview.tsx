@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 import toast from 'react-hot-toast';
 import Markdown from 'react-markdown';
@@ -18,7 +19,7 @@ const Container = styled.div`
   display: flex;
   height: 100%;
   padding: 20px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 20px) var(--screen-edge-horizontal);
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   position: relative;
 
   @media (max-width: 1080px) {
@@ -34,20 +35,20 @@ const MobileTabBar = styled.div`
   @media (max-width: 1080px) {
     display: flex;
     gap: 0;
-    margin-bottom: 10px;
+    margin-bottom: var(--space);
     flex-shrink: 0;
   }
 `;
 
 const MobileTab = styled.button<{ $active: boolean }>`
   flex: 1;
-  background: ${props => props.$active ? '#1a1a1a' : '#0a0a0a'};
-  border: 1px solid ${props => props.$active ? '#0f0' : '#333'};
-  border-bottom: ${props => props.$active ? '2px solid #0f0' : '1px solid #333'};
-  color: ${props => props.$active ? '#0f0' : '#666'};
+  background: ${props => props.$active ? 'var(--color-surface-raised)' : 'var(--color-surface)'};
+  border: 1px solid ${props => props.$active ? 'var(--color-accent-green)' : 'var(--color-border)'};
+  border-bottom: ${props => props.$active ? '2px solid var(--color-accent-green)' : '1px solid var(--color-border)'};
+  color: ${props => props.$active ? 'var(--color-accent-green)' : 'var(--color-text-dim)'};
   font-family: inherit;
-  font-size: var(--type-body);
-  padding: 10px;
+  ${type.body}
+  padding: var(--space);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -56,17 +57,17 @@ const MobileTab = styled.button<{ $active: boolean }>`
 
 const Panel = styled.div<{ $mobileHidden?: boolean }>`
   flex: 1;
-  background: #0a0a0a;
-  border: 1px solid #333;
-  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: calc(var(--space) * 3);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
 
   @media (max-width: 1080px) {
     display: ${props => props.$mobileHidden ? 'none' : 'flex'};
-    padding: 15px;
+    padding: calc(var(--space) * 2);
     min-height: 0;
     flex: 1;
     overflow-x: hidden;
@@ -78,7 +79,7 @@ const LeftColumn = styled.div<{ $mobileHidden?: boolean }>`
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 10px;
+  gap: var(--space);
 
   @media (max-width: 1080px) {
     display: ${props => props.$mobileHidden ? 'none' : 'flex'};
@@ -89,7 +90,7 @@ const LeftColumn = styled.div<{ $mobileHidden?: boolean }>`
 const DesktopOnly = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space);
   flex-shrink: 0;
 
   @media (max-width: 1080px) {
@@ -103,37 +104,36 @@ const MobileOnly = styled.div`
   @media (max-width: 1080px) {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space);
     margin-top: auto;
-    padding-top: 10px;
+    padding-top: var(--space);
   }
 `;
 
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space);
   min-width: 0;
 
   label {
-    color: #555;
-    font-size: var(--type-small);
+    color: var(--color-text-disabled);
+    ${type.small}
     text-transform: uppercase;
   }
 
   input, textarea, select {
-    background: #111;
-    border: 1px solid #444;
-    color: #ddd;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
     font-family: inherit;
-    padding: 8px;
-    font-size: var(--type-body);
-    border-radius: 4px;
+    padding: var(--space);
+    ${type.body}
     box-sizing: border-box;
     max-width: 100%;
 
     &:focus {
-      border-color: #888;
+      border-color: var(--color-text-subtle);
       outline: none;
     }
 
@@ -150,12 +150,12 @@ const InputGroup = styled.div`
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 10px;
-    padding-right: 30px;
+    padding-right: calc(var(--space) * 4);
   }
 
   textarea {
     resize: none;
-    padding: 10px;
+    padding: var(--space);
     field-sizing: content;
   }
 `;
@@ -163,37 +163,37 @@ const InputGroup = styled.div`
 // --- NEW STYLED INPUTS FOR CONSISTENCY ---
 
 const StyledInput = styled.input`
-  background: #111;
+  background: var(--color-surface-raised);
   border: none;
-  border-bottom: 1px solid #333;
-  color: #ddd;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
   font-family: inherit;
-  padding: 8px;
-  font-size: var(--type-body);
+  padding: var(--space);
+  ${type.body}
   width: 100%;
   
   &:focus {
-    border-bottom-color: #0f0;
-    background: #1a1a1a;
+    border-bottom-color: var(--color-accent-green);
+    background: var(--color-surface-raised);
     outline: none;
   }
 `;
 
 const StyledTextArea = styled.textarea`
-  background: #111;
+  background: var(--color-surface-raised);
   border: none;
-  border-bottom: 1px solid #333;
-  color: #ddd;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
   font-family: inherit;
-  padding: 8px;
-  font-size: var(--type-body);
+  padding: var(--space);
+  ${type.body}
   resize: none;
   width: 100%;
   field-sizing: content;
   
   &:focus {
-    border-bottom-color: #0f0;
-    background: #1a1a1a;
+    border-bottom-color: var(--color-accent-green);
+    background: var(--color-surface-raised);
     outline: none;
   }
 `;
@@ -202,16 +202,16 @@ const ModuleContainer = styled.div`
   padding: 5px 0;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
 `;
 
 const ModuleItem = styled.div`
-  border-bottom: 1px dashed #333;
-  padding-bottom: 15px;
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: calc(var(--space) * 2);
   &:last-child { border-bottom: none; padding-bottom: 0; }
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space);
 `;
 
 // -----------------------------------------
@@ -219,37 +219,37 @@ const ModuleItem = styled.div`
 const SuspectList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px; 
+  gap: var(--space); 
 `;
 
 const SuspectRow = styled.div<{ $selected: boolean }>`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px;
-  background: ${props => props.$selected ? '#222' : '#0f0f0f'};
-  border: 1px solid ${props => props.$selected ? '#fff' : '#333'};
+  gap: var(--space);
+  padding: var(--space);
+  background: ${props => props.$selected ? 'var(--color-border-subtle)' : '#0f0f0f'};
+  border: 1px solid ${props => props.$selected ? 'var(--color-text-bright)' : 'var(--color-border)'};
   cursor: pointer;
 
   &:hover {
-    background: #222;
+    background: var(--color-border-subtle);
   }
 `;
 
 const ActionButtons = styled.div`
   margin-top: auto;
   display: flex;
-  gap: 10px;
+  gap: var(--space);
 `;
 
 const StartButton = styled.button`
   flex: 1;
   background: #0d0;
-  color: #000;
+  color: var(--color-text-inverse);
   border: none;
-  padding: 15px;
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
   cursor: pointer;
 
@@ -262,7 +262,7 @@ const StartButton = styled.button`
 
 const SuspectEditorRow = styled.div`
   display: flex;
-  gap: 10px;
+  gap: var(--space);
 
   @media (max-width: 1080px) {
     flex-direction: column;
@@ -272,7 +272,7 @@ const SuspectEditorRow = styled.div`
 const PortraitCol = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space);
   width: 120px;
   flex-shrink: 0;
 
@@ -284,12 +284,12 @@ const PortraitCol = styled.div`
 const PortraitBtnGrid = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space);
 
   @media (max-width: 1080px) {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: var(--space);
   }
 `;
 
@@ -298,22 +298,21 @@ const InputsCol = styled.div`
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space);
 `;
 
 const RandomizeButton = styled.button`
-  background: #333;
-  color: #fff;
-  border: 1px solid #555;
+  background: var(--color-border);
+  color: var(--color-text-bright);
+  border: 1px solid var(--color-border-strong);
   cursor: pointer;
-  padding: 8px 12px;
+  padding: var(--space) calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   width: 100%;
-  border-radius: 4px;
   transition: all 0.2s;
   
-  &:hover { background: #555; }
+  &:hover { background: var(--color-border-strong); }
   &:disabled { opacity: 0.5; cursor: wait; }
 `;
 
@@ -322,11 +321,10 @@ const UploadButton = styled.button`
   color: #adf;
   border: 1px solid #456;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: var(--space) calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   width: 100%;
-  border-radius: 4px;
   transition: all 0.2s;
   
   &:hover { background: #345; }
@@ -338,11 +336,10 @@ const CameraButton = styled.button`
   color: #fa0;
   border: 1px solid #633;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: var(--space) calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   width: 100%;
-  border-radius: 4px;
   transition: all 0.2s;
   
   &:hover { background: #533; }
@@ -351,13 +348,13 @@ const CameraButton = styled.button`
 
 const RetryButton = styled.button`
   background: #0e0e0e;
-  color: #0ff;
+  color: var(--color-accent-cyan);
   border: 1px dashed #088;
-  padding: 12px;
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
-  margin-bottom: 10px;
+  margin-bottom: var(--space);
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
@@ -373,35 +370,35 @@ const RetryButton = styled.button`
 `;
 
 const UtilityButton = styled.button<{ $danger?: boolean }>`
-  background: ${props => props.$danger ? '#300' : '#222'};
-  color: ${props => props.$danger ? '#f55' : '#ccc'};
-  border: 1px solid ${props => props.$danger ? '#500' : '#444'};
-  padding: 8px;
+  background: ${props => props.$danger ? '#300' : 'var(--color-border-subtle)'};
+  color: ${props => props.$danger ? 'var(--color-accent-red-bright)' : '#ccc'};
+  border: 1px solid ${props => props.$danger ? '#500' : 'var(--color-border)'};
+  padding: var(--space);
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   text-transform: uppercase;
   
   &:hover {
     background: ${props => props.$danger ? '#500' : '#333'};
-    color: #fff;
+    color: var(--color-text-bright);
   }
 `;
 
 const SaveButton = styled.button`
   background: #004400;
-  color: #0f0;
-  border: 1px solid #0f0;
-  padding: 15px;
+  color: var(--color-accent-green);
+  border: 1px solid var(--color-accent-green);
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   font-weight: bold;
   cursor: pointer;
   text-transform: uppercase;
 
   &:hover {
     background: #006600;
-    color: #fff;
+    color: var(--color-text-bright);
   }
   
   &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -409,15 +406,15 @@ const SaveButton = styled.button`
 
 const Fieldset = styled.fieldset`
   border: none;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-border);
   padding: 15px 0 0 0;
   margin: 20px 0 0 0;
   background: transparent;
   
   legend {
-    color: #888;
+    color: var(--color-text-subtle);
     padding: 0 10px 0 0;
-    font-size: var(--type-small);
+    ${type.small}
     text-transform: uppercase;
     font-weight: bold;
   }
@@ -425,31 +422,29 @@ const Fieldset = styled.fieldset`
 
 const SmallButton = styled.button<{ $active?: boolean }>`
   background: ${props => props.$active ? '#3b82f6' : '#333'};
-  color: ${props => props.$active ? '#fff' : '#ccc'};
-  border: 1px solid ${props => props.$active ? '#60a5fa' : '#555'};
+  color: ${props => props.$active ? 'var(--color-text-bright)' : '#ccc'};
+  border: 1px solid ${props => props.$active ? '#60a5fa' : 'var(--color-border-strong)'};
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: var(--type-small);
+  padding: var(--space) var(--space);
+  ${type.small}
   font-family: inherit;
-  border-radius: 4px;
   transition: all 0.2s;
   &:hover { background: ${props => props.$active ? '#2563eb' : '#555'}; }
 `;
 
 const DeleteButton = styled.button`
   background: transparent;
-  color: #555;
-  border: 1px solid #333;
+  color: var(--color-text-disabled);
+  border: 1px solid var(--color-border);
   cursor: pointer;
-  padding: 6px 12px;
-  font-size: var(--type-small);
+  padding: var(--space) calc(var(--space) * 2);
+  ${type.small}
   font-family: inherit;
-  border-radius: 4px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space);
   flex-shrink: 0;
   text-transform: uppercase;
   font-weight: bold;
@@ -457,14 +452,14 @@ const DeleteButton = styled.button`
   text-align: center;
   
   &:hover {
-    color: #f55;
-    border-color: #f55;
+    color: var(--color-accent-red-bright);
+    border-color: var(--color-accent-red-bright);
     background: rgba(255, 85, 85, 0.15);
   }
   
   @media (max-width: 768px) {
-    color: #f55;
-    border-color: #f55;
+    color: var(--color-accent-red-bright);
+    border-color: var(--color-accent-red-bright);
   }
 `;
 
@@ -483,7 +478,6 @@ const XIcon = styled.span`
     width: 100%;
     height: 2px;
     background: currentColor;
-    border-radius: 1px;
   }
   &::before { transform: translate(-50%, -50%) rotate(45deg); }
   &::after { transform: translate(-50%, -50%) rotate(-45deg); }
@@ -491,17 +485,16 @@ const XIcon = styled.span`
 
 const ToggleButton = styled.button<{ $active?: boolean }>`
   background: ${props => props.$active ? 'rgba(255, 85, 85, 0.15)' : 'transparent'};
-  color: ${props => props.$active ? '#f55' : '#555'};
-  border: 1px solid ${props => props.$active ? '#f55' : '#333'};
+  color: ${props => props.$active ? 'var(--color-accent-red-bright)' : 'var(--color-text-disabled)'};
+  border: 1px solid ${props => props.$active ? 'var(--color-accent-red-bright)' : 'var(--color-border)'};
   cursor: pointer;
-  padding: 6px 12px;
-  font-size: var(--type-small);
+  padding: var(--space) calc(var(--space) * 2);
+  ${type.small}
   font-family: inherit;
-  border-radius: 4px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space);
   text-transform: uppercase;
   font-weight: bold;
   flex-shrink: 0;
@@ -509,24 +502,23 @@ const ToggleButton = styled.button<{ $active?: boolean }>`
   text-align: center;
   
   &:hover {
-    color: ${props => props.$active ? '#f55' : '#fff'};
-    border-color: ${props => props.$active ? '#f55' : '#888'};
+    color: ${props => props.$active ? 'var(--color-accent-red-bright)' : 'var(--color-text-bright)'};
+    border-color: ${props => props.$active ? 'var(--color-accent-red-bright)' : 'var(--color-text-subtle)'};
     background: ${props => props.$active ? 'rgba(255, 85, 85, 0.15)' : 'rgba(255,255,255,0.1)'};
   }
 `;
 
 const HeroImageModuleWrapper = styled.div`
   container-type: inline-size;
-  margin-bottom: 10px;
+  margin-bottom: var(--space);
 `;
 
 const HeroImageModuleInner = styled.div`
   display: flex;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
   align-items: stretch;
   background: rgba(255,255,255,0.03);
-  padding: 15px;
-  border-radius: 12px;
+  padding: calc(var(--space) * 2);
   border: 1px solid rgba(255,255,255,0.05);
 
   @container (max-width: 450px) {
@@ -537,19 +529,18 @@ const HeroImageModuleInner = styled.div`
 const HeroImagePreview = styled.div<{ $imageUrl?: string }>`
   width: 50%;
   aspect-ratio: 1 / 1;
-  background: #000;
-  border: 1px solid #333;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   background-image: ${props => props.$imageUrl ? `url(${props.$imageUrl})` : 'none'};
   background-size: cover;
   background-position: center;
   image-rendering: pixelated;
   flex-shrink: 0;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
-  font-size: 0.6rem;
+  color: var(--color-border);
+  ${type.xs}
   overflow: hidden;
 
   @container (max-width: 450px) {
@@ -564,7 +555,7 @@ const HeroImageControls = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: calc(var(--space) * 2);
 
   @container (max-width: 450px) {
     width: 100%;
@@ -582,7 +573,7 @@ const Overlay = styled.div`
   justify-content: center;
   z-index: 999;
   flex-direction: column;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
 `;
 
 const rotate = keyframes`
@@ -593,15 +584,14 @@ const rotate = keyframes`
 const Spinner = styled.div`
   width: 50px;
   height: 50px;
-  border: 4px solid #333;
-  border-top-color: #0f0;
-  border-radius: 50%;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-accent-green);
   animation: ${rotate} 1s linear infinite;
 `;
 
 const LoadingText = styled.div`
-  color: #0f0;
-  font-size: var(--type-body-lg);
+  color: var(--color-accent-green);
+  ${type.bodyLg}
   font-family: inherit;
   text-transform: uppercase;
 `;
@@ -623,25 +613,24 @@ const VideoPreview = styled.video`
   width: 100%;
   max-width: 600px;
   max-height: 70%;
-  border: 2px solid #0f0;
-  background: #111;
-  box-shadow: 0 0 20px #0f0;
+  border: 2px solid var(--color-accent-green);
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 20px var(--color-accent-green);
 `;
 
 const CameraControls = styled.div`
   display: flex;
-  gap: 20px;
-  margin-top: 20px;
+  gap: calc(var(--space) * 3);
+  margin-top: calc(var(--space) * 3);
 `;
 
 const SnapButton = styled.button`
   width: 80px;
   height: 80px;
-  border-radius: 50%;
-  background: #f00;
-  border: 4px solid #fff;
+  background: var(--color-accent-red);
+  border: 4px solid var(--color-text-bright);
   cursor: pointer;
-  box-shadow: 0 0 10px #f00;
+  box-shadow: 0 0 10px var(--color-accent-red);
   
   &:hover { transform: scale(1.1); }
   &:active { transform: scale(0.95); }
@@ -1269,10 +1258,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               fontSize: 'var(--type-small)',
               textTransform: 'uppercase',
               letterSpacing: '2px',
-              marginBottom: '5px'
+              marginBottom: 'var(--space)'
             }}>
               {loadingState.step}
-              {loadingState.stepDetail && <span style={{ color: '#888', marginLeft: '8px' }}>— {loadingState.stepDetail}</span>}
+              {loadingState.stepDetail && <span style={{ color: '#888', marginLeft: 'var(--space)' }}>— {loadingState.stepDetail}</span>}
             </div>
           )}
           <Spinner />
@@ -1283,7 +1272,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             maxWidth: '320px',
             textAlign: 'center',
             lineHeight: 1.5,
-            marginTop: '10px'
+            marginTop: 'var(--space)'
           }}>
             Analyzing the full case narrative, evidence, timelines, and character relationships. This can take a few minutes.
           </div>
@@ -1376,7 +1365,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
           <InputGroup>
             <label>Investigation Start Time</label>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 'var(--space)', alignItems: 'center' }}>
               <input
                 type="text"
                 placeholder="e.g. 'September 12, 1924 at 11:30 PM' or '5 ABY, late evening'"
@@ -1505,12 +1494,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   background: '#222',
                   border: '1px solid #444',
                   color: '#888',
-                  padding: '8px 10px',
+                  padding: 0,
                   cursor: 'pointer',
-                  borderRadius: '4px',
-                  fontSize: '16px',
+                  fontSize: 'var(--type-body)',
                   lineHeight: 1,
-                  flexShrink: 0
+                  flexShrink: 0,
+                  aspectRatio: '1',
+                  alignSelf: 'stretch',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
                 title="Open date picker"
               >
@@ -1530,7 +1523,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   {!draftCase.heroImageUrl && "NO IMAGE"}
                 </HeroImagePreview>
                 <HeroImageControls>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space)' }}>
                     <SmallButton
                       $active={heroMode === 'suspect'}
                       onClick={() => setHeroMode('suspect')}
@@ -1556,7 +1549,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
                   {heroMode === 'suspect' && (
                     <select
-                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: 'var(--space)', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: 'calc(var(--space) * 4)' }}
                       onChange={(e) => {
                         const s = draftCase.suspects?.find(x => x.id === e.target.value);
                         if (s?.portraits?.[Emotion.NEUTRAL]) handleCaseChange('heroImageUrl', s.portraits[Emotion.NEUTRAL]);
@@ -1572,7 +1565,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
                   {heroMode === 'evidence' && (
                     <select
-                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px' }}
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: 'var(--space)', WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: 'calc(var(--space) * 4)' }}
                       onChange={(e) => {
                         const ev = [...draftCase.initialEvidence, ...(draftCase.suspects?.flatMap(s => s.hiddenEvidence || []) || [])].find(x => x.id === e.target.value);
                         if (ev?.imageUrl) handleCaseChange('heroImageUrl', ev.imageUrl);
@@ -1587,7 +1580,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   )}
 
                   {heroMode === 'custom' && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: 'var(--space)' }}>
                       <SmallButton onClick={() => setShowHeroEditor(true)} style={{ flex: 1 }}>
                         GENERATE CUSTOM
                       </SmallButton>
@@ -1613,7 +1606,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     placeholder="Or paste image URL here..."
                     value={draftCase.heroImageUrl || ''}
                     onChange={(e) => handleCaseChange('heroImageUrl', e.target.value)}
-                    style={{ fontSize: '0.75rem', padding: '8px', background: '#111', border: '1px solid #333', borderRadius: '4px', color: '#888', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+                    style={{ fontSize: 'var(--type-xs)', padding: 'var(--space)', background: '#111', border: '1px solid #333', color: '#888', width: '100%', minWidth: 0, boxSizing: 'border-box' }}
                   />
                 </HeroImageControls>
               </HeroImageModuleInner>
@@ -1622,7 +1615,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
           <InputGroup>
             <label>Edit case</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,255,0,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,255,0,0.1)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space)', background: 'rgba(0,255,0,0.03)', padding: 'calc(var(--space) * 2)', border: '1px solid rgba(0,255,0,0.1)' }}>
               <textarea
                 placeholder="e.g. 'Change the setting to a futuristic space station' or 'Add a secret accomplice for the killer' or 'Make the victim a famous opera singer'..."
                 value={editPrompt}
@@ -1632,11 +1625,11 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               <StartButton
                 onClick={handleEditCase}
                 disabled={loadingState.visible || !editPrompt.trim()}
-                style={{ fontSize: 'var(--type-body)', padding: '10px' }}
+                style={{ fontSize: 'var(--type-body)', padding: 'var(--space)' }}
               >
                 APPLY EDITS
               </StartButton>
-              <p style={{ fontSize: '0.7rem', color: '#555', margin: 0 }}>
+              <p style={{ fontSize: 'var(--type-xs)', color: '#555', margin: 0 }}>
                 This will transform suspects, evidence, and narrative to match your request.
               </p>
             </div>
@@ -1673,8 +1666,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             <ModuleContainer>
               {(draftCase.initialTimeline || []).map((event, idx) => (
                 <ModuleItem key={`initial-timeline-${idx}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <div style={{ display: 'flex', gap: '5px' }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space)' }}>
+                    <div style={{ display: 'flex', gap: 'var(--space)' }}>
                       <StyledInput
                         placeholder="Day (e.g. Today, Yesterday)"
                         value={event.day || ''}
@@ -1721,7 +1714,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                       const newList = (draftCase.initialTimeline || []).filter((_, i) => i !== idx);
                       handleCaseChange('initialTimeline', newList);
                     }}
-                    style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                    style={{ marginLeft: 'var(--space)', alignSelf: 'stretch' }}
                     title="Delete timeline event"
                   >
                     <XIcon />
@@ -1731,12 +1724,12 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               <SmallButton onClick={() => {
                 const newList = [...(draftCase.initialTimeline || []), { time: '', activity: '', day: 'Today', dayOffset: 0 }];
                 handleCaseChange('initialTimeline', newList);
-              }} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
+              }} style={{ padding: 'var(--space)', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
             </ModuleContainer>
           </Fieldset>
 
           <MobileOnly>
-            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+            <div style={{ display: 'flex', gap: 'var(--space)', width: '100%' }}>
               <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#fff', border: 'none' }}>CLOSE</SaveButton>
               <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
               <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
@@ -1812,14 +1805,14 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         </SuspectList>
 
         {activeSuspect && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space) * 2)', marginTop: 'calc(var(--space) * 3)', borderTop: '1px solid #333', paddingTop: 'calc(var(--space) * 3)' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space)' }}>
               <h3 style={{ margin: 0, color: '#aaa', fontSize: 'var(--type-h3)' }}>
                 EDITING: {activeSuspect.name} {selectedSuspectId === 'officer' ? '(CHIEF)' : selectedSuspectId === 'partner' ? '(PARTNER)' : ''}
               </h3>
               {!isSupportChar && (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 'var(--space)', alignItems: 'center' }}>
                   <ToggleButton
                     $active={(activeSuspect as Suspect).isGuilty}
                     onClick={() => handleSuspectChange(activeSuspect.id, 'isGuilty', !(activeSuspect as Suspect).isGuilty)}
@@ -1871,7 +1864,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
               {/* Right: All the input fields */}
               <InputsCol>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: 'var(--space)' }}>
                   <InputGroup style={{ flex: 1 }}>
                     <label>Name</label>
                     <input
@@ -1913,11 +1906,11 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 </InputGroup>
                 <InputGroup>
                   <label>TTS Voice</label>
-                  <div style={{ display: 'flex', gap: '8px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: 'var(--space)', minWidth: 0 }}>
                     <select
                       value={activeSuspect.voice || ''}
                       onChange={(e) => handleSuspectChange(selectedSuspectId!, 'voice', e.target.value)}
-                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: '8px', borderRadius: '4px', flex: 1, minWidth: 0, WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: '30px', boxSizing: 'border-box' }}
+                      style={{ backgroundColor: '#111', color: '#fff', border: '1px solid #444', padding: 'var(--space)', flex: 1, minWidth: 0, WebkitAppearance: 'none', appearance: 'none', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' d='M6 8L0 0h12z'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '10px', paddingRight: 'calc(var(--space) * 4)', boxSizing: 'border-box' }}
                     >
                       {TTS_VOICES.map(v => (
                         <option key={v.name} value={v.name}>
@@ -1935,7 +1928,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         border: '1px solid #444',
                         cursor: (activeSuspect.voice && activeSuspect.voice !== 'None' && !isPreviewingVoice) ? 'pointer' : 'not-allowed',
                         opacity: (activeSuspect.voice && activeSuspect.voice !== 'None' && !isPreviewingVoice) ? 1 : 0.5,
-                        fontSize: '12px',
+                        fontSize: 'var(--type-xs)',
                         whiteSpace: 'nowrap'
                       }}
                     >
@@ -1989,7 +1982,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                       onChange={(e) => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, statement: e.target.value })}
                     />
                   </InputGroup>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space)', marginTop: 'var(--space)', alignItems: 'flex-end' }}>
                     <InputGroup style={{ flex: 1 }}>
                       <label>Location</label>
                       <input
@@ -2001,7 +1994,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                       $active={(activeSuspect as Suspect).alibi?.isTrue || false}
                       onClick={() => handleSuspectChange(activeSuspect.id, 'alibi', { ...(activeSuspect as Suspect).alibi, isTrue: !(activeSuspect as Suspect).alibi?.isTrue })}
                       data-cursor="pointer"
-                      style={{ height: 'calc(var(--type-body) + 18px)' }}
+                      style={{ padding: 'calc(var(--space) + 3.4px) calc(var(--space) * 2)', fontSize: 'var(--type-body)' }}
                     >
                       {(activeSuspect as Suspect).alibi?.isTrue ? '✓' : <XIcon />} VERIFIED
                     </ToggleButton>
@@ -2018,7 +2011,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
 
                       return (
                         <ModuleItem key={`${activeSuspect.id}-${targetName}`}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 'var(--space)', alignItems: 'center' }}>
                             <div style={{
                               flex: 1,
                               color: '#fff',
@@ -2056,8 +2049,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   <ModuleContainer>
                     {(activeSuspect as Suspect)?.timeline?.map((t, i) => (
                       <ModuleItem key={`${activeSuspect.id}-timeline-${i}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <div style={{ display: 'flex', gap: '5px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space)' }}>
+                          <div style={{ display: 'flex', gap: 'var(--space)' }}>
                             <StyledInput
                               placeholder="Day (e.g. Today, Yesterday)"
                               value={t.day || ''}
@@ -2091,14 +2084,14 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         </div>
                         <DeleteButton
                           onClick={() => removeTimelineEvent(i)}
-                          style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                          style={{ marginLeft: 'var(--space)', alignSelf: 'stretch' }}
                           title="Delete timeline event"
                         >
                           <XIcon />
                         </DeleteButton>
                       </ModuleItem>
                     ))}
-                    <SmallButton onClick={addTimelineEvent} style={{ padding: '10px', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
+                    <SmallButton onClick={addTimelineEvent} style={{ padding: 'var(--space)', background: '#222' }}>+ ADD TIMELINE EVENT</SmallButton>
                   </ModuleContainer>
                 </Fieldset>
 
@@ -2114,14 +2107,14 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         />
                         <DeleteButton
                           onClick={() => removeFact(i)}
-                          style={{ marginLeft: '10px', alignSelf: 'stretch' }}
+                          style={{ marginLeft: 'var(--space)', alignSelf: 'stretch' }}
                           title="Delete fact"
                         >
                           <XIcon />
                         </DeleteButton>
                       </ModuleItem>
                     ))}
-                    <SmallButton onClick={addFact} style={{ padding: '10px', background: '#222' }}>+ ADD FACT</SmallButton>
+                    <SmallButton onClick={addFact} style={{ padding: 'var(--space)', background: '#222' }}>+ ADD FACT</SmallButton>
                   </ModuleContainer>
                 </Fieldset>
 
@@ -2157,7 +2150,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             )}
 
             <MobileOnly>
-              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <div style={{ display: 'flex', gap: 'var(--space)', width: '100%' }}>
                 <SaveButton onClick={handleSave} disabled={loadingState.visible} style={{ flex: 1 }}>SAVE</SaveButton>
                 <SaveButton onClick={handleCheckConsistency} disabled={loadingState.visible} style={{ flex: 1 }}>CHECK CONSISTENCY</SaveButton>
                 <SaveButton onClick={handleCancel} disabled={loadingState.visible} style={{ flex: 1, background: '#444', color: '#ccc' }}>CLOSE</SaveButton>
@@ -2183,13 +2176,12 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 0 50px rgba(0,0,0,0.5)',
-            borderRadius: '8px',
             overflow: 'hidden',
           }}>
             <h2 style={{
               color: '#fff', marginTop: 0, marginBottom: 0,
               borderBottom: '1px solid #333', padding: '20px 25px',
-              fontSize: '1.5rem', flexShrink: 0,
+              fontSize: 'var(--type-h3)', flexShrink: 0,
               background: '#111', position: 'relative', zIndex: 1,
             }}>Narrative Audit Report</h2>
 
@@ -2201,16 +2193,16 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             }}>
               {consistencyModal.report && typeof consistencyModal.report === 'object' ? (
                 <>
-                  <section style={{ marginBottom: '25px' }}>
-                    <h3 style={{ color: '#f55', fontSize: '1.1rem', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Issues Detected</h3>
-                    <div style={{ color: '#bbb', fontSize: '0.95rem' }}>
+                  <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
+                    <h3 style={{ color: '#f55', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Issues Detected</h3>
+                    <div style={{ color: '#bbb', fontSize: 'var(--type-body)' }}>
                       <Markdown>{consistencyModal.report.issuesFound || 'No issues detected.'}</Markdown>
                     </div>
                   </section>
 
-                  <section style={{ marginBottom: '25px' }}>
-                    <h3 style={{ color: '#0f0', fontSize: '1.1rem', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Proposed Repairs</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
+                    <h3 style={{ color: '#0f0', fontSize: 'var(--type-body-lg)', marginBottom: 'calc(var(--space) * 2)', textTransform: 'uppercase', letterSpacing: '1px' }}>Proposed Repairs</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space) * 2)' }}>
                       {(consistencyModal.report.changesMade || []).map((change: any, idx: number) => {
                         const evidence = change.evidenceId ?
                           [...(consistencyModal.updatedCase?.initialEvidence || []), ...(consistencyModal.updatedCase?.suspects || []).flatMap(s => s.hiddenEvidence || [])]
@@ -2223,23 +2215,22 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         return (
                           <div key={idx} style={{
                             background: '#1a1a1a',
-                            padding: '15px',
-                            borderRadius: '6px',
+                            padding: 'calc(var(--space) * 2)',
                             borderLeft: '3px solid #0f0',
                             display: 'flex',
-                            gap: '15px',
+                            gap: 'calc(var(--space) * 2)',
                             alignItems: 'flex-start'
                           }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ color: '#eee', fontSize: '1rem', fontWeight: 500 }}>{change.description}</div>
+                              <div style={{ color: '#eee', fontSize: 'var(--type-body)', fontWeight: 500 }}>{change.description}</div>
                               {evidence && (
-                                <div style={{ marginTop: '8px', fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
+                                <div style={{ marginTop: 'var(--space)', fontSize: 'var(--type-small)', color: '#888', fontStyle: 'italic' }}>
                                   Linked to: {evidence.title}
                                 </div>
                               )}
                             </div>
                             {isNewEvidence && evidence?.imageUrl && (
-                              <div style={{ width: '80px', height: '80px', flexShrink: 0, borderRadius: '4px', overflow: 'hidden', border: '1px solid #333' }}>
+                              <div style={{ width: '80px', height: '80px', flexShrink: 0, overflow: 'hidden', border: '1px solid #333' }}>
                                 <img src={evidence.imageUrl} alt={evidence.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
                               </div>
                             )}
@@ -2250,8 +2241,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   </section>
 
                   <section>
-                    <h3 style={{ color: '#aaa', fontSize: '1.1rem', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Conclusion</h3>
-                    <p style={{ color: '#999', fontSize: '0.95rem', lineHeight: '1.5' }}>{consistencyModal.report.conclusion}</p>
+                    <h3 style={{ color: '#aaa', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Conclusion</h3>
+                    <p style={{ color: '#999', fontSize: 'var(--type-body)', lineHeight: '1.5' }}>{consistencyModal.report.conclusion}</p>
                   </section>
                 </>
               ) : (
@@ -2259,7 +2250,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', borderTop: '1px solid #333', padding: '20px 25px', justifyContent: 'flex-end', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 'calc(var(--space) * 2)', borderTop: '1px solid #333', padding: '20px 25px', justifyContent: 'flex-end', flexShrink: 0 }}>
               <SaveButton onClick={() => setConsistencyModal({ visible: false, report: null, updatedCase: null })} style={{ background: '#333', padding: '10px 20px' }}>Discard</SaveButton>
               <SaveButton onClick={applyConsistencyChanges} style={{ padding: '10px 25px', background: '#0f0', color: '#000' }}>Apply All Changes</SaveButton>
             </div>
@@ -2271,10 +2262,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
-          <div style={{ background: '#111', padding: '20px', border: '1px solid #333', maxWidth: '400px', width: '90%' }}>
+          <div style={{ background: '#111', padding: 'calc(var(--space) * 3)', border: '1px solid #333', maxWidth: '400px', width: '90%' }}>
             <h3 style={{ color: '#fff', marginTop: 0 }}>Delete Suspect</h3>
             <p style={{ color: '#ccc' }}>Are you sure you want to remove {suspectToDelete.name}?</p>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <div style={{ display: 'flex', gap: 'var(--space)', marginTop: 'calc(var(--space) * 3)' }}>
               <SaveButton onClick={confirmDeleteSuspect} style={{ background: '#800' }}>Delete</SaveButton>
               <SaveButton onClick={() => setSuspectToDelete(null)}>Cancel</SaveButton>
             </div>

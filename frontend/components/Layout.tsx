@@ -5,7 +5,7 @@ import styled, { createGlobalStyle, keyframes, css } from 'styled-components';
 import { ScreenState } from '../types';
 import CRTOverlay from './CRTOverlay';
 import { User } from 'firebase/auth';
-import { cssTokens, media } from '../theme';
+import { cssTokens, media, type } from '../theme';
 
 import { useOnboarding } from '../contexts/OnboardingContext';
 import ExitCaseDialog from './ExitCaseDialog';
@@ -27,6 +27,7 @@ const GlobalStyle = createGlobalStyle`
     --type-body-lg: 1.2rem;
     --type-body: 1rem;
     --type-small: 0.85rem;
+    --type-xs: 0.75rem;
 
     /* Design Tokens (from theme.ts) */
     ${cssTokens}
@@ -44,21 +45,21 @@ const GlobalStyle = createGlobalStyle`
       --type-body-lg: 1.3rem; /* Larger for readability on mobile */
       --type-body: 1.15rem;
       --type-small: 0.95rem;
+      --type-xs: 0.85rem;
     }
   }
 
   /* Large Screen / 2K+ Breakpoint */
   
   html {
-    background: #000;
+    background: var(--color-bg);
   }
 
   body {
-    background: #000;
-    color: #e0e0e0;
+    background: var(--color-bg);
+    color: var(--color-text);
     margin: 0;
     padding: 0;
-    font-family: var(--font-main);
     overflow: hidden;
     text-align: pretty;
   }
@@ -73,7 +74,6 @@ const GlobalStyle = createGlobalStyle`
   
   /* Ensure inputs and buttons use the font */
   button, input, textarea, select {
-    font-family: var(--font-main);
   }
   
   /* Scrollbar styling */
@@ -81,13 +81,13 @@ const GlobalStyle = createGlobalStyle`
     width: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #111; 
+    background: var(--color-surface-raised); 
   }
   ::-webkit-scrollbar-thumb {
-    background: #333; 
+    background: var(--color-border); 
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #555; 
+    background: var(--color-border-strong); 
   }
   
   * {
@@ -149,8 +149,8 @@ const MainContainer = styled.div`
   align-items: center;
   justify-content: center;
   position: relative;
-  background: #000;
-  padding: 15px;
+  background: var(--color-bg);
+  padding: calc(var(--space) * 2);
   cursor: none !important;
   
   &, & * {
@@ -166,7 +166,7 @@ const MainContainer = styled.div`
 const Screen = styled.div<{ $powerState: 'on' | 'off' | 'turning-on' | 'turning-off' }>`
   width: 100%;
   height: 100%;
-  background-color: #000;
+  background-color: var(--color-bg);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -204,8 +204,8 @@ const TopBar = styled.div`
   display: flex;
   align-items: center;
   padding: var(--screen-edge-top) var(--screen-edge-horizontal) 10px var(--screen-edge-horizontal);
-  font-size: var(--type-body-lg);
-  border-bottom: 2px solid #333;
+  ${type.bodyLg}
+  border-bottom: 2px solid var(--color-border);
   background: #0f0f0f;
   z-index: 101;
   min-height: 70px;
@@ -252,11 +252,11 @@ const TitleContainer = styled.div<{ $marquee?: boolean }>`
 
 const Title = styled.h1`
   margin: 0;
-  font-size: var(--type-h3);
+  ${type.h3}
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: #fff;
-  text-shadow: 0 0 5px #fff;
+  color: var(--color-text-bright);
+  text-shadow: 0 0 5px var(--color-text-bright);
   line-height: 1.1;
   text-align: center;
   white-space: nowrap;
@@ -265,13 +265,13 @@ const Title = styled.h1`
   width: 100%;
   
   @media (max-width: 768px) {
-    font-size: 1.4rem;
+    ${type.h3}
   }
 `;
 
 const SubTitle = styled.div`
-  font-size: var(--type-small);
-  color: #555;
+  ${type.small}
+  color: var(--color-text-disabled);
   letter-spacing: 1px;
   
   @media (max-width: 768px) {
@@ -282,18 +282,18 @@ const SubTitle = styled.div`
 const NavButton = styled.button`
   background: transparent;
   border: none;
-  color: #aaa;
+  color: var(--color-text-muted);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   cursor: pointer;
-  padding: 0 10px;
+  padding: 0;
   transition: color 0.2s;
   text-transform: uppercase;
   text-align: left;
   
   &:hover {
-    color: #fff;
-    text-shadow: 0 0 5px #fff;
+    color: var(--color-text-bright);
+    text-shadow: 0 0 5px var(--color-text-bright);
   }
 
   &[disabled] {
@@ -302,41 +302,39 @@ const NavButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    font-size: 1.4rem;
+    ${type.h3}
     padding: 10px 0;
     width: 100%;
     text-align: left;
-    border-bottom: 1px solid #222;
-    color: #ccc;
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text);
   }
 `;
 
 const UploadButton = styled(NavButton)`
-  color: #0ff; 
-  border: 1px solid #044; 
-  border-radius: 4px;
+  color: var(--color-accent-cyan); 
+  border: 1px solid #044; /* subtle cyan border */
   background: rgba(0, 100, 100, 0.1);
-  margin-right: 15px;
+  margin-right: calc(var(--space) * 2);
 
   &:hover {
     background: rgba(0, 255, 255, 0.2);
-    color: #fff;
-    border-color: #0ff;
-    box-shadow: 0 0 10px #0ff;
+    color: var(--color-text-bright);
+    border-color: var(--color-accent-cyan);
+    box-shadow: 0 0 10px var(--color-accent-cyan);
   }
   
   @media (max-width: 768px) {
     border: none;
     background: transparent;
     margin: 0;
-    color: #0ff; 
+    color: var(--color-accent-cyan); 
   }
 `;
 
 const ScreenContent = styled.div`
   flex: 1;
   position: relative;
-  z-index: 10;
   overflow-y: auto;
 `;
 
@@ -352,13 +350,13 @@ const ContentInset = styled.div`
 
 const NavGroup = styled.div`
   display: flex; 
-  gap: 20px; 
+  gap: calc(var(--space) * 3); 
   min-width: 200px; 
   align-items: center;
   
   @media (max-width: 768px) {
     min-width: auto;
-    gap: 10px;
+    gap: var(--space);
     grid-column: 1;
     grid-row: 1;
     justify-self: start;
@@ -369,19 +367,20 @@ const HamburgerButton = styled.button<{ $visible?: boolean }>`
   display: ${props => props.$visible ? 'flex' : 'none'};
   background: transparent;
   border: none;
-  color: #0f0;
+  color: var(--color-accent-green);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
   cursor: pointer;
+  padding: 0;
   z-index: 20;
   text-transform: uppercase;
   flex-shrink: 0;
   align-items: center;
   
   &:hover {
-    color: #fff;
-    text-shadow: 0 0 5px #0f0;
+    color: var(--color-text-bright);
+    text-shadow: 0 0 5px var(--color-accent-green);
   }
   
   @media (max-width: 768px) {
@@ -394,10 +393,10 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
   @media (max-width: 768px) {
     display: flex;
     background: transparent;
-    color: #0f0;
+    color: var(--color-accent-green);
     border: none;
     font-family: inherit;
-    font-size: var(--type-body-lg);
+    ${type.bodyLg}
     font-weight: bold;
     text-transform: uppercase;
     cursor: pointer;
@@ -409,8 +408,8 @@ const MobileActionButton = styled.button<{ $active?: boolean }>`
     justify-self: end;
     
     &:hover {
-      color: #fff;
-      text-shadow: 0 0 5px #0f0;
+      color: var(--color-text-bright);
+      text-shadow: 0 0 5px var(--color-accent-green);
     }
   }
 `;
@@ -421,14 +420,14 @@ const SlideMenu = styled.div<{ $isOpen: boolean }>`
   left: 0;
   width: 400px;
   height: calc(100% - 80px);
-  background: #0a0a0a;
-  border-right: 2px solid #0f0;
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-accent-green);
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  padding-left: calc(var(--screen-edge-horizontal) + 10px);
+  padding: calc(var(--space) * 3);
+  padding-left: calc(var(--screen-edge-horizontal) + 2px);
   padding-bottom: var(--screen-edge-bottom);
-  gap: 10px;
+  gap: var(--space);
   z-index: 100;
   transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-110%)'};
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -439,15 +438,14 @@ const SlideMenu = styled.div<{ $isOpen: boolean }>`
     text-align: left;
     width: 100%;
     padding: 8px 0;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--color-border-subtle);
   }
 
   ${UploadButton} {
     margin-right: 0;
     border: none;
     background: transparent;
-    border-bottom: 1px solid #1a1a1a;
-    border-radius: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
   }
 
   @media (max-width: 768px) {
@@ -456,7 +454,7 @@ const SlideMenu = styled.div<{ $isOpen: boolean }>`
     height: auto;
     max-height: calc(100% - 60px);
     border-right: none;
-    border-bottom: 2px solid #0f0;
+    border-bottom: 2px solid var(--color-accent-green);
     padding-left: var(--screen-edge-horizontal);
     padding-right: var(--screen-edge-horizontal);
     transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(calc(-100% - 60px))'};
@@ -512,12 +510,12 @@ const NavGroupRight = styled(NavGroup)`
 
 const UnsavedBadge = styled.span`
   color: var(--color-accent-orange);
-  font-size: 0.75rem;
+  ${type.xs}
   text-transform: uppercase;
   letter-spacing: 1px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space);
 `;
 
 const UnsavedDot = styled.span`
@@ -528,7 +526,7 @@ const UnsavedDot = styled.span`
   display: inline-block;
 `;
 
-const AccentNavButton = styled(NavButton)<{ $accentColor?: string }>`
+const AccentNavButton = styled(NavButton) <{ $accentColor?: string }>`
   color: ${props => props.$accentColor || 'var(--color-accent-green)'};
   ${props => props.$accentColor === 'var(--color-accent-green)' ? 'font-weight: bold;' : ''}
 `;
@@ -538,12 +536,12 @@ const VolumeRow = styled.div`
   align-items: center;
   gap: calc(var(--space) * 1.25);
   padding: 4px 0 var(--space) 0;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--color-border-subtle);
 `;
 
 const VolumeLabel = styled.span`
   color: var(--color-text-disabled);
-  font-size: 0.8rem;
+  ${type.small}
   min-width: 50px;
 `;
 
@@ -558,7 +556,7 @@ const VolumeSlider = styled.input`
 
 const VolumeValue = styled.span`
   color: var(--color-text-disabled);
-  font-size: 0.8rem;
+  ${type.small}
   min-width: 30px;
   text-align: right;
 `;
@@ -571,7 +569,7 @@ const MenuDivider = styled.div`
 
 const MenuSectionLabel = styled.div`
   color: var(--color-text-subtle);
-  font-size: 0.75rem;
+  ${type.xs}
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: calc(var(--space) * 0.625);
@@ -585,21 +583,21 @@ const UserSection = styled.div`
 
 const UserName = styled.div`
   color: var(--color-accent-green);
-  font-size: 0.9rem;
+  ${type.small}
   margin-bottom: calc(var(--space) * 0.625);
 `;
 
 const MenuUnsavedBadge = styled.div`
   color: var(--color-accent-orange);
-  font-size: 0.9rem;
+  ${type.small}
   text-transform: uppercase;
   letter-spacing: 1px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space);
   padding: 5px 0;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 5px;
+  margin-bottom: var(--space);
 `;
 
 const MobileActionPlaceholder = styled(MobileActionButton).attrs({ as: 'div' as const })`
@@ -619,7 +617,7 @@ const MarqueeWrapper = styled.div<{ $width?: number }>`
 const MarqueeSpan = styled.span<{ $animName?: string }>`
   display: inline-block;
   white-space: nowrap;
-  font-size: 1.4rem;
+  ${type.h3}
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--color-text-bright);

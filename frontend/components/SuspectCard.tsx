@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useLayoutEffect } from 'react';
+import { type } from '../theme';
 import styled, { css, keyframes } from 'styled-components';
 import Atropos from 'atropos/react';
 import { Suspect, Emotion } from '../types';
@@ -78,9 +79,9 @@ const ContentClipper = styled.div<{ $bgColor: string }>`
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
   border-radius: 16px;
-  border: 4px solid #fff;
+  border: 4px solid var(--color-text-bright);
   background: ${props => props.$bgColor};
-  color: #fff;
+  color: var(--color-text-bright);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -144,7 +145,7 @@ const scrollAnimation = keyframes`
 const NameContainer = styled.div<{ $compact?: boolean }>`
   position: relative;
   height: ${props => props.$compact ? '1.8rem' : '2.2rem'};
-  margin-bottom: 5px;
+  margin-bottom: var(--space);
   width: 100%;
   overflow: hidden;
   
@@ -169,9 +170,8 @@ const nameBaseStyles = css<{ $compact?: boolean }>`
   font-size: ${props => props.$compact ? 'var(--type-h3)' : 'var(--type-h2)'};
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 2px 2px 0px #000;
+  text-shadow: 2px 2px 0px var(--color-bg);
   white-space: nowrap;
-  font-family: 'VT323', monospace;
   font-weight: bold;
   line-height: 1;
 `;
@@ -200,7 +200,7 @@ const MarqueeTrack = styled.div<{ $compact?: boolean; $duration: number }>`
 
   h2 {
     ${nameBaseStyles}
-    margin-right: 30px; /* Spacer for the loop */
+    margin-right: calc(var(--space) * 4); /* Spacer for the loop */
   }
 `;
 
@@ -309,9 +309,9 @@ const ResponsiveName: React.FC<{ text: string; compact?: boolean }> = ({ text, c
 // --- END NAME SYSTEM ---
 
 const Subtitle = styled.div`
-  font-size: var(--type-body);
+  ${type.body}
   opacity: 0.9;
-  margin-top: 5px;
+  margin-top: var(--space);
 `;
 
 /* 
@@ -324,11 +324,11 @@ const FlipButton = styled.button<{ $isBack?: boolean }>`
   bottom: 15px;
   ${props => props.$isBack ? 'left: 15px;' : 'right: 15px;'}
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   font-weight: bold;
-  color: #fff;
+  color: var(--color-text-bright);
   background: rgba(0,0,0,0.85);
-  padding: 8px 14px;
+  padding: var(--space) calc(var(--space) * 2);
   border-radius: 4px;
   cursor: pointer;
   z-index: 9999 !important; /* Force to top */
@@ -340,18 +340,18 @@ const FlipButton = styled.button<{ $isBack?: boolean }>`
 
   @media (hover: hover) {
     &:hover {
-      background: #fff;
-      color: #000;
+      background: var(--color-text-bright);
+      color: var(--color-text-inverse);
       transform: translateZ(105px) scale(1.1);
-      box-shadow: 0 0 10px #fff;
-      border-color: #fff;
+      box-shadow: 0 0 10px var(--color-text-bright);
+      border-color: var(--color-text-bright);
     }
   }
 
   &:active {
-    background: #f00;
-    border-color: #f00;
-    color: #fff;
+    background: var(--color-accent-red);
+    border-color: var(--color-accent-red);
+    color: var(--color-text-bright);
     transform: translateZ(95px) scale(0.95);
   }
 `;
@@ -364,7 +364,7 @@ const BackContent = styled.div<{ $allowHorizontalScroll?: boolean }>`
   overflow-x: hidden;
   touch-action: ${props => props.$allowHorizontalScroll ? 'pan-x pan-y' : 'pan-y'} !important;
   margin-top: 0;
-  margin-bottom: 30px; 
+  margin-bottom: calc(var(--space) * 4); 
   padding: 0 20px 20px 20px;
   z-index: 20; 
   position: relative;
@@ -377,14 +377,12 @@ const BackContent = styled.div<{ $allowHorizontalScroll?: boolean }>`
   }
   &::-webkit-scrollbar-track { 
     background: rgba(0,0,0,0.3); 
-    border-radius: 5px;
   }
   &::-webkit-scrollbar-thumb { 
     background: rgba(255, 255, 255, 0.8); 
-    border-radius: 5px;
     border: 2px solid rgba(0,0,0,0.2);
     &:hover {
-      background: #fff;
+      background: var(--color-text-bright);
     }
   }
 `;
@@ -396,21 +394,21 @@ const InfoList = styled.ul`
 `;
 
 const InfoItem = styled.li`
-  margin-bottom: 12px;
+  margin-bottom: calc(var(--space) * 2);
   display: flex;
   flex-direction: column;
-  font-size: var(--type-body);
+  ${type.body}
   line-height: 1.3;
   
   strong {
-    color: #aaa;
-    font-size: var(--type-small);
+    color: var(--color-text-muted);
+    ${type.small}
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: 0;
   }
   
   span {
-    color: #fff;
+    color: var(--color-text-bright);
   }
 `;
 
@@ -547,11 +545,11 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
                     position: 'relative',
                     zIndex: 2,
                     background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
-                    paddingBottom: '40px',
-                    paddingTop: '30px'
+                    paddingBottom: 'calc(var(--space) * 5)',
+                    paddingTop: 'calc(var(--space) * 4)'
                   }}>
                     <ResponsiveName text={suspect.name} />
-                    <Subtitle style={{ textShadow: '0 2px 4px #000' }}>Age: {suspect.age}</Subtitle>
+                    <Subtitle style={{ textShadow: '0 2px 4px var(--color-bg)' }}>Age: {suspect.age}</Subtitle>
                   </Header>
                 </>
               )}
@@ -560,7 +558,7 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
             {/* FLOATING CONTROLS (Outside Clipper) */}
             {variant === 'compact' && onAction && (
               <div style={{ position: 'absolute', right: '15px', bottom: '15px', zIndex: 100, transform: 'translateZ(60px)' }}>
-                <button style={{ background: '#fff', color: bgColor, border: 'none', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer' }}
+                <button style={{ background: 'var(--color-polaroid-bg)', color: bgColor, border: 'none', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer' }}
                   onClick={(e) => { e.stopPropagation(); onAction(); }}>
                   [{actionLabel}]
                 </button>
@@ -586,18 +584,18 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
                 right: 15,
                 minWidth: 22,
                 height: 22,
-                borderRadius: 11,
-                background: '#0f0',
-                color: '#000',
+                background: 'var(--color-accent-green)',
+                color: 'var(--color-text-inverse)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.8rem',
+                fontSize: 'var(--type-small)',
                 fontWeight: 'bold',
                 fontFamily: "'VT323', monospace",
                 padding: '0 5px',
-                border: '2px solid #000',
-                boxShadow: '0 0 8px #0f0, 0 0 16px rgba(0,255,0,0.4)',
+                border: '2px solid var(--color-text-inverse)',
+                boxShadow: '0 0 8px var(--color-accent-green), 0 0 16px rgba(0,255,0,0.4)',
+                borderRadius: '50%',
                 animation: 'notif-pulse 1.5s ease-in-out infinite',
                 zIndex: 9999,
                 transform: 'translateZ(100px)',
@@ -619,7 +617,7 @@ const SuspectCard: React.FC<SuspectCardProps> = ({
                   width: 20,
                   height: 20,
                   borderRadius: '50%',
-                  border: '3px solid #0f0',
+                  border: '3px solid var(--color-accent-green)',
                   borderTopColor: 'transparent',
                   boxShadow: '0 0 8px rgba(0,255,0,0.3)',
                   animation: 'spin 0.8s linear infinite',

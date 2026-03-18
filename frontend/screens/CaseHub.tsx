@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { CaseData, ScreenState, ChatMessage, Evidence, Emotion, TimelineStatement } from '../types';
@@ -35,7 +36,7 @@ const BoardSection = styled.div`
 
 const MainLayout = styled.div`
   display: flex;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   flex: 1;
   overflow: hidden;
   margin-top: 0;
@@ -47,19 +48,18 @@ const MainLayout = styled.div`
 
 const EvidenceBoard = styled.div`
   flex: 1;
-  border: 2px dashed #444;
+  border: 2px dashed var(--color-border);
   background: rgba(0,0,0,0.2);
-  padding: 20px;
+  padding: calc(var(--space) * 3);
   overflow-y: auto;
   position: relative;
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   
   @media (max-width: 768px) {
-    padding: 15px;
+    padding: calc(var(--space) * 2);
     padding-top: 0;
-    border: 1px dashed #333;
+    border: 1px dashed var(--color-border);
     background: rgba(0,0,0,0.2);
     overflow-y: auto;
     flex: 1;
@@ -70,7 +70,7 @@ const EvidenceBoard = styled.div`
 const EvidenceGrid = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   justify-content: center;
   align-items: flex-start;
   width: 100%;
@@ -78,11 +78,11 @@ const EvidenceGrid = styled.div`
 `;
 
 const EvidenceItemBase = styled(motion.div)`
-  background: #fff;
-  color: #000;
-  padding: 12px 12px 24px 12px;
+  background: var(--color-polaroid-bg);
+  color: var(--color-text-inverse);
+  padding: calc(var(--space) * 2) calc(var(--space) * 2) calc(var(--space) * 3) calc(var(--space) * 2);
   width: 260px;
-  box-shadow: 3px 3px 12px rgba(0,0,0,0.6);
+  box-shadow: 3px 3px 12px var(--color-polaroid-shadow);
   font-family: 'Caveat', cursive;
   font-size: var(--type-body-lg);
   line-height: 1.1;
@@ -112,13 +112,13 @@ const LightboxOverlay = styled(motion.div)`
   justify-content: center;
   cursor: pointer;
   overflow-y: auto;
-  padding: 40px 20px;
+  padding: calc(var(--space) * 5) calc(var(--space) * 3);
 `;
 
 const LightboxCardWrapper = styled(motion.div)`
-  background: #fff;
-  color: #000;
-  padding: 20px 20px 36px 20px;
+  background: var(--color-polaroid-bg);
+  color: var(--color-text-inverse);
+  padding: calc(var(--space) * 3) calc(var(--space) * 3) calc(var(--space) * 5) calc(var(--space) * 3);
   max-width: 500px;
   width: 90vw;
   box-shadow: 0 20px 60px rgba(0,0,0,0.8);
@@ -134,13 +134,13 @@ const LightboxCardWrapper = styled(motion.div)`
 const LightboxImage = styled.div<{ $src?: string }>`
   width: 100%;
   aspect-ratio: 1;
-  background-color: #333;
+  background-color: var(--color-border);
   background-image: ${props => props.$src ? `url(${props.$src})` : 'none'};
   background-size: cover;
   background-position: center;
   image-rendering: pixelated;
-  border: 1px solid #ddd;
-  margin-bottom: 16px;
+  border: 1px solid #ddd; /* light frame on white polaroid */
+  margin-bottom: calc(var(--space) * 2);
 `;
 
 const LightboxText = styled.div`
@@ -149,14 +149,14 @@ const LightboxText = styled.div`
   
   strong {
     display: block;
-    font-size: 2rem;
-    margin-bottom: 6px;
+    font-size: var(--type-h2);
+    margin-bottom: var(--space);
     font-weight: 700;
   }
   
   span {
-    font-size: 1.4rem;
-    color: #333;
+    font-size: var(--type-h3);
+    color: var(--color-border);
     display: block;
     padding: 0 10px;
     line-height: 1.4;
@@ -170,9 +170,9 @@ const LightboxClose = styled.button`
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
   border: 2px solid #fff;
-  font-size: 1.2rem;
+  ${type.bodyLg}
   font-family: 'VT323', monospace;
-  padding: 8px 16px;
+  padding: var(--space) calc(var(--space) * 2);
   cursor: pointer;
   z-index: 10002;
   transition: background 0.2s;
@@ -185,17 +185,17 @@ const LightboxClose = styled.button`
 const PolaroidImage = styled.div<{ $src?: string }>`
   width: 100%;
   aspect-ratio: 1;
-  background-color: #333;
+  background-color: var(--color-border);
   background-image: ${props => props.$src ? `url(${props.$src})` : 'none'};
   background-size: cover;
   background-position: center;
   image-rendering: pixelated;
-  border: 1px solid #ddd;
-  margin-bottom: 10px;
+  border: 1px solid #ddd; /* light frame on white polaroid */
+  margin-bottom: var(--space);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #888;
+  color: var(--color-text-subtle);
   font-size: var(--type-small);
 `;
 
@@ -206,32 +206,32 @@ const PolaroidText = styled.div`
   strong {
     display: block;
     font-size: var(--type-h3);
-    margin-bottom: 2px;
+    margin-bottom: 0;
     font-weight: 700;
   }
   
   span {
     font-size: var(--type-body-lg);
-    color: #000;
+    color: var(--color-text-inverse);
     display: block;
     padding: 0 5px;
   }
 `;
 
 const NoteItem = styled(EvidenceItemBase)`
-  background: #fff9c4; /* Light yellow post-it */
+  background: var(--color-note-yellow); /* Light yellow post-it */
   width: 260px;
   min-height: 180px;
   align-items: flex-start;
   font-family: 'Caveat', cursive;
   font-size: var(--type-h3);
-  color: #000;
+  color: var(--color-text-inverse);
   
   strong {
       display: block;
       width: 100%;
-      border-bottom: 1px dashed #990;
-      margin-bottom: 8px;
+      border-bottom: 1px dashed #990; /* unique note style */
+      margin-bottom: var(--space);
       font-weight: 700;
   }
   
@@ -243,7 +243,7 @@ const NoteItem = styled(EvidenceItemBase)`
 const SidePanel = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
   width: 320px;
   flex-shrink: 0;
   z-index: 20;
@@ -252,16 +252,16 @@ const SidePanel = styled.div`
 const ChiefWidget = styled.div`
   background: #0d1b2a;
   border: 2px solid #415a77;
-  padding: 10px;
+  padding: var(--space);
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space);
   
   @media (max-width: 768px) {
     width: 100%;
     flex-shrink: 1;
-    gap: 10px;
+    gap: var(--space);
     justify-content: center;
     min-height: 0;
     overflow: hidden;
@@ -270,12 +270,12 @@ const ChiefWidget = styled.div`
 
 const ChiefStatus = styled.div`
   display: flex;
-  gap: 10px;
+  gap: var(--space);
   align-items: center;
-  color: #778da9;
+  color: var(--color-officer-text);
   
   img {
-    border: 2px solid #415a77;
+    border: 2px solid var(--color-officer-border);
     image-rendering: pixelated;
     width: 40px;
     height: 40px;
@@ -291,7 +291,7 @@ const ChiefStatus = styled.div`
     flex-direction: row;
     text-align: left;
     align-items: center;
-    gap: 12px;
+    gap: calc(var(--space) * 2);
     
     img {
       width: 80px;
@@ -305,12 +305,12 @@ const ChiefStatus = styled.div`
     }
     
     div span:first-child {
-      font-size: var(--type-h3);
-      color: #fff;
+      ${type.h3}
+      color: var(--color-text-bright);
     }
     
     div span:last-child {
-      font-size: var(--type-body-lg);
+      ${type.bodyLg}
     }
   }
 `;
@@ -319,14 +319,14 @@ const SecureLineButton = styled.button`
   background: #1b263b;
   color: #e0e1dd;
   border: 1px solid #415a77;
-  padding: 8px;
+  padding: var(--space);
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   text-transform: uppercase;
   
   &:hover:not(:disabled) {
-    background: #415a77;
+    background: var(--color-officer-button-hover);
   }
   &:disabled {
     opacity: 0.5;
@@ -334,19 +334,19 @@ const SecureLineButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    padding: 15px;
-    font-size: var(--type-body-lg);
-    background: #253855;
+    padding: calc(var(--space) * 2);
+    ${type.bodyLg}
+    background: #253855; /* slightly lighter officer button on mobile */
   }
 `;
 
 const AccuseButton = styled.button`
   background: #700;
-  color: #fff;
+  color: var(--color-text-bright);
   border: 2px solid #a00;
-  padding: 15px;
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
@@ -357,8 +357,8 @@ const AccuseButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    font-size: var(--type-h3);
-    padding: 20px;
+    ${type.h3}
+    padding: calc(var(--space) * 3);
   }
 `;
 
@@ -366,22 +366,22 @@ const TimelineButton = styled.button`
   background: #1b263b;
   color: #4af;
   border: 2px solid #415a77;
-  padding: 12px;
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space);
   text-transform: uppercase;
   letter-spacing: 1px;
   
   &:hover {
     background: #253855;
-    border-color: #4af;
+    border-color: var(--color-accent-blue);
   }
 
   svg {
@@ -390,46 +390,46 @@ const TimelineButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    font-size: var(--type-body-lg);
-    padding: 15px;
+    ${type.bodyLg}
+    padding: calc(var(--space) * 2);
   }
 `;
 
 const BriefingWidget = styled.div`
   background: #111;
   border: 1px solid #444;
-  padding: 15px;
+  padding: calc(var(--space) * 2);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space);
   flex: 1;
   overflow-y: auto;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
   
   &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  &::-webkit-scrollbar-thumb { background: var(--color-border); }
 
   h3 {
     margin: 0;
-    color: #888;
-    font-size: 1.1rem;
+    color: var(--color-text-subtle);
+    ${type.bodyLg}
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 5px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space);
   }
   
   p {
     margin: 0;
-    font-size: 1.1rem;
+    ${type.bodyLg}
     line-height: 1.6;
-    color: #ddd;
+    color: var(--color-text);
     font-family: 'VT323', monospace;
   }
 
   .tags {
     display: flex;
-    gap: 10px;
+    gap: var(--space);
     flex-wrap: wrap;
   }
   
@@ -438,17 +438,17 @@ const BriefingWidget = styled.div`
     max-height: none;
     
     h3 {
-        font-size: var(--type-body-lg);
-        color: #aaa;
+        ${type.bodyLg}
+        color: var(--color-text-muted);
     }
     
     p {
-        font-size: var(--type-body-lg);
+        ${type.bodyLg}
         line-height: 1.6;
     }
     
     .tags {
-        gap: 15px;
+        gap: calc(var(--space) * 2);
     }
   }
 `;
@@ -456,14 +456,14 @@ const BriefingWidget = styled.div`
 const Tag = styled.span<{ $color?: string }>`
   background: #222;
   color: ${props => props.$color || '#aaa'};
-  padding: 2px 6px;
-  font-size: var(--type-small);
-  border: 1px solid #333;
+  padding: 0 var(--space);
+  ${type.small}
+  border: 1px solid var(--color-border);
   text-transform: uppercase;
   
   @media (max-width: 768px) {
-    font-size: var(--type-body);
-    padding: 5px 10px;
+    ${type.body}
+    padding: var(--space) var(--space);
   }
 `;
 
@@ -482,11 +482,11 @@ const ModalOverlay = styled.div`
 const ChatModal = styled.div`
   width: 600px;
   height: 500px;
-  background: #050a10;
-  border: 2px solid #415a77;
+  background: var(--color-officer-surface);
+  border: 2px solid var(--color-officer-border);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 30px #000;
+  box-shadow: 0 0 30px var(--color-bg);
   
   @media (max-width: 768px) {
     width: 95%;
@@ -497,65 +497,65 @@ const ChatModal = styled.div`
 const ChatHeader = styled.div`
   background: #0d1b2a;
   color: #778da9;
-  padding: 10px 20px;
+  padding: var(--space) calc(var(--space) * 3);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #415a77;
+  border-bottom: 1px solid var(--color-officer-border);
 `;
 
 const CloseButton = styled.button`
   background: transparent;
-  color: #778da9;
+  color: var(--color-officer-text);
   border: none;
-  font-size: 1.2rem;
+  ${type.bodyLg}
   cursor: pointer;
-  &:hover { color: #fff; }
+  &:hover { color: var(--color-text-bright); }
 `;
 
 const ChatLog = styled.div`
   flex: 1;
-  padding: 20px;
+  padding: calc(var(--space) * 3);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
 `;
 
 const OfficerBubble = styled.div<{ $sender: 'player' | 'officer' }>`
   align-self: ${props => props.$sender === 'player' ? 'flex-end' : 'flex-start'};
   max-width: 80%;
-  background: ${props => props.$sender === 'player' ? '#1b263b' : '#0d1b2a'};
-  color: ${props => props.$sender === 'player' ? '#e0e1dd' : '#778da9'};
-  padding: 10px;
-  border: 1px solid #415a77;
+  background: ${props => props.$sender === 'player' ? 'var(--color-officer-button)' : 'var(--color-officer-bg)'};
+  color: ${props => props.$sender === 'player' ? 'var(--color-officer-accent)' : 'var(--color-officer-text)'};
+  padding: var(--space);
+  border: 1px solid var(--color-officer-border);
   
-  .name { font-size: var(--type-small); margin-bottom: 4px; opacity: 0.7; }
+  .name { ${type.small} margin-bottom: var(--space); opacity: 0.7; }
 `;
 
 const InputZone = styled.div`
-  padding: 15px;
-  border-top: 1px solid #415a77;
+  padding: calc(var(--space) * 2);
+  border-top: 1px solid var(--color-officer-border);
   display: flex;
-  gap: 10px;
-  background: #0d1b2a;
+  gap: var(--space);
+  background: var(--color-officer-bg);
 `;
 
 const ChatInput = styled.input`
   flex: 1;
-  background: #050a10;
-  border: 1px solid #415a77;
-  color: #e0e1dd;
-  padding: 8px;
+  background: var(--color-officer-surface);
+  border: 1px solid var(--color-officer-border);
+  color: var(--color-officer-accent);
+  padding: var(--space);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   
-  &:focus { outline: none; border-color: #778da9; }
+  &:focus { outline: none; border-color: var(--color-officer-text); }
 `;
 
 const SendButton = styled.button`
-  background: #415a77;
-  color: #fff;
+  background: var(--color-officer-button-hover);
+  color: var(--color-text-bright);
   border: none;
   padding: 0 20px;
   cursor: pointer;
@@ -582,12 +582,12 @@ const MobileTabBar = styled.div`
 const TabItem = styled.button<{ $active: boolean }>`
   flex: 1;
   background: transparent;
-  color: ${props => props.$active ? '#fff' : '#666'};
+  color: ${props => props.$active ? 'var(--color-text-bright)' : 'var(--color-text-dim)'};
   border: none;
-  border-top: 3px solid ${props => props.$active ? '#0f0' : 'transparent'};
-  padding: 14px 5px;
+  border-top: 3px solid ${props => props.$active ? 'var(--color-accent-green)' : 'transparent'};
+  padding: calc(var(--space) * 2) var(--space);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
   text-transform: uppercase;
 `;
@@ -647,15 +647,15 @@ const AccordionButton = styled.button<{ $color: string; $isOpen: boolean }>`
     if (c === 'orange') return props.$isOpen ? '#f90' : '#3a2a0a';
     return props.$isOpen ? '#4af' : '#1a3a3a';
   }};
-  padding: 14px;
+  padding: calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space);
   text-transform: uppercase;
   letter-spacing: 2px;
   flex-shrink: 0;
@@ -674,7 +674,7 @@ const AccordionChevron = styled(motion.span)`
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  font-size: 1.2rem;
+  ${type.bodyLg}
   line-height: 1;
 `;
 
@@ -720,7 +720,7 @@ const InlineSuspectCarousel = styled.div`
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  gap: 12px;
+  gap: calc(var(--space) * 2);
   align-items: center;
   flex: 1;
   min-height: 0;
@@ -740,8 +740,7 @@ const InlineSuspectCarousel = styled.div`
     height: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 2px;
+    background: var(--color-border);
   }
 `;
 
@@ -749,10 +748,10 @@ const InlineEvidenceWrap = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 15px;
+  padding: calc(var(--space) * 2);
   
   &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  &::-webkit-scrollbar-thumb { background: var(--color-border); }
 `;
 
 interface CaseHubProps {
@@ -1133,13 +1132,13 @@ const CaseHub: React.FC<CaseHubProps> = ({
           )}
 
           {activeMobileTab === 'HQ' && (
-            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 'calc(var(--space) * 2)', display: 'flex', flexDirection: 'column', gap: 'calc(var(--space) * 2)', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <ChiefWidget style={{ flexShrink: 1, minHeight: 0 }}>
                 <ChiefStatus>
                   <img src={officerPortrait} alt={officerName} />
                   <div>
                     <span style={{ fontWeight: 'bold' }}>{officerName.toUpperCase()}</span>
-                    <span style={{ color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
+                    <span style={{ color: officerHintsRemaining > 3 ? 'var(--color-officer-text)' : '#b00' }}>
                       BATT: {officerHintsRemaining * 10}%
                     </span>
                   </div>
@@ -1149,7 +1148,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                 </SecureLineButton>
               </ChiefWidget>
               <BriefingWidget id="mission-briefing-mobile" style={{ flex: 1, minHeight: '30vh', overflowY: 'auto' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space)' }}>
                   <h3>Mission Briefing</h3>
                   <div className="tags">
                     <Tag>{caseData.type}</Tag>
@@ -1178,14 +1177,14 @@ const CaseHub: React.FC<CaseHubProps> = ({
             <EvidenceBoard id="evidence-board">
               <h2 style={{
                 marginTop: 0,
-                marginBottom: '20px',
+                marginBottom: 'calc(var(--space) * 3)',
                 fontSize: 'var(--type-h3)',
                 color: '#aaa',
                 borderBottom: '1px dashed #444',
-                paddingBottom: '10px',
+                paddingBottom: 'var(--space)',
                 fontWeight: 'normal'
               }}>
-                EVIDENCE BOARD: <span style={{ color: '#fff', fontWeight: 'bold' }}>{caseData.title.toUpperCase()}</span>
+                EVIDENCE BOARD: <span style={{ color: 'var(--color-text-bright)', fontWeight: 'bold' }}>{caseData.title.toUpperCase()}</span>
               </h2>
 
               <EvidenceGrid>
@@ -1238,7 +1237,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
 
             <SidePanel>
               <BriefingWidget>
-                <div id="mission-briefing" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div id="mission-briefing" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space)' }}>
                   <h3>Mission Briefing</h3>
                   <div className="tags">
                     <Tag>{caseData.type}</Tag>
@@ -1253,7 +1252,7 @@ const CaseHub: React.FC<CaseHubProps> = ({
                   <img src={officerPortrait} alt={officerName} />
                   <div>
                     <span style={{ fontWeight: 'bold', fontSize: 'var(--type-body)' }}>{officerName.toUpperCase()}</span>
-                    <span style={{ fontSize: 'var(--type-small)', color: officerHintsRemaining > 3 ? '#778da9' : '#b00' }}>
+                    <span style={{ fontSize: 'var(--type-small)', color: officerHintsRemaining > 3 ? 'var(--color-officer-text)' : '#b00' }}>
                       BATT: {officerHintsRemaining * 10}%
                     </span>
                   </div>

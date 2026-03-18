@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
+import { type } from '../theme';
 
 const Container = styled.div`
   display: flex;
@@ -8,60 +9,57 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 40px;
-  gap: 30px;
+  padding: calc(var(--space) * 5);
+  gap: calc(var(--space) * 4);
 `;
 
 const Title = styled.h2`
-  font-size: var(--type-h2);
-  color: #fff;
-  text-transform: uppercase;
+  ${type.h2}
+  color: var(--color-text-bright);
   margin: 0;
-  text-shadow: 0 0 10px #fff;
+  text-shadow: 0 0 10px var(--color-text-bright);
 `;
 
 const PromptInput = styled.textarea`
+  ${type.h3}
   width: 100%;
   max-width: 600px;
   height: 150px;
-  background: #050505;
-  border: 2px solid #333;
-  color: #0f0;
-  font-family: 'VT323', monospace;
-  font-size: var(--type-h3);
-  padding: 20px;
+  background: var(--color-surface-inset);
+  border: 2px solid var(--color-border);
+  color: var(--color-accent-green);
+  padding: calc(var(--space) * 3);
   resize: none;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+  text-transform: none;
 
   &:focus {
     outline: none;
-    border-color: #0f0;
-    box-shadow: inset 0 0 20px rgba(0,50,0,0.5), 0 0 10px #0f0;
+    border-color: var(--color-accent-green);
+    box-shadow: inset 0 0 20px var(--color-accent-green-dark), 0 0 10px var(--color-accent-green);
   }
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
 `;
 
 const ActionButton = styled.button<{ $primary?: boolean }>`
-  background: ${props => props.$primary ? '#0f0' : '#222'};
-  color: ${props => props.$primary ? '#000' : '#ccc'};
-  border: ${props => props.$primary ? 'none' : '1px solid #555'};
-  padding: 15px 30px;
-  font-family: inherit;
-  font-size: var(--type-h3);
+  ${type.h3}
+  background: ${props => props.$primary ? 'var(--color-accent-green)' : 'var(--color-border-subtle)'};
+  color: ${props => props.$primary ? 'var(--color-text-inverse)' : 'var(--color-text)'};
+  border: ${props => props.$primary ? 'none' : '1px solid var(--color-border-strong)'};
+  padding: calc(var(--space) * 2) calc(var(--space) * 4);
   cursor: pointer;
-  text-transform: uppercase;
   font-weight: bold;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
     transform: scale(1.05);
-    background: ${props => props.$primary ? '#3f3' : '#444'};
-    color: ${props => props.$primary ? '#000' : '#fff'};
-    box-shadow: 0 0 15px ${props => props.$primary ? '#0f0' : 'rgba(255,255,255,0.2)'};
+    background: ${props => props.$primary ? '#3f3' : 'var(--color-border-strong)'};
+    color: ${props => props.$primary ? 'var(--color-text-inverse)' : 'var(--color-text-bright)'};
+    box-shadow: 0 0 15px ${props => props.$primary ? 'var(--color-accent-green)' : 'rgba(255,255,255,0.2)'};
   }
 
   &:disabled {
@@ -77,9 +75,9 @@ const blink = keyframes`
 `;
 
 const LoadingText = styled.div`
-  font-size: var(--type-h3);
-  color: #0f0;
-  margin-top: 20px;
+  ${type.h3}
+  color: var(--color-accent-green);
+  margin-top: calc(var(--space) * 3);
   text-align: center;
   
   &::after {
@@ -113,15 +111,15 @@ const ProgressBar = styled.div`
 `;
 
 const DescriptionText = styled.p`
+  ${type.bodyLg}
   color: var(--color-text-subtle);
   max-width: 600px;
   text-align: center;
-  font-size: var(--type-body-lg);
 `;
 
 const SmallCancelButton = styled(ActionButton)`
+  ${type.body}
   margin-top: calc(var(--space) * 1.25);
-  font-size: var(--type-body);
   padding: var(--space) calc(var(--space) * 2.5);
 `;
 
@@ -133,6 +131,7 @@ const LoadingWrapper = styled.div`
 `;
 
 const NoteText = styled.p`
+  ${type.small}
   color: var(--color-text-dim);
   margin-top: calc(var(--space) * 2.5);
   font-style: italic;

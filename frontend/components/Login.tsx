@@ -2,6 +2,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { signInWithGoogle } from '../services/firebase';
+import { type } from '../theme';
 
 const Container = styled.div`
   display: flex;
@@ -9,63 +10,54 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 30px;
-  background: #050505;
-  padding: 20px;
+  gap: calc(var(--space) * 4);
+  background: var(--color-surface-inset);
+  padding: calc(var(--space) * 3);
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    padding: 40px 30px;
+    padding: calc(var(--space) * 5) calc(var(--space) * 4);
   }
 `;
 
 const Title = styled.h1`
-  color: #0f0;
-  font-size: 4rem;
-  text-shadow: 0 0 20px #0f0;
+  ${type.h1}
+  color: var(--color-accent-green);
+  text-shadow: 0 0 20px var(--color-accent-green);
   margin: 0;
-  text-transform: uppercase;
   letter-spacing: 5px;
-
-  @media (max-width: 768px) {
-    font-size: 2.2rem;
-    letter-spacing: 3px;
-  }
 `;
 
 const Subtitle = styled.p`
-  color: #555;
-  font-size: 1.2rem;
+  ${type.bodyLg}
+  color: var(--color-text-disabled);
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 2px;
 `;
 
 const LoginButton = styled.button`
+  ${type.h3}
   background: transparent;
-  border: 2px solid #0f0;
-  color: #0f0;
-  padding: 15px 40px;
-  font-family: inherit;
-  font-size: 1.5rem;
+  border: 2px solid var(--color-accent-green);
+  color: var(--color-accent-green);
+  padding: calc(var(--space) * 2) calc(var(--space) * 5);
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 2px;
   transition: all 0.2s;
 
   &:hover {
-    background: #0f0;
-    color: #000;
-    box-shadow: 0 0 30px #0f0;
+    background: var(--color-accent-green);
+    color: var(--color-text-inverse);
+    box-shadow: 0 0 30px var(--color-accent-green);
   }
 `;
 
 const Warning = styled.div`
-  color: #f00;
-  font-size: 0.9rem;
+  ${type.small}
+  color: var(--color-accent-red);
   max-width: 400px;
   text-align: center;
-  margin-top: 20px;
+  margin-top: calc(var(--space) * 3);
   opacity: 0.7;
 `;
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { type } from '../theme';
 import { createPortal } from 'react-dom';
 import styled, { keyframes } from 'styled-components';
 
@@ -24,16 +25,14 @@ const Banner = styled.div`
   bottom: 16px;
   left: 16px;
   right: 16px;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, var(--color-surface) 0%, #1a1a2e 100%);
   border: 1px solid #00ff88;
-  border-radius: 12px;
-  padding: 16px;
+  padding: calc(var(--space) * 2);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: calc(var(--space) * 2);
   z-index: 99999;
   animation: ${slideUp} 0.4s ease-out, ${pulse} 2s ease-in-out infinite;
-  font-family: 'VT323', monospace;
 
   @media (min-width: 769px) {
     display: none; /* Only show on mobile */
@@ -43,7 +42,6 @@ const Banner = styled.div`
 const IconImg = styled.img`
   width: 48px;
   height: 48px;
-  border-radius: 10px;
   flex-shrink: 0;
 `;
 
@@ -54,26 +52,24 @@ const TextCol = styled.div`
 
 const Title = styled.div`
   color: #00ff88;
-  font-size: 18px;
+  ${type.bodyLg}
   font-weight: bold;
   line-height: 1.2;
 `;
 
 const Subtitle = styled.div`
-  color: #999;
-  font-size: 14px;
+  color: var(--color-text-subtle);
+  ${type.small}
   line-height: 1.3;
-  margin-top: 2px;
+  margin-top: 0;
 `;
 
 const InstallBtn = styled.button`
   background: #00ff88;
-  color: #000;
+  color: var(--color-text-inverse);
   border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-family: 'VT323', monospace;
-  font-size: 16px;
+  padding: var(--space) calc(var(--space) * 2);
+  ${type.body}
   font-weight: bold;
   cursor: pointer;
   white-space: nowrap;
@@ -88,10 +84,10 @@ const InstallBtn = styled.button`
 const CloseBtn = styled.button`
   background: none;
   border: none;
-  color: #666;
-  font-size: 20px;
+  color: var(--color-text-dim);
+  ${type.bodyLg}
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space);
   line-height: 1;
   position: absolute;
   top: 6px;
@@ -193,14 +189,14 @@ const InstallPrompt: React.FC = () => {
           <Title>Install DetectiveML</Title>
           <Subtitle>
             Tap{' '}
-            <span style={{ fontSize: '18px', verticalAlign: 'middle' }}>
+            <span style={{ verticalAlign: 'middle' }}>
               {/* iOS share icon (box with arrow) */}
-              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" style={{ verticalAlign: 'middle', marginBottom: '2px' }}>
+              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" style={{ verticalAlign: 'middle', marginBottom: '0' }}>
                 <path d="M8 0L8 11M8 0L4 4M8 0L12 4" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M1 7V15C1 16.1 1.9 17 3 17H13C14.1 17 15 16.1 15 15V7" stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </span>
-            {' '}then <strong style={{ color: '#fff' }}>"Add to Home Screen"</strong>
+            {' '}then <strong style={{ color: 'var(--color-text-bright)' }}>{"\"Add to Home Screen\""}</strong>
           </Subtitle>
         </TextCol>
       </Banner>,

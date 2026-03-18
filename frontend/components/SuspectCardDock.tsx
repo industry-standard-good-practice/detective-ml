@@ -1,5 +1,6 @@
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { motion, LayoutGroup } from 'framer-motion';
 import { Suspect, Emotion } from '../types';
@@ -63,7 +64,7 @@ const DockRowHitArea = styled.div`
 const DockRowInner = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: var(--space);
   padding: 0 var(--screen-edge-horizontal);
   width: max-content;
   min-width: 100%;
@@ -89,20 +90,18 @@ const NotificationBadge = styled.div`
   right: 0;
   min-width: 18px;
   height: 18px;
-  background: #0f0;
-  border-radius: 10px;
-  border: 2px solid #000;
+  background: var(--color-accent-green);
+  border: 2px solid var(--color-bg);
   z-index: 30;
-  box-shadow: 0 0 8px #0f0, 0 0 16px rgba(0, 255, 0, 0.4);
+  box-shadow: 0 0 8px var(--color-accent-green), 0 0 16px rgba(0, 255, 0, 0.4);
   animation: notif-pulse 1.5s ease-in-out infinite;
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
-  font-size: 0.7rem;
+  color: var(--color-text-inverse);
+  ${type.xs}
   font-weight: bold;
-  font-family: 'VT323', monospace;
   padding: 0 4px;
 
   @keyframes notif-pulse {
@@ -118,7 +117,7 @@ const LoadingBadge = styled.div`
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid #0f0;
+  border: 2px solid var(--color-accent-green);
   border-top-color: transparent;
   z-index: 30;
   box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);

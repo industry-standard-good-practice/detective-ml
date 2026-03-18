@@ -6,15 +6,14 @@
  */
 
 import styled from 'styled-components';
+import { type } from '../../theme';
 
 export const Select = styled.select`
+  ${type.small}
   background: var(--color-surface);
   color: var(--color-text-subtle);
   border: 1px solid var(--color-border);
-  font-family: var(--font-main);
-  font-size: var(--type-small);
-  padding: 3px 22px 3px 6px;
-  border-radius: 3px;
+  padding: 0 calc(var(--space) * 3) 0 var(--space);
   cursor: pointer;
   max-width: 180px;
   -webkit-appearance: none;

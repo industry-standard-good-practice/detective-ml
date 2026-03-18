@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 import { useOnboarding, OnboardingStep } from '../contexts/OnboardingContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,8 +20,7 @@ export const OnboardingHighlight = styled(motion.div)`
   position: absolute;
   background: transparent;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
-  border-radius: 8px;
-  border: 2px solid #0f0;
+  border: 2px solid var(--color-accent-green);
   pointer-events: none;
   z-index: 9991;
 `;
@@ -37,16 +37,16 @@ const CenteredBackdrop = styled(motion.div)`
 
 export const OnboardingTooltip = styled(motion.div) <{ $position: 'top' | 'bottom' | 'left' | 'right'; $hideTail?: boolean }>`
   position: absolute;
-  background: #111;
-  border: 1px solid #0f0;
-  padding: 20px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-accent-green);
+  padding: calc(var(--space) * 3);
   width: 300px;
-  color: #fff;
+  color: var(--color-text-bright);
   z-index: 9992;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
   pointer-events: none; /* Allow clicks to pass through to target if overlapping */
 
   &::after {
@@ -58,72 +58,71 @@ export const OnboardingTooltip = styled(motion.div) <{ $position: 'top' | 'botto
       bottom: -20px;
       left: 50%;
       transform: translateX(-50%);
-      border-top-color: #0f0;
+      border-top-color: var(--color-accent-green);
     `}
     ${props => props.$position === 'bottom' && `
       top: -20px;
       left: 50%;
       transform: translateX(-50%);
-      border-bottom-color: #0f0;
+      border-bottom-color: var(--color-accent-green);
     `}
     ${props => props.$position === 'left' && `
       right: -20px;
       top: 50%;
       transform: translateY(-50%);
-      border-left-color: #0f0;
+      border-left-color: var(--color-accent-green);
     `}
     ${props => props.$position === 'right' && `
       left: -20px;
       top: 50%;
       transform: translateY(-50%);
-      border-right-color: #0f0;
+      border-right-color: var(--color-accent-green);
     `}
   }
 `;
 
 const Title = styled.h4`
   margin: 0;
-  color: #0f0;
+  color: var(--color-accent-green);
   text-transform: uppercase;
-  font-family: 'VT323', monospace;
-  font-size: 1.5rem;
+  ${type.h3}
 `;
 
 const Description = styled.p`
   margin: 0;
-  font-size: 1rem;
+  ${type.body}
   line-height: 1.4;
-  color: #ccc;
+  color: var(--color-text);
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 5px;
+  gap: var(--space);
+  margin-top: var(--space);
   pointer-events: none; /* Don't capture clicks in the gap */
 `;
 
 const NavButton = styled.button<{ $primary?: boolean }>`
-  background: ${props => props.$primary ? '#0f0' : 'transparent'};
-  color: ${props => props.$primary ? '#000' : '#0f0'};
-  border: 1px solid #0f0;
-  padding: 8px 16px;
+  background: ${props => props.$primary ? 'var(--color-accent-green)' : 'transparent'};
+  color: ${props => props.$primary ? 'var(--color-text-inverse)' : 'var(--color-accent-green)'};
+  border: 1px solid var(--color-accent-green);
+  padding: var(--space) calc(var(--space) * 2);
   font-family: inherit;
   font-weight: bold;
   cursor: pointer;
   text-transform: uppercase;
-  font-size: 0.8rem;
+  ${type.small}
   pointer-events: auto; /* Only buttons capture clicks */
 
   &:hover {
-    background: ${props => props.$primary ? '#5f5' : 'rgba(0, 255, 0, 0.1)'};
+    background: ${props => props.$primary ? 'var(--color-partner-name)' : 'rgba(0, 255, 0, 0.1)'};
   }
 `;
 
 const StepIndicator = styled.div`
-  font-size: 0.7rem;
-  color: #555;
+  ${type.xs}
+  color: var(--color-text-disabled);
   text-align: right;
 `;
 
@@ -534,9 +533,9 @@ export const OnboardingTour: React.FC = () => {
               </NavButton>
             )}
             {step.requiresAction && !isActionCompleted && (
-              <div style={{ color: '#555', fontSize: '0.7rem', alignSelf: 'center' }}>
+              <StepIndicator style={{ alignSelf: 'center' }}>
                 Action Required
-              </div>
+              </StepIndicator>
             )}
           </ButtonGroup>
 

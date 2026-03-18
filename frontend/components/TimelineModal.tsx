@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 import { TimelineStatement, Suspect } from '../types';
 import SuspectPortrait from './SuspectPortrait';
@@ -20,22 +21,22 @@ const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: calc(var(--space) * 3);
 
   @media (max-width: 600px) {
-    padding: 10px;
+    padding: var(--space);
   }
 `;
 
 const ModalContent = styled.div`
-  background: #050a10;
-  border: 2px solid #415a77;
+  background: var(--color-officer-surface);
+  border: 2px solid var(--color-officer-border);
   width: 100%;
   max-width: 1200px;
   height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 30px #000;
+  box-shadow: 0 0 30px var(--color-bg);
   position: relative;
 
   @media (max-width: 600px) {
@@ -44,29 +45,29 @@ const ModalContent = styled.div`
 `;
 
 const ModalHeader = styled.div`
-  background: #0d1b2a;
-  color: #778da9;
-  padding: 15px 20px;
+  background: var(--color-officer-bg);
+  color: var(--color-officer-text);
+  padding: calc(var(--space) * 2) calc(var(--space) * 3);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #415a77;
+  border-bottom: 1px solid var(--color-officer-border);
 
   h2 {
     margin: 0;
-    font-size: 1.5rem;
+    ${type.h3}
     letter-spacing: 2px;
-    color: #fff;
+    color: var(--color-text-bright);
   }
 `;
 
 const CloseButton = styled.button`
   background: transparent;
-  color: #778da9;
+  color: var(--color-officer-text);
   border: none;
-  font-size: 1.5rem;
+  ${type.h3}
   cursor: pointer;
-  &:hover { color: #fff; }
+  &:hover { color: var(--color-text-bright); }
 `;
 
 /* Non-scrolling wrapper: holds the vertical spine line absolutely positioned */
@@ -80,11 +81,11 @@ const TimelineLineWrapper = styled.div`
   &::before {
     content: '';
     position: absolute;
-    left: 50%;
+    left: calc(50% - 3.5px);
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #415a77;
+    background: var(--color-officer-border);
     transform: translateX(-50%);
     z-index: 0;
     pointer-events: none;
@@ -108,11 +109,11 @@ const ScrollContent = styled.div`
   flex-direction: column;
   gap: 0;
   min-height: 100%;
-  padding: 30px 20px;
+  padding: calc(var(--space) * 4) calc(var(--space) * 3);
   box-sizing: border-box;
 
   @media (max-width: 600px) {
-    padding: 20px 10px;
+    padding: calc(var(--space) * 3) var(--space);
   }
 `;
 
@@ -120,7 +121,7 @@ const ScrollContent = styled.div`
 
 const TimeGroup = styled.div`
   position: relative;
-  margin-bottom: 30px;
+  margin-bottom: calc(var(--space) * 4);
   animation: ${fadeIn} 0.3s ease-out both;
   
   &:last-child {
@@ -134,40 +135,40 @@ const TimeGroupLabel = styled.div`
   flex-direction: column;
   align-items: center;
   z-index: 3;
-  margin-bottom: 12px;
+  margin-bottom: calc(var(--space) * 2);
 
   @media (max-width: 600px) {
     align-items: flex-start;
-    padding-left: 40px;
+    padding-left: calc(var(--space) * 5);
   }
 `;
 
 const TimeBadge = styled.div`
-  background: #0d1b2a;
-  color: #0f0;
-  border: 1px solid #0f0;
-  padding: 4px 16px;
+  background: var(--color-officer-bg);
+  color: var(--color-accent-green);
+  border: 1px solid var(--color-accent-green);
+  padding: var(--space) calc(var(--space) * 2);
   font-family: 'VT323', monospace;
-  font-size: 1.3rem;
+  ${type.h3}
   letter-spacing: 2px;
   box-shadow: 0 0 15px rgba(0, 255, 0, 0.15);
   position: relative;
   z-index: 3;
-  margin-bottom: 6px;
+  margin-bottom: var(--space);
 
   @media (max-width: 600px) {
-    font-size: 1.1rem;
-    padding: 3px 12px;
-    margin-top: 8px;
+    ${type.bodyLg}
+    padding: 0 calc(var(--space) * 2);
+    margin-top: var(--space);
   }
 `;
 
 const TimeGroupDot = styled.div`
   width: 14px;
   height: 14px;
-  background: #0f0;
+  background: var(--color-accent-green);
   border-radius: 50%;
-  box-shadow: 0 0 12px #0f0;
+  box-shadow: 0 0 12px var(--color-accent-green);
   z-index: 2;
   flex-shrink: 0;
 
@@ -181,15 +182,15 @@ const TimeGroupDot = styled.div`
 
 const EventsRow = styled.div`
   display: flex;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   position: relative;
   padding: 0 30px;
 
   @media (max-width: 600px) {
     flex-direction: column;
-    padding-left: 40px;
-    padding-right: 10px;
-    gap: 10px;
+    padding-left: calc(var(--space) * 5);
+    padding-right: var(--space);
+    gap: var(--space);
   }
 `;
 
@@ -197,7 +198,7 @@ const LeftEvents = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space);
   align-items: flex-end;
 
   @media (max-width: 600px) {
@@ -209,7 +210,7 @@ const RightEvents = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space);
   align-items: flex-start;
 `;
 
@@ -220,16 +221,15 @@ const Spacer = styled.div`
 `;
 
 const StatementCard = styled.div<{ $isInitial?: boolean }>`
-  background: #1b263b;
-  border: 1px solid #415a77;
-  ${props => props.$isInitial ? 'border-left: 4px solid #0f0;' : ''}
-  padding: 12px 15px;
-  border-radius: 4px;
+  background: var(--color-officer-button);
+  border: 1px solid var(--color-officer-border);
+  ${props => props.$isInitial ? 'border-left: 4px solid var(--color-accent-green);' : ''}
+  padding: calc(var(--space) * 2) calc(var(--space) * 2);
   width: 100%;
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   position: relative;
 `;
@@ -237,27 +237,27 @@ const StatementCard = styled.div<{ $isInitial?: boolean }>`
 const CardHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
 `;
 
 const SuspectInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
 
   span {
     font-weight: bold;
-    color: #fff;
-    font-size: 0.85rem;
+    color: var(--color-text-bright);
+    ${type.small}
   }
 `;
 
 const StatementText = styled.p`
   margin: 0;
-  color: #e0e1dd;
+  color: var(--color-officer-accent);
   font-style: italic;
   line-height: 1.4;
-  font-size: 0.95rem;
+  ${type.body}
 `;
 
 const NewEntryDot = styled.div`
@@ -267,8 +267,8 @@ const NewEntryDot = styled.div`
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #4af;
-  box-shadow: 0 0 6px #4af, 0 0 12px rgba(68,170,255,0.4);
+  background: var(--color-accent-blue);
+  box-shadow: 0 0 6px var(--color-accent-blue), 0 0 12px rgba(68,170,255,0.4);
   animation: notif-pulse 1.5s ease-in-out infinite;
   z-index: 5;
 
@@ -284,14 +284,14 @@ const EmptyState = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #555;
+  color: var(--color-text-disabled);
   text-align: center;
-  padding: 40px;
+  padding: calc(var(--space) * 5);
   
   svg {
     width: 64px;
     height: 64px;
-    margin-bottom: 20px;
+    margin-bottom: calc(var(--space) * 3);
     opacity: 0.3;
   }
 `;
@@ -339,37 +339,37 @@ const DayDivider = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 30px 30px;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 4) calc(var(--space) * 4);
   z-index: 4;
-  background: #050a10;
+  background: var(--color-officer-surface);
 
   &::before, &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: #0f0;
+    background: var(--color-accent-green);
     opacity: 0.3;
   }
 
   @media (max-width: 600px) {
     background: none;
-    padding: 25px 10px 25px 40px;
+    padding: calc(var(--space) * 3) var(--space) calc(var(--space) * 3) calc(var(--space) * 5);
     &::before { display: none; }
   }
 `;
 
 const DayLabel = styled.div`
   font-family: 'VT323', monospace;
-  color: #0f0;
-  font-size: 1.5rem;
+  color: var(--color-accent-green);
+  ${type.h3}
   letter-spacing: 3px;
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 
   @media (max-width: 600px) {
-    font-size: 1.2rem;
+    ${type.bodyLg}
     letter-spacing: 2px;
   }
 `;
@@ -450,7 +450,7 @@ const TimelineModal: React.FC<TimelineModalProps> = ({ statements, initialTimeli
             </SuspectInfo>
           ) : e.isInitial ? (
             <SuspectInfo>
-              <span style={{ color: '#0f0', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Initial Discovery</span>
+              <span style={{ color: 'var(--color-accent-green)', fontSize: 'var(--type-xs)', textTransform: 'uppercase', letterSpacing: '1px' }}>Initial Discovery</span>
             </SuspectInfo>
           ) : null}
         </CardHeader>

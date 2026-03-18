@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { Suspect } from '../types';
 import SuspectPortrait from '../components/SuspectPortrait';
@@ -16,9 +17,9 @@ const Container = styled.div`
   justify-content: center;
   height: 100%;
   flex-direction: column;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   background: radial-gradient(circle, #220000 0%, #000000 80%);
-  padding: 20px;
+  padding: calc(var(--space) * 3) 0;
 
   @media (max-width: 768px) {
     padding: 20px 0;
@@ -26,7 +27,7 @@ const Container = styled.div`
 `;
 
 const Title = styled.h2`
-  font-size: var(--type-h2);
+  ${type.h2}
   color: #ff0000;
   text-shadow: 0 0 10px #ff0000;
   text-transform: uppercase;
@@ -41,7 +42,7 @@ const Title = styled.h2`
 const SubTitle = styled.p`
   color: #aaa;
   margin-top: -10px;
-  font-size: var(--type-body);
+  ${type.body}
   text-align: center;
 
   @media (max-width: 768px) {
@@ -52,7 +53,8 @@ const SubTitle = styled.p`
 const ScrollContainer = styled.div`
   display: flex;
   overflow-x: auto;
-  padding: 40px;
+  overflow-y: hidden;
+  padding: calc(var(--space) * 5);
   width: 100%;
   align-items: center;
   
@@ -62,11 +64,11 @@ const ScrollContainer = styled.div`
   }
   &::-webkit-scrollbar-track {
     background: #111;
-    border-radius: 5px;
+  
   }
   &::-webkit-scrollbar-thumb {
     background: #500; 
-    border-radius: 5px;
+  
     border: 1px solid #111;
   }
   &::-webkit-scrollbar-thumb:hover {
@@ -76,13 +78,13 @@ const ScrollContainer = styled.div`
 
 const ScrollInner = styled.div`
   display: flex;
-  gap: 40px;
+  gap: calc(var(--space) * 5);
   margin: 0 auto;
   align-items: center;
 
   @media (max-width: 768px) {
-    gap: 20px;
-    padding: 0 20px;
+    gap: calc(var(--space) * 3);
+    padding: 0 calc(var(--space) * 3);
   }
 `;
 
@@ -96,22 +98,22 @@ const SuspectItem = styled.div<{ $selected?: boolean }>`
   align-items: center;
   transform: ${props => props.$selected ? 'scale(1.1)' : 'scale(1)'};
   border: ${props => props.$selected ? '4px solid var(--color-accent-red)' : 'none'};
-  border-radius: 8px;
 
-  &:hover {
-    transform: scale(1.1);
-    z-index: 10;
+  @media (hover: hover) {
+    &:hover {
+      transform: scale(1.1);
+      z-index: 10;
+    }
   }
   
   h3 {
-    margin-top: 15px;
+    margin-top: calc(var(--space) * 2);
     color: var(--color-text-bright);
     text-transform: uppercase;
-    font-size: var(--type-h3);
+    ${type.h3}
     text-shadow: 0 2px 4px #000;
     background: rgba(0,0,0,0.5);
-    padding: 2px 10px;
-    border-radius: 4px;
+    padding: 0 var(--space);
   }
 `;
 
@@ -119,11 +121,11 @@ const CancelButton = styled.button`
   background: transparent;
   color: var(--color-text-subtle);
   border: 1px solid var(--color-border-strong);
-  padding: 10px 30px;
+  padding: var(--space) calc(var(--space) * 4);
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--type-body-lg);
-  margin-top: 20px;
+  ${type.bodyLg}
+  margin-top: calc(var(--space) * 3);
   text-transform: uppercase;
   transition: all 0.2s;
 
@@ -147,7 +149,7 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
   const [selectedSuspectIds, setSelectedSuspectIds] = useState<string[]>([]);
 
   const toggleSuspect = (id: string) => {
-    setSelectedSuspectIds(prev => 
+    setSelectedSuspectIds(prev =>
       prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id]
     );
   };
@@ -160,33 +162,33 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
     <Container>
       <Title>MAKE YOUR ACCUSATION</Title>
       <SubTitle>Select the perpetrator(s) to close the case, or accuse nobody. This action is final.</SubTitle>
-      
+
       <ScrollContainer>
         <ScrollInner>
           {accusableSuspects.map(s => (
-            <SuspectItem 
-              key={s.id} 
+            <SuspectItem
+              key={s.id}
               onClick={() => toggleSuspect(s.id)}
               data-cursor="pointer"
               $selected={selectedSuspectIds.includes(s.id)}
             >
-              <SuspectPortrait 
-                suspect={s} 
-                size={250} 
+              <SuspectPortrait
+                suspect={s}
+                size={250}
               />
               <h3>{s.name}</h3>
             </SuspectItem>
           ))}
         </ScrollInner>
       </ScrollContainer>
-      
+
       <AccuseButton onClick={handleAccuse}>
-        {selectedSuspectIds.length > 0 
+        {selectedSuspectIds.length > 0
           ? `[ ACCUSE ${selectedSuspectIds.length} SUSPECT(S) ]`
           : '[ ACCUSE NOBODY ]'
         }
       </AccuseButton>
-      
+
       <CancelButton onClick={onBack}>
         [ CANCEL ]
       </CancelButton>

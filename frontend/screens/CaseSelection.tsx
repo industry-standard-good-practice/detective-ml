@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { CaseData, CaseStats } from '../types';
 
@@ -26,10 +27,10 @@ const Container = styled.div`
 
 const Header = styled.div`
   padding: 20px var(--screen-edge-horizontal);
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: calc(var(--space) * 5);
   
   @media (max-width: 768px) {
     display: none;
@@ -44,7 +45,7 @@ const HeaderTitle = styled.h2`
 
 const TabBar = styled.div`
   display: flex;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   
   @media (max-width: 768px) {
     display: none;
@@ -55,8 +56,8 @@ const MobileBottomTabBar = styled.div`
   display: none;
   @media (max-width: 768px) {
     display: flex;
-    background: #111;
-    border-top: 1px solid #333;
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-border);
     flex-shrink: 0;
     padding: 0 var(--screen-edge-horizontal);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -67,10 +68,10 @@ const TabButton = styled.button<{ $active: boolean; $color: string }>`
   background: transparent;
   border: none;
   border-bottom: 2px solid ${props => props.$active ? props.$color : 'transparent'};
-  color: ${props => props.$active ? props.$color : '#666'};
+  color: ${props => props.$active ? props.$color : 'var(--color-text-dim)'};
   font-family: inherit;
-  font-size: var(--type-h3);
-  padding: 5px 15px;
+  ${type.h3}
+  padding: var(--space) calc(var(--space) * 2);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -87,11 +88,11 @@ const BottomTabButton = styled.button<{ $active: boolean; $color: string }>`
   background: transparent;
   border: none;
   border-top: 3px solid ${props => props.$active ? props.$color : 'transparent'};
-  color: ${props => props.$active ? props.$color : '#666'};
+  color: ${props => props.$active ? props.$color : 'var(--color-text-dim)'};
   font-family: inherit;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   font-weight: bold;
-  padding: 14px 5px;
+  padding: calc(var(--space) * 2) var(--space);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -103,7 +104,7 @@ const BottomTabButton = styled.button<{ $active: boolean; $color: string }>`
 const SortBar = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space);
   margin-left: auto;
   
   @media (max-width: 768px) {
@@ -118,25 +119,25 @@ const MobileSortBar = styled.div`
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
+    gap: var(--space);
     padding: 10px 5vw 0;
     flex-shrink: 0;
   }
 `;
 
 const SortLabel = styled.span`
-  color: #555;
-  font-size: var(--type-small);
+  color: var(--color-text-disabled);
+  ${type.small}
   text-transform: uppercase;
 `;
 
 const SortButton = styled.button<{ $active: boolean }>`
   background: ${props => props.$active ? 'rgba(0, 255, 255, 0.15)' : 'transparent'};
-  border: 1px solid ${props => props.$active ? '#0ff' : '#333'};
-  color: ${props => props.$active ? '#0ff' : '#666'};
-  padding: 4px 12px;
+  border: 1px solid ${props => props.$active ? '#0ff' : 'var(--color-border)'};
+  color: ${props => props.$active ? '#0ff' : 'var(--color-text-dim)'};
+  padding: var(--space) calc(var(--space) * 2);
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   cursor: pointer;
   text-transform: uppercase;
   transition: all 0.2s;
@@ -153,7 +154,7 @@ const SortButton = styled.button<{ $active: boolean }>`
 const NetworkGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: calc(var(--space) * 2);
   padding: 40px var(--screen-edge-horizontal);
   overflow-y: auto;
   flex: 1;
@@ -193,10 +194,10 @@ const NetworkGrid = styled.div`
 
 const CaseCard = styled.div<{ $theme?: CardTheme; $isActive?: boolean }>`
   border: 2px solid ${props => getTheme(props.$theme).border};
-  padding: 20px;
+  padding: calc(var(--space) * 3);
   cursor: pointer;
   transition: all 0.2s;
-  background: #111;
+  background: var(--color-surface-raised);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -236,13 +237,13 @@ const CaseImage = styled.div<{ $src?: string }>`
   background-image: ${props => props.$src && props.$src !== 'PLACEHOLDER' ? `url(${props.$src})` : 'none'};
   background-size: cover;
   background-position: center;
-  border: 1px solid #333;
+  border: 1px solid var(--color-border);
   image-rendering: pixelated;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
-  font-size: var(--type-small);
+  color: var(--color-border);
+  ${type.small}
   text-transform: uppercase;
   flex-shrink: 0;
 `;
@@ -250,7 +251,7 @@ const CaseImage = styled.div<{ $src?: string }>`
 const CardTextContent = styled.div`
   display: flex;
   flex-direction: column;
-  padding-top: 20px;
+  padding: 20px 0;
 
   @media (max-width: 768px) {
     display: flex;
@@ -260,17 +261,17 @@ const CardTextContent = styled.div`
     flex: 1;
     -webkit-overflow-scrolling: touch;
     margin-right: -20px;
-    padding-right: 20px;
-    padding-bottom: 20px;
+    padding-right: calc(var(--space) * 3);
+    padding-bottom: calc(var(--space) * 3);
     
     &::-webkit-scrollbar { width: 3px; }
-    &::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    &::-webkit-scrollbar-thumb { background: var(--color-border); }
   }
 `;
 
 const CardTitle = styled.h3<{ $color: string }>`
   color: ${props => props.$color};
-  font-size: var(--type-h3);
+  ${type.h3}
   margin: 0 0 5px 0;
 `;
 
@@ -278,15 +279,15 @@ const BadgeRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--space);
+  margin-bottom: var(--space);
 `;
 
 const Badge = styled.span<{ $bg: string; $color: string }>`
   background: ${props => props.$bg};
   color: ${props => props.$color};
-  padding: 2px 8px;
-  font-size: var(--type-small);
+  padding: 0 var(--space);
+  ${type.small}
   font-weight: bold;
   text-transform: uppercase;
 `;
@@ -294,41 +295,41 @@ const Badge = styled.span<{ $bg: string; $color: string }>`
 const TypeBadge = styled.span<{ $bg: string; $color: string }>`
   background: ${props => props.$bg};
   color: ${props => props.$color};
-  padding: 2px 8px;
-  font-size: var(--type-small);
+  padding: 0 var(--space);
+  ${type.small}
 `;
 
 const DifficultyLabel = styled.span<{ $difficulty: string }>`
-  color: ${props => props.$difficulty === 'Hard' ? 'red' : props.$difficulty === 'Medium' ? '#fa0' : 'green'};
-  font-size: var(--type-small);
+  color: ${props => props.$difficulty === 'Hard' ? 'red' : props.$difficulty === 'Medium' ? 'var(--color-accent-orange)' : 'green'};
+  ${type.small}
 `;
 
 const VersionLabel = styled.span`
-  color: #555;
-  font-size: var(--type-small);
+  color: var(--color-text-disabled);
+  ${type.small}
 `;
 
 const AuthorLine = styled.div`
-  color: #666;
-  font-size: var(--type-small);
-  margin-top: 5px;
+  color: var(--color-text-dim);
+  ${type.small}
+  margin-top: var(--space);
   font-style: italic;
 `;
 
 const Description = styled.p`
-  color: #aaa;
+  color: var(--color-text-muted);
   margin: 5px 0 0 0;
-  font-size: var(--type-body);
+  ${type.body}
   line-height: 1.4;
 `;
 
 const StatsLine = styled.div`
   display: flex;
-  gap: 12px;
+  gap: calc(var(--space) * 2);
   align-items: center;
-  margin-top: 8px;
-  font-size: var(--type-small);
-  color: #555;
+  margin-top: var(--space);
+  ${type.small}
+  color: var(--color-text-disabled);
 `;
 
 const UpvoteStat = styled.span`
@@ -366,7 +367,7 @@ const CreateCard = styled(CaseCard)`
 `;
 
 const CreateCardTitle = styled.h3`
-  font-size: var(--type-h3);
+  ${type.h3}
   margin: 0;
 `;
 
@@ -374,10 +375,10 @@ const CreateCardTitle = styled.h3`
 
 const AdminControls = styled.div`
   display: flex;
-  gap: 10px;
+  gap: var(--space);
   margin-top: auto;
-  padding-top: 15px;
-  border-top: 1px solid #222;
+  padding-top: calc(var(--space) * 2);
+  border-top: 1px solid var(--color-border-subtle);
   flex-shrink: 0;
 `;
 
@@ -385,9 +386,9 @@ const AdminButton = styled.button<{ $variant?: 'delete' | 'feature' | 'publish' 
   background: ${props => props.$variant === 'delete' ? 'rgba(255, 0, 0, 0.1)' : props.$variant === 'publish' ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 255, 0, 0.1)'};
   border: 1px solid ${props => props.$variant === 'delete' ? '#f00' : props.$variant === 'publish' ? '#0f0' : '#ff0'};
   color: ${props => props.$variant === 'delete' ? '#f00' : props.$variant === 'publish' ? '#0f0' : '#ff0'};
-  padding: 5px 10px;
+  padding: var(--space) var(--space);
   font-family: inherit;
-  font-size: 0.7rem;
+  ${type.xs}
   cursor: pointer;
   text-transform: uppercase;
   transition: all 0.2s;
@@ -401,8 +402,8 @@ const AdminButton = styled.button<{ $variant?: 'delete' | 'feature' | 'publish' 
 /* ─── Status Messages ─── */
 
 const EmptyMessage = styled.div<{ $color?: string; $fullWidth?: boolean }>`
-  color: ${props => props.$color || '#555'};
-  padding: 20px;
+  color: ${props => props.$color || 'var(--color-text-disabled)'};
+  padding: calc(var(--space) * 3);
   ${props => props.$fullWidth && 'grid-column: 1 / -1;'}
 `;
 

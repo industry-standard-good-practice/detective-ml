@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { Overlay, ModalBox, ModalTitle, ModalText, ModalButtonRow, Button } from './ui';
 
@@ -15,14 +16,14 @@ const DialogBox = styled(ModalBox)`
 `;
 
 const DialogTitle = styled(ModalTitle)`
-  font-size: var(--type-h3);
+  ${type.h3}
   color: var(--color-accent-red-bright);
   text-shadow: none;
 `;
 
 const DialogText = styled(ModalText)`
   color: var(--color-text-muted);
-  font-size: var(--type-body);
+  ${type.body}
   margin-bottom: calc(var(--space) * 1.25);
 `;
 
@@ -32,7 +33,7 @@ const UnsavedWarning = styled.div`
   color: var(--color-accent-orange);
   padding: calc(var(--space) * 1.25) calc(var(--space) * 2);
   margin-bottom: calc(var(--space) * 2.5);
-  font-size: var(--type-small);
+  ${type.small}
   text-transform: uppercase;
   letter-spacing: 1px;
 `;
@@ -40,12 +41,12 @@ const UnsavedWarning = styled.div`
 const CancelBtn = styled(Button).attrs({ $variant: 'ghost' as const })`
   background: var(--color-border-subtle);
   border: 1px solid var(--color-border-strong);
-  font-size: var(--type-body);
+  ${type.body}
   &:hover { background: var(--color-border); color: var(--color-text-bright); }
 `;
 
 const DangerBtn = styled(Button).attrs({ $variant: 'danger' as const })`
-  font-size: var(--type-body);
+  ${type.body}
   color: var(--color-accent-red-bright);
   &:hover { color: var(--color-text-bright); }
 `;

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wand2, Save, Undo, Loader2, AlertCircle, ImagePlus } from 'lucide-react';
@@ -15,13 +16,12 @@ const Overlay = styled(motion.div)`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: calc(var(--space) * 3);
 `;
 
 const Modal = styled(motion.div)`
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
   width: 100%;
   max-width: 900px;
   max-height: 95%;
@@ -33,7 +33,7 @@ const Modal = styled(motion.div)`
 `;
 
 const Header = styled.div`
-  padding: 16px 24px;
+  padding: calc(var(--space) * 2) calc(var(--space) * 3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
@@ -42,7 +42,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h2`
-  font-size: 1.125rem;
+  ${type.bodyLg}
   font-weight: 600;
   color: white;
   margin: 0;
@@ -53,8 +53,7 @@ const CloseButton = styled.button`
   border: none;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
+  padding: var(--space);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -68,10 +67,10 @@ const CloseButton = styled.button`
 `;
 
 const Content = styled.div`
-  padding: 24px;
+  padding: calc(var(--space) * 3);
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 24px;
+  gap: calc(var(--space) * 3);
   overflow-y: auto;
   min-height: 0;
 
@@ -82,7 +81,6 @@ const Content = styled.div`
 
 const ImageContainer = styled.div`
   background: #000;
-  border-radius: 16px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -102,20 +100,20 @@ const PreviewImage = styled.img`
 const Controls = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: calc(var(--space) * 2);
   min-height: 0;
 `;
 
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space);
   flex: 1;
   min-height: 0;
 `;
 
 const Label = styled.label`
-  font-size: 0.8125rem;
+  ${type.small}
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
@@ -125,10 +123,9 @@ const Label = styled.label`
 const TextArea = styled.textarea`
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 14px;
+  padding: calc(var(--space) * 2);
   color: white;
-  font-size: 0.9375rem;
+  ${type.body}
   resize: none;
   flex: 1;
   min-height: 100px;
@@ -149,7 +146,7 @@ const TextArea = styled.textarea`
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 12px;
+  gap: calc(var(--space) * 2);
   flex-shrink: 0;
 `;
 
@@ -158,11 +155,10 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 12px;
+  gap: var(--space);
+  padding: calc(var(--space) * 2) calc(var(--space) * 2);
   font-weight: 600;
-  font-size: 0.875rem;
+  ${type.small}
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
@@ -196,10 +192,10 @@ const LoadingOverlay = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: calc(var(--space) * 2);
   color: white;
   z-index: 10;
-  padding: 20px;
+  padding: calc(var(--space) * 3);
   text-align: center;
 `;
 
@@ -208,9 +204,8 @@ const ProgressBar = styled.div`
   max-width: 200px;
   height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: var(--space);
 `;
 
 const ProgressFill = styled(motion.div)`
@@ -383,9 +378,9 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: 'rgba(255,255,255,0.3)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'calc(var(--space) * 2)', color: 'rgba(255,255,255,0.3)', padding: 'calc(var(--space) * 5)', textAlign: 'center' }}>
                   <ImagePlus size={48} />
-                  <span style={{ fontSize: '0.9rem' }}>Describe your character below to generate a portrait</span>
+                  <span style={{ fontSize: 'var(--type-small)' }}>Describe your character below to generate a portrait</span>
                 </div>
               )}
               {isGenerating && (
@@ -400,7 +395,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   <span>Generating Emotion Alternates...</span>
                   {savingProgress.total > 0 && (
                     <>
-                      <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                      <span style={{ fontSize: 'var(--type-small)', opacity: 0.8 }}>
                         {savingProgress.current} / {savingProgress.total}
                       </span>
                       <ProgressBar>
@@ -424,18 +419,17 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     disabled={isGenerating || isSaving}
-                    style={{ paddingBottom: '70px' }}
+                    style={{ paddingBottom: 'calc(var(--space) * 9)' }}
                   />
                   <div style={{
                     position: 'absolute', bottom: '1px', left: '1px', right: '1px',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '6px 8px',
-                    borderRadius: '0 0 11px 11px'
-                  }}>
+                    }}>
                     <Button
                       onClick={handleUndo}
                       disabled={isGenerating || isSaving || history.length <= 1}
-                      style={{ flex: 'none', padding: '8px 14px', fontSize: '0.8rem' }}
+                      style={{ flex: 'none', padding: '8px 14px', fontSize: 'var(--type-small)' }}
                     >
                       <Undo size={14} />
                       Undo
@@ -444,7 +438,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                       $variant="primary"
                       onClick={handleEdit}
                       disabled={isGenerating || isSaving || !prompt.trim()}
-                      style={{ flex: 'none', width: '36px', height: '36px', padding: 0, borderRadius: '10px' }}
+                      style={{ flex: 'none', width: '36px', height: '36px', padding: 0, }}
                       title="Generate Edit"
                     >
                       <Wand2 size={16} />
@@ -452,7 +446,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   </div>
                 </div>
                 {error && (
-                  <div style={{ color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                  <div style={{ color: '#ef4444', fontSize: 'var(--type-small)', display: 'flex', alignItems: 'center', gap: 'var(--space)', marginTop: 'var(--space)' }}>
                     <AlertCircle size={14} />
                     {error}
                   </div>

@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 import { CaseData, CaseStats, Evidence } from '../types';
 import { generateCaseSummary } from '../services/geminiService';
@@ -13,15 +14,15 @@ const fadeIn = keyframes`
 const Container = styled.div`
   display: flex;
   height: 100%;
-  padding: 40px;
-  gap: 40px;
-  background: #050505;
+  padding: calc(var(--space) * 5);
+  gap: calc(var(--space) * 5);
+  background: var(--color-surface-inset);
   
   @media (max-width: 768px) {
     display: block;
     height: 100%;
     overflow-y: auto;
-    padding: 15px;
+    padding: calc(var(--space) * 2);
     gap: 0;
   }
 `;
@@ -37,18 +38,18 @@ const LeftPanel = styled.div`
   @media (max-width: 768px) {
     height: auto;
     display: block;
-    margin-bottom: 30px;
+    margin-bottom: calc(var(--space) * 4);
   }
 `;
 
 const RightPanel = styled.div`
   flex: 0 0 380px;
-  border: 1px solid #333;
-  padding: 20px;
-  background: #111;
+  border: 1px solid var(--color-border);
+  padding: calc(var(--space) * 3);
+  background: var(--color-surface-raised);
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
   overflow-y: auto;
   animation: ${fadeIn} 0.8s ease-out;
   
@@ -56,7 +57,7 @@ const RightPanel = styled.div`
     width: 100%;
     height: auto;
     overflow-y: visible;
-    padding: 15px;
+    padding: calc(var(--space) * 2);
   }
 `;
 
@@ -64,39 +65,39 @@ const TopRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #333;
+  margin-bottom: calc(var(--space) * 3);
+  padding-bottom: calc(var(--space) * 3);
+  border-bottom: 2px solid var(--color-border);
   
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
-    gap: 15px;
+    gap: calc(var(--space) * 2);
     text-align: center;
   }
 `;
 
 const Header = styled.h1<{ $gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE' | null }>`
-  font-size: var(--type-h1);
-  color: ${props => props.$gameResult === 'SUCCESS' ? '#0f0' : props.$gameResult === 'PARTIAL' ? '#fa0' : '#f00'};
+  ${type.h1}
+  color: ${props => props.$gameResult === 'SUCCESS' ? 'var(--color-accent-green)' : props.$gameResult === 'PARTIAL' ? 'var(--color-accent-orange)' : 'var(--color-accent-red)'};
   margin: 0;
   text-transform: uppercase;
-  text-shadow: 0 0 10px ${props => props.$gameResult === 'SUCCESS' ? '#0f0' : props.$gameResult === 'PARTIAL' ? '#fa0' : '#f00'};
+  text-shadow: 0 0 10px ${props => props.$gameResult === 'SUCCESS' ? 'var(--color-accent-green)' : props.$gameResult === 'PARTIAL' ? 'var(--color-accent-orange)' : 'var(--color-accent-red)'};
   line-height: 1;
   
   @media (max-width: 768px) {
-    font-size: 2.5rem;
+    ${type.h2}
   }
 `;
 
 const CompactStats = styled.div`
   display: flex;
-  gap: 30px;
+  gap: calc(var(--space) * 4);
   
   @media (max-width: 768px) {
     width: 100%;
     justify-content: center;
-    gap: 20px;
+    gap: calc(var(--space) * 3);
   }
 `;
 
@@ -110,15 +111,15 @@ const CompactStatItem = styled.div`
   }
   
   label { 
-    font-size: var(--type-small); 
-    color: #777; 
+    ${type.small} 
+    color: #777;
     text-transform: uppercase; 
-    margin-bottom: 4px;
+    margin-bottom: var(--space);
   }
   
   span { 
-    font-size: var(--type-h3); 
-    color: #fff; 
+    ${type.h3} 
+    color: var(--color-text-bright);
     font-weight: bold; 
     text-shadow: 0 0 5px rgba(255,255,255,0.2);
   }
@@ -142,10 +143,10 @@ const Stamp = styled.div<{ $gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE' | null
   position: absolute;
   top: 20px;
   right: 20px;
-  font-size: var(--type-h1);
-  border: 5px solid ${props => props.$gameResult === 'SUCCESS' ? '#0f0' : props.$gameResult === 'PARTIAL' ? '#fa0' : '#f00'};
-  color: ${props => props.$gameResult === 'SUCCESS' ? '#0f0' : props.$gameResult === 'PARTIAL' ? '#fa0' : '#f00'};
-  padding: 5px 20px;
+  ${type.h1}
+  border: 5px solid ${props => props.$gameResult === 'SUCCESS' ? 'var(--color-accent-green)' : props.$gameResult === 'PARTIAL' ? 'var(--color-accent-orange)' : 'var(--color-accent-red)'};
+  color: ${props => props.$gameResult === 'SUCCESS' ? 'var(--color-accent-green)' : props.$gameResult === 'PARTIAL' ? 'var(--color-accent-orange)' : 'var(--color-accent-red)'};
+  padding: var(--space) calc(var(--space) * 3);
   transform: rotate(12deg);
   font-weight: bold;
   text-align: center;
@@ -161,17 +162,17 @@ const Stamp = styled.div<{ $gameResult: 'SUCCESS' | 'PARTIAL' | 'FAILURE' | null
   @media (max-width: 768px) {
     top: 10px;
     right: 10px;
-    font-size: 2rem;
-    padding: 2px 10px;
+    ${type.h2}
+    padding: 0 var(--space);
   }
 `;
 
 const SummaryBox = styled.div`
-  background: #1a1a1a;
-  padding: 30px;
-  border-left: 4px solid #555;
-  color: #ddd;
-  font-size: var(--type-body-lg);
+  background: var(--color-surface-raised);
+  padding: calc(var(--space) * 4);
+  border-left: 4px solid var(--color-border-strong);
+  color: var(--color-text);
+  ${type.bodyLg}
   line-height: 1.6;
   white-space: pre-wrap;
   font-family: 'VT323', monospace;
@@ -179,37 +180,37 @@ const SummaryBox = styled.div`
   flex: 1;
   
   @media (max-width: 768px) {
-    padding: 15px;
-    font-size: var(--type-body);
+    padding: calc(var(--space) * 2);
+    ${type.body}
     height: auto;
     overflow-y: visible;
-    border-left: 2px solid #555;
+    border-left: 2px solid var(--color-border-strong);
   }
 `;
 
 // --- RIGHT PANEL ITEMS ---
 
 const StatItem = styled.div`
-  background: #222;
-  padding: 15px;
-  h3 { margin: 0 0 5px 0; color: #888; font-size: var(--type-small); text-transform: uppercase; }
-  span { font-size: var(--type-h3); color: #fff; }
+  background: var(--color-border-subtle);
+  padding: calc(var(--space) * 2);
+  h3 { margin: 0 0 5px 0; color: var(--color-text-subtle); ${type.small} text-transform: uppercase; }
+  span { ${type.h3} color: var(--color-text-bright); }
 `;
 
 const EvidenceList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space);
 `;
 
 const EvidenceRow = styled.div<{ $found: boolean }>`
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: ${props => props.$found ? '#0f0' : '#555'};
-  font-size: var(--type-body);
-  padding: 5px;
-  border-bottom: 1px solid #222;
+  gap: var(--space);
+  color: ${props => props.$found ? 'var(--color-accent-green)' : 'var(--color-text-disabled)'};
+  ${type.body}
+  padding: var(--space);
+  border-bottom: 1px solid var(--color-border-subtle);
 
   span.icon {
     width: 20px;
@@ -219,23 +220,23 @@ const EvidenceRow = styled.div<{ $found: boolean }>`
 `;
 
 const ResetButton = styled.button`
-  background: #fff;
-  color: #000;
+  background: var(--color-text-bright);
+  color: var(--color-text-inverse);
   border: none;
-  padding: 15px 30px;
-  font-size: var(--type-h3);
+  padding: calc(var(--space) * 2) calc(var(--space) * 4);
+  ${type.h3}
   font-family: inherit;
   font-weight: bold;
   cursor: pointer;
   text-transform: uppercase;
-  margin-top: 20px;
+  margin-top: calc(var(--space) * 3);
   
   &:hover { background: #ccc; }
   
   @media (max-width: 768px) {
     width: 100%;
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: calc(var(--space) * 3);
+    margin-bottom: calc(var(--space) * 3);
   }
 `;
 
@@ -245,10 +246,10 @@ const VoteRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 15px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  gap: calc(var(--space) * 3);
+  padding: calc(var(--space) * 2);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
 `;
 
 const VoteButton = styled.button<{ $active: boolean; $type: 'up' | 'down' }>`
@@ -256,48 +257,48 @@ const VoteButton = styled.button<{ $active: boolean; $type: 'up' | 'down' }>`
     ? (props.$type === 'up' ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)') 
     : 'transparent'};
   border: 2px solid ${props => props.$active 
-    ? (props.$type === 'up' ? '#0f0' : '#f00') 
-    : '#444'};
+    ? (props.$type === 'up' ? 'var(--color-accent-green)' : 'var(--color-accent-red)') 
+    : 'var(--color-border)'};
   color: ${props => props.$active 
-    ? (props.$type === 'up' ? '#0f0' : '#f00') 
-    : '#888'};
-  padding: 8px 20px;
+    ? (props.$type === 'up' ? 'var(--color-accent-green)' : 'var(--color-accent-red)') 
+    : 'var(--color-text-subtle)'};
+  padding: var(--space) calc(var(--space) * 3);
   font-family: inherit;
-  font-size: var(--type-h3);
+  ${type.h3}
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
 
   &:hover {
-    border-color: ${props => props.$type === 'up' ? '#0f0' : '#f00'};
-    color: ${props => props.$type === 'up' ? '#0f0' : '#f00'};
+    border-color: ${props => props.$type === 'up' ? 'var(--color-accent-green)' : 'var(--color-accent-red)'};
+    color: ${props => props.$type === 'up' ? 'var(--color-accent-green)' : 'var(--color-accent-red)'};
     background: ${props => props.$type === 'up' ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'};
   }
 `;
 
 const VoteCount = styled.span`
-  font-size: var(--type-body);
-  color: #888;
+  ${type.body}
+  color: var(--color-text-subtle);
 `;
 
 // --- GLOBAL INTEL / LEADERBOARD ---
 
 const IntelSection = styled.div`
-  background: #0a0a0a;
-  border: 1px solid #222;
-  padding: 15px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  padding: calc(var(--space) * 2);
 `;
 
 const IntelTitle = styled.h3`
-  color: #0ff;
-  font-size: var(--type-small);
+  color: var(--color-accent-cyan);
+  ${type.small}
   text-transform: uppercase;
   margin: 0 0 12px 0;
   letter-spacing: 1px;
-  border-bottom: 1px solid #222;
-  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--space);
 `;
 
 const IntelRow = styled.div`
@@ -305,17 +306,16 @@ const IntelRow = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 6px 0;
-  font-size: var(--type-body);
+  ${type.body}
   
-  label { color: #777; font-size: var(--type-small); text-transform: uppercase; }
+  label { color: #777; ${type.small} text-transform: uppercase; }
 `;
 
 const CompareBar = styled.div`
   position: relative;
   height: 6px;
-  background: #222;
-  margin-top: 4px;
-  border-radius: 3px;
+  background: var(--color-border-subtle);
+  margin-top: var(--space);
   overflow: hidden;
 `;
 
@@ -326,21 +326,20 @@ const CompareBarFill = styled.div<{ $width: number; $color: string }>`
   height: 100%;
   width: ${props => props.$width}%;
   background: ${props => props.$color};
-  border-radius: 3px;
   transition: width 0.8s ease-out;
 `;
 
 const CompareRow = styled.div`
-  margin-bottom: 12px;
+  margin-bottom: calc(var(--space) * 2);
 `;
 
 const CompareValues = styled.div`
   display: flex;
   justify-content: space-between;
-  font-size: var(--type-small);
-  margin-bottom: 4px;
+  ${type.small}
+  margin-bottom: var(--space);
   
-  .you { color: #0ff; }
+  .you { color: var(--color-accent-cyan); }
   .avg { color: var(--color-text-dim); }
 `;
 
@@ -348,7 +347,7 @@ const CompareValues = styled.div`
 
 const ReportLine = styled.div`
   min-height: 1.2em;
-  margin-bottom: 4px;
+  margin-bottom: var(--space);
 `;
 
 const FoundTag = styled.span`
@@ -380,7 +379,7 @@ const PortraitRow = styled.div`
 
 const SubjectHeading = styled.h2`
   margin-top: calc(var(--space) * 1.25);
-  font-size: var(--type-h2);
+  ${type.h2}
 `;
 
 const DesktopOnly = styled.div`
@@ -394,7 +393,7 @@ const MobileOnly = styled.div`
 
 const VoteDividerLabel = styled.span`
   color: var(--color-text-disabled);
-  font-size: var(--type-small);
+  ${type.small}
   text-transform: uppercase;
 `;
 
@@ -405,9 +404,9 @@ const IntelValue = styled.span<{ $color: string }>`
 
 const EvidenceLogTitle = styled.h3`
   border-bottom: 1px solid var(--color-border-strong);
-  padding-bottom: 5px;
+  padding-bottom: var(--space);
   margin-top: calc(var(--space) * 1.25);
-  font-size: var(--type-small);
+  ${type.small}
 `;
 
 const EvidenceInfo = styled.div`
@@ -420,7 +419,7 @@ const EvidenceTitle = styled.span`
 `;
 
 const EvidenceMissedHint = styled.span`
-  font-size: var(--type-small);
+  ${type.small}
   font-style: italic;
 `;
 
@@ -461,9 +460,9 @@ const EndGame: React.FC<EndGameProps> = ({
   const totalTimeline = caseData.suspects.reduce((acc, s) => acc + (s.timeline?.length || 0), 0);
   
   const getResultColor = () => {
-      if (gameResult === 'SUCCESS') return '#0f0';
-      if (gameResult === 'PARTIAL') return '#fa0';
-      return '#f00';
+      if (gameResult === 'SUCCESS') return 'var(--color-accent-green)';
+      if (gameResult === 'PARTIAL') return 'var(--color-accent-orange)';
+      return 'var(--color-accent-red)';
   };
 
   const resultColor = getResultColor();
@@ -573,7 +572,7 @@ const EndGame: React.FC<EndGameProps> = ({
           <IntelTitle>▸ GLOBAL INTEL</IntelTitle>
           <IntelRow>
             <label>Total Plays</label>
-            <IntelValue $color="#0ff">{plays}</IntelValue>
+            <IntelValue $color="var(--color-accent-cyan)">{plays}</IntelValue>
           </IntelRow>
           <IntelRow>
             <label>Success Rate</label>

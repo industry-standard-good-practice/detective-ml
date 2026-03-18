@@ -7,8 +7,10 @@
  */
 
 import styled from 'styled-components';
+import { type } from '../../theme';
 
 export const PixelImage = styled.div<{ $src?: string; $size?: string }>`
+  ${type.label}
   width: ${props => props.$size || '100%'};
   aspect-ratio: 1;
   background-color: var(--color-border);
@@ -21,8 +23,6 @@ export const PixelImage = styled.div<{ $src?: string; $size?: string }>`
   align-items: center;
   justify-content: center;
   color: var(--color-text-subtle);
-  font-size: var(--type-small);
-  text-transform: uppercase;
   flex-shrink: 0;
 `;
 

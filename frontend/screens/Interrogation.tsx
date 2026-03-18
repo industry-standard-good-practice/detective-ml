@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 import toast from 'react-hot-toast';
 import { CaseData, Suspect, ChatMessage, Emotion, Evidence, TimelineStatement } from '../types';
@@ -34,13 +35,13 @@ const MainContent = styled.div`
   flex: 1;
   overflow: hidden;
   padding: 20px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 50px + 10px) var(--screen-edge-horizontal);
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   position: relative;
   z-index: 1;
   justify-content: center;
 
   @media (max-width: 1280px) {
-    gap: 15px;
+    gap: calc(var(--space) * 2);
     padding: 15px var(--screen-edge-horizontal) calc(var(--screen-edge-bottom) + 50px + 10px) var(--screen-edge-horizontal);
   }
   
@@ -68,7 +69,7 @@ const ChatPanel = styled.div`
   max-width: 900px;
   display: flex;
   flex-direction: column;
-  border: 1px solid #333;
+  border: 1px solid var(--color-border);
   padding: 0; /* REMOVED PADDING to flush scrollbar */
   height: 100%;
   background: rgba(0,0,0,0.2);
@@ -90,38 +91,38 @@ const ChatLog = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  padding: 20px; /* Added padding inside scrolling area */
-  padding-bottom: 20px;
+  gap: calc(var(--space) * 2);
+  padding: calc(var(--space) * 3); /* Added padding inside scrolling area */
+  padding-bottom: calc(var(--space) * 3);
 
   /* Flush Scrollbar Styling */
   &::-webkit-scrollbar {
     width: 10px;
   }
   &::-webkit-scrollbar-track {
-    background: #0a0a0a;
-    border-left: 1px solid #333;
+    background: var(--color-surface);
+    border-left: 1px solid var(--color-border);
   }
   &::-webkit-scrollbar-thumb {
-    background: #333;
-    border: 1px solid #555;
+    background: var(--color-border);
+    border: 1px solid var(--color-border-strong);
   }
   &::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--color-border-strong);
   }
   
   @media (max-width: 768px) {
-    padding: 10px;
+    padding: var(--space);
   }
 `;
 
 const EvidenceChip = styled.div<{ $collected: boolean }>`
-  margin-top: 8px;
-  background: ${props => props.$collected ? '#2d4' : '#ffc'};
-  color: #000;
-  border: 2px dashed ${props => props.$collected ? '#2d4' : '#cc0'};
-  padding: 5px 10px;
-  font-size: var(--type-small);
+  margin-top: var(--space);
+  background: ${props => props.$collected ? 'var(--color-evidence-collected)' : 'var(--color-evidence-yellow)'};
+  color: var(--color-text-inverse);
+  border: 2px dashed ${props => props.$collected ? 'var(--color-evidence-collected)' : 'var(--color-evidence-border)'};
+  padding: var(--space) var(--space);
+  ${type.small}
   font-weight: bold;
   cursor: ${props => props.$collected ? 'default' : 'pointer'};
   &[data-cursor] { cursor: ${props => props.$collected ? 'default' : 'pointer'}; }
@@ -130,7 +131,7 @@ const EvidenceChip = styled.div<{ $collected: boolean }>`
   animation: fadeIn 0.5s;
 
   &:hover {
-    background: ${props => props.$collected ? '#2d4' : '#fff'};
+    background: ${props => props.$collected ? 'var(--color-evidence-collected)' : 'var(--color-text-bright)'};
   }
   
   &::before {
@@ -149,15 +150,15 @@ const MessageBubble = styled.div<{ $sender: 'player' | 'suspect' | 'officer' | '
   text-align: ${props => props.$sender === 'system' ? 'center' : 'left'};
   
   .sender-name {
-    font-size: var(--type-small);
+    ${type.small}
     color: ${props => {
-    if (props.$sender === 'player') return '#f55';
-    if (props.$sender === 'partner') return '#5f5';
-    if (props.$sender === 'system') return '#f00';
+    if (props.$sender === 'player') return 'var(--color-player-name)';
+    if (props.$sender === 'partner') return 'var(--color-partner-name)';
+    if (props.$sender === 'system') return 'var(--color-accent-red)';
     if (props.$customColor) return props.$customColor;
-    return '#5af';
+    return 'var(--color-suspect-name)';
   }};
-    margin-bottom: 4px;
+    margin-bottom: var(--space);
     display: block;
     align-self: ${props => {
     if (props.$sender === 'system') return 'center';
@@ -169,49 +170,47 @@ const MessageBubble = styled.div<{ $sender: 'player' | 'suspect' | 'officer' | '
 
   .text {
     color: ${props => {
-    if (props.$sender === 'partner') return '#afa';
-    if (props.$sender === 'system') return '#f55';
-    return '#eee';
+    if (props.$sender === 'partner') return 'var(--color-partner-text)';
+    if (props.$sender === 'system') return 'var(--color-system-text)';
+    return 'var(--color-player-text)';
   }};
-    font-size: var(--type-body-lg);
+    ${type.bodyLg}
     line-height: 1.4;
     font-style: ${props => props.$isAction ? 'italic' : 'normal'};
     background: ${props => {
-    if (props.$sender === 'player') return '#311';
-    if (props.$sender === 'partner') return '#131';
-    if (props.$sender === 'system') return 'rgba(50, 0, 0, 0.5)';
+    if (props.$sender === 'player') return 'var(--color-player-bg)';
+    if (props.$sender === 'partner') return 'var(--color-partner-bg)';
+    if (props.$sender === 'system') return 'var(--color-system-bg)';
     return 'transparent';
   }};
     padding: ${props => (props.$sender === 'player' || props.$sender === 'partner' || props.$sender === 'system') ? '8px 12px' : '0'};
-    border-radius: 8px;
     border: ${props => {
-    if (props.$isAction && props.$sender === 'player') return '1px dashed #f55';
-    if (props.$sender === 'partner') return '1px solid #252';
-    if (props.$sender === 'system') return '1px solid #f00';
+    if (props.$isAction && props.$sender === 'player') return '1px dashed var(--color-player-name)';
+    if (props.$sender === 'partner') return '1px solid var(--color-partner-border)';
+    if (props.$sender === 'system') return '1px solid var(--color-accent-red)';
     return 'none';
   }};
   }
 
   .attachment {
     align-self: flex-end;
-    font-size: var(--type-small);
-    background: #333;
-    color: #aaa;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-top: 5px;
-    border: 1px solid #555;
+    ${type.small}
+    background: var(--color-border);
+    color: var(--color-text-muted);
+    padding: 0 var(--space);
+    margin-top: var(--space);
+    border: 1px solid var(--color-border-strong);
   }
 `;
 
 const InputContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 20px;
+  gap: var(--space);
+  padding: calc(var(--space) * 3);
   width: 100%;
   background: #080808; /* Solid background to obscure scrolling text */
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-border);
   
   @media (max-width: 768px) {
     padding: 10px var(--screen-edge-horizontal);
@@ -222,14 +221,14 @@ const InputContainer = styled.div`
 const UnifiedInputBar = styled.div<{ $disabled: boolean }>`
   display: flex;
   align-items: center;
-  border: 1px solid #444;
-  background: #050505;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-inset);
   height: 50px;
   opacity: ${props => props.$disabled ? 0.6 : 1};
   transition: all 0.2s;
   
   &:focus-within {
-    border-color: #fff;
+    border-color: var(--color-border-focus);
     box-shadow: 0 0 10px rgba(255,255,255,0.1);
   }
   
@@ -243,12 +242,12 @@ const MobileInputRow = styled.div`
   @media (max-width: 768px) {
     display: flex;
     align-items: center;
-    border: 1px solid #444;
-    background: #050505;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-inset);
     height: 56px;
     
     &:focus-within {
-      border-color: #fff;
+      border-color: var(--color-border-focus);
       box-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
   }
@@ -261,7 +260,7 @@ const MobileButtonRow = styled.div`
     align-items: center;
     justify-content: space-between;
     height: 40px;
-    margin-top: 10px;
+    margin-top: var(--space);
     
     button {
       height: 100%;
@@ -276,13 +275,13 @@ const TypeButtonWrapper = styled.div`
 
 const TypeButton = styled.button<{ $disabled: boolean }>`
   background-color: transparent;
-  color: #888;
+  color: var(--color-text-subtle);
   border: none;
-  border-right: 1px solid #333;
+  border-right: 1px solid var(--color-border);
   height: 100%;
   padding: 0 35px 0 15px;
   font-family: 'VT323', monospace;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
   text-transform: uppercase;
   position: relative;
@@ -297,25 +296,25 @@ const TypeButton = styled.button<{ $disabled: boolean }>`
     transform: translateY(-50%);
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid #888;
+    border-top: 5px solid var(--color-text-subtle);
   }
 
   &:hover {
-    color: #fff;
-    background: #111;
-    &::after { border-top-color: #fff; }
+    color: var(--color-text-bright);
+    background: var(--color-surface-raised);
+    &::after { border-top-color: var(--color-text-bright); }
   }
 
   ${props => props.$disabled && `
     cursor: not-allowed;
     opacity: 0.5;
-    &:hover { color: #888; background: transparent; &::after { border-top-color: #888; } }
+    &:hover { color: var(--color-text-subtle); background: transparent; &::after { border-top-color: var(--color-text-subtle); } }
   `}
 
   @media (max-width: 768px) {
     padding: 0 25px 0 8px;
-    font-size: 1rem;
-    background: #222;
+    ${type.body}
+    background: var(--color-border-subtle);
     border: none;
     border-right: none;
     &::after { right: 5px; }
@@ -330,32 +329,32 @@ const TypeMenu = styled.div`
   border: 1px solid #555;
   width: 140px;
   z-index: 50;
-  box-shadow: 0 0 20px #000;
+  box-shadow: 0 0 20px var(--color-bg);
   display: flex;
   flex-direction: column;
 `;
 
 const TypeMenuItem = styled.button<{ $active: boolean }>`
-  background: ${props => props.$active ? '#222' : 'transparent'};
-  color: ${props => props.$active ? '#fff' : '#ccc'};
+  background: ${props => props.$active ? 'var(--color-border-subtle)' : 'transparent'};
+  color: ${props => props.$active ? 'var(--color-text-bright)' : '#ccc'};
   border: none;
-  padding: 10px 12px;
+  padding: var(--space) calc(var(--space) * 2);
   text-align: left;
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--color-border-subtle);
   text-transform: uppercase;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
   transition: background 0.15s;
 
   &:last-child { border-bottom: none; }
 
   &:hover {
-    background: #222;
-    color: #fff;
+    background: var(--color-border-subtle);
+    color: var(--color-text-bright);
   }
 `;
 
@@ -367,10 +366,10 @@ const PlusButtonWrapper = styled.div`
 const PlusButton = styled.button<{ $active: boolean }>`
   background: transparent;
   border: none;
-  color: ${props => props.$active ? '#fff' : '#444'};
+  color: ${props => props.$active ? 'var(--color-text-bright)' : 'var(--color-border)'};
   width: 40px;
   height: 100%;
-  font-size: var(--type-h2);
+  ${type.h2}
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -379,8 +378,8 @@ const PlusButton = styled.button<{ $active: boolean }>`
   transition: all 0.2s;
   
   &:hover {
-    color: #fff;
-    text-shadow: 0 0 5px #fff;
+    color: var(--color-text-bright);
+    text-shadow: 0 0 5px var(--color-text-bright);
   }
 `;
 
@@ -405,7 +404,7 @@ const MicButton = styled.button<{ $listening: boolean; $transcribing?: boolean }
   
   &:hover {
     background: ${props => props.$transcribing ? '#a06000' : props.$listening ? '#d00' : '#333'};
-    color: #fff;
+    color: var(--color-text-bright);
   }
   
   svg {
@@ -420,7 +419,7 @@ const EvidenceMenu = styled.div`
   position: absolute;
   bottom: 110%;
   left: 0;
-  background: #050505;
+  background: var(--color-surface-inset);
   border: 1px solid #555;
   width: 280px;
   max-height: 300px;
@@ -434,23 +433,22 @@ const EvidenceMenu = styled.div`
     width: 6px;
   }
   &::-webkit-scrollbar-thumb {
-    background: #333;
+    background: var(--color-border);
   }
 `;
 
 const TimelineEvidenceOption = styled.button`
-  background: #1b263b;
-  color: #fff;
-  border: 1px solid #415a77;
-  padding: 12px;
-  margin: 5px 10px;
-  border-radius: 4px;
+  background: var(--color-officer-button);
+  color: var(--color-text-bright);
+  border: 1px solid var(--color-officer-border);
+  padding: calc(var(--space) * 2);
+  margin: var(--space) var(--space);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space);
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   transition: transform 0.1s, background 0.2s;
   
@@ -462,28 +460,28 @@ const TimelineEvidenceOption = styled.button`
   .header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space);
     border-bottom: 1px solid rgba(65, 90, 119, 0.5);
-    padding-bottom: 6px;
-    margin-bottom: 4px;
+    padding-bottom: var(--space);
+    margin-bottom: var(--space);
   }
 
   .time {
     font-family: 'VT323', monospace;
-    color: #0f0;
-    font-size: 1.1rem;
+    color: var(--color-accent-green);
+    ${type.bodyLg}
   }
 
   .suspect {
-    font-size: 0.75rem;
-    color: #aaa;
+    ${type.xs}
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 1px;
   }
 
   .statement {
-    font-size: var(--type-body);
-    color: #ddd;
+    ${type.body}
+    color: var(--color-text);
     line-height: 1.3;
     font-style: italic;
   }
@@ -492,22 +490,22 @@ const TimelineEvidenceOption = styled.button`
 const TimelineDayHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
   padding: 8px 12px 4px;
-  margin-top: 4px;
+  margin-top: var(--space);
   
   &::before, &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: #0f0;
+    background: var(--color-accent-green);
     opacity: 0.25;
   }
   
   span {
     font-family: 'VT323', monospace;
-    color: #0f0;
-    font-size: 0.9rem;
+    color: var(--color-accent-green);
+    ${type.small}
     letter-spacing: 2px;
     text-transform: uppercase;
     white-space: nowrap;
@@ -519,19 +517,19 @@ const EvidenceOption = styled.button`
   background: transparent;
   color: #ccc;
   border: none;
-  padding: 10px 12px;
+  padding: var(--space) calc(var(--space) * 2);
   text-align: left;
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space);
   
   &:hover {
-    background: #222;
-    color: #fff;
+    background: var(--color-border-subtle);
+    color: var(--color-text-bright);
   }
 `;
 
@@ -539,34 +537,34 @@ const GhostInput = styled.input`
   flex: 1;
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--color-text-bright);
   font-family: 'VT323', monospace;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   padding: 0 15px;
   height: 100%;
   min-width: 0;
   
   &:focus { outline: none; }
-  &::placeholder { color: #333; }
-  &:disabled { color: #500; cursor: not-allowed; }
+  &::placeholder { color: var(--color-border); }
+  &:disabled { color: var(--color-danger-bg); cursor: not-allowed; }
 `;
 
 const SendActionBtn = styled.button`
   height: 100%;
   padding: 0 25px;
-  background: #fff;
-  color: #000;
+  background: var(--color-text-bright);
+  color: var(--color-text-inverse);
   border: none;
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--color-border);
   font-family: inherit;
   font-weight: bold;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
   transition: background 0.2s;
   
   &:disabled {
-    background: #222;
-    color: #555;
+    background: var(--color-border-subtle);
+    color: var(--color-border-strong);
     cursor: not-allowed;
   }
   
@@ -583,27 +581,27 @@ const SendActionBtn = styled.button`
 const AttachmentChipsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 5px;
+  gap: var(--space);
+  margin-bottom: var(--space);
 `;
 
 const AttachmentChip = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space);
   background: #1a1a1a;
-  border: 1px dashed #555;
-  color: #fff;
-  padding: 4px 10px;
-  font-size: var(--type-small);
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-text-bright);
+  padding: var(--space) var(--space);
+  ${type.small}
 
   button {
     background: transparent;
     border: none;
-    color: #f55;
+    color: var(--color-accent-red-bright);
     font-weight: bold;
     cursor: pointer;
-    font-size: var(--type-body);
+    ${type.body}
     padding: 0;
     line-height: 1;
   }
@@ -611,14 +609,13 @@ const AttachmentChip = styled.div`
 
 const SuggestionChips = styled.div`
   display: flex;
-  gap: 10px;
-  margin-bottom: 5px;
+  gap: var(--space);
   overflow-x: auto;
-  padding-bottom: 5px;
+  padding-bottom: var(--space);
   margin-left: -20px;
   margin-right: -20px;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: calc(var(--space) * 3 - 4px);
+  padding-right: calc(var(--space) * 3);
   width: calc(100% + 40px);
   max-width: calc(100% + 40px);
   
@@ -626,8 +623,7 @@ const SuggestionChips = styled.div`
     height: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: #444; 
-    border-radius: 2px;
+    background: var(--color-border); 
   }
   &::-webkit-scrollbar-track {
     background: transparent; 
@@ -636,8 +632,8 @@ const SuggestionChips = styled.div`
   @media (max-width: 768px) {
     margin-left: -10px;
     margin-right: -10px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: var(--space);
+    padding-right: var(--space);
     margin-bottom: 0px;
     width: calc(100% + 20px);
     max-width: calc(100% + 20px);
@@ -650,20 +646,19 @@ const SuggestionChips = styled.div`
 `;
 
 const Chip = styled.button`
-  background: #222;
-  border: 1px solid #444;
-  color: #aaa;
-  padding: 5px 10px;
-  border-radius: 15px;
+  background: var(--color-border-subtle);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: var(--space) var(--space);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   white-space: nowrap;
   cursor: pointer;
   flex-shrink: 0;
   
   &:hover {
     border-color: #777;
-    color: #fff;
+    color: var(--color-text-bright);
   }
 `;
 
@@ -672,7 +667,7 @@ const RightPanel = styled.div<{ $mobileOpen: boolean }>`
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
   transition: transform 0.3s ease;
   height: 100%; 
   overflow: hidden; 
@@ -683,11 +678,11 @@ const RightPanel = styled.div<{ $mobileOpen: boolean }>`
     right: 0;
     bottom: 0;
     width: calc(100% - 24px);
-    background: #0a0a0a;
+    background: var(--color-surface);
     z-index: 100;
-    padding: 20px;
+    padding: calc(var(--space) * 3);
     box-shadow: -10px 0 30px rgba(0,0,0,0.8);
-    border-left: 2px solid #333;
+    border-left: 2px solid var(--color-border);
     transform: translateX(${props => props.$mobileOpen ? '0' : '100%'});
     flex: none;
     min-width: 0;
@@ -713,12 +708,12 @@ const IntelOverlay = styled.div<{ $visible: boolean }>`
 `;
 
 const AggravationMeter = styled.div`
-  border: 1px solid #444;
-  padding: 15px;
-  background: #0a0a0a;
+  border: 1px solid var(--color-border);
+  padding: calc(var(--space) * 3);
+  background: var(--color-surface);
   flex-shrink: 0; 
   
-  h3 { margin: 0 0 10px 0; font-size: var(--type-body); color: #888; text-transform: uppercase; }
+  h3 { margin: 0 0 10px 0; ${type.body} color: var(--color-text-subtle); text-transform: uppercase; }
 `;
 
 const ProgressBar = styled.div<{ $level: number }>`
@@ -746,20 +741,20 @@ const ProgressBar = styled.div<{ $level: number }>`
 
 const SidekickContainer = styled.div`
   flex: 1; 
-  border: 1px solid #444;
-  padding: 15px;
+  border: 1px solid var(--color-border);
+  padding: calc(var(--space) * 3);
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
+  background: var(--color-surface);
   position: relative;
-  gap: 10px;
+  gap: var(--space);
   overflow: hidden; 
   min-height: 0; 
 
   & > h3 { 
     margin: 0; 
-    font-size: var(--type-body); 
-    color: #888; 
+    ${type.body} 
+    color: var(--color-text-subtle); 
     text-transform: uppercase; 
   }
 `;
@@ -767,7 +762,7 @@ const SidekickContainer = styled.div`
 const SidekickHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: calc(var(--space) * 2);
   flex-shrink: 0;
   padding-bottom: 0;
   border-bottom: none;
@@ -779,13 +774,13 @@ const SidekickHeader = styled.div`
     
     h3 {
       margin: 0;
-      font-size: var(--type-body);
+      ${type.body}
       color: #9f9; 
       text-transform: uppercase;
     }
     
     span {
-      font-size: var(--type-small);
+      ${type.small}
       color: #686;
     }
   }
@@ -796,13 +791,13 @@ const BubbleScrollArea = styled.div`
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding-right: 5px;
-  padding-top: 15px; 
-  padding-bottom: 10px;
+  padding-right: var(--space);
+  padding-top: calc(var(--space) * 2); 
+  padding-bottom: var(--space);
   min-height: 0;
   
   &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #333; }
+  &::-webkit-scrollbar-thumb { background: var(--color-border); }
 `;
 
 const float = keyframes`
@@ -819,11 +814,10 @@ const fadeIn = keyframes`
 const WhisperBubble = styled.div`
   background: #081008;
   border: 1px dashed #282;
-  padding: 15px;
-  border-radius: 8px;
+  padding: calc(var(--space) * 2);
   position: relative;
   color: #8c8;
-  font-size: var(--type-body);
+  ${type.body}
   font-style: italic;
   line-height: 1.4;
   width: 100%;
@@ -837,28 +831,28 @@ const WhisperBubble = styled.div`
 
 const SidekickActions = styled.div`
     display: flex;
-    gap: 10px;
+    gap: var(--space);
     margin-top: 0;
     flex-shrink: 0;
-    padding-top: 10px;
+    padding-top: var(--space);
     border-top: none;
 `;
 
 const ActionButton = styled.button<{ $type: 'good' | 'bad' | 'neutral' }>`
     flex: 1;
-    background: ${props => props.$type === 'good' ? '#003300' : props.$type === 'bad' ? '#330000' : '#222'};
+    background: ${props => props.$type === 'good' ? '#003300' : props.$type === 'bad' ? '#330000' : 'var(--color-border-subtle)'};
     color: ${props => props.$type === 'good' ? '#6f6' : props.$type === 'bad' ? '#f66' : '#ccc'};
-    border: 1px solid ${props => props.$type === 'good' ? '#0f0' : props.$type === 'bad' ? '#f00' : '#555'};
-    padding: 10px 5px;
+    border: 1px solid ${props => props.$type === 'good' ? 'var(--color-accent-green)' : props.$type === 'bad' ? 'var(--color-accent-red)' : 'var(--color-border-strong)'};
+    padding: var(--space) var(--space);
     font-family: inherit;
-    font-size: var(--type-body);
+    ${type.body}
     cursor: pointer;
     text-transform: uppercase;
     transition: all 0.2s;
 
     &:hover:not(:disabled) {
-        background: ${props => props.$type === 'good' ? '#0f0' : props.$type === 'bad' ? '#f00' : '#444'};
-        color: #000;
+        background: ${props => props.$type === 'good' ? 'var(--color-accent-green)' : props.$type === 'bad' ? 'var(--color-accent-red)' : 'var(--color-border)'};
+        color: var(--color-text-inverse);
     }
     
     &:disabled {
@@ -875,10 +869,10 @@ const DebugToggle = styled.button`
   top: 10px;
   right: 10px;
   background: #300;
-  color: #f55;
-  border: 1px solid #f00;
+  color: var(--color-accent-red-bright);
+  border: 1px solid var(--color-accent-red);
   font-family: 'VT323', monospace;
-  font-size: var(--type-small);
+  ${type.small}
   cursor: pointer;
   z-index: 50;
   opacity: 0.5;
@@ -895,11 +889,11 @@ const DebugMenu = styled.div`
   right: 10px;
   background: rgba(0,0,0,0.9);
   border: 1px solid #f00;
-  padding: 10px;
+  padding: var(--space);
   z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space);
   max-width: 300px;
 `;
 
@@ -908,20 +902,20 @@ const DebugItem = styled.button`
   color: #f88;
   border: none;
   text-align: left;
-  padding: 5px;
+  padding: var(--space);
   cursor: pointer;
   font-family: 'VT323';
-  font-size: var(--type-small);
+  ${type.small}
   &:hover { background: #400; }
 `;
 
 const DeceasedBadge = styled.div`
   color: #f00; 
   font-weight: bold; 
-  font-size: var(--type-body-lg);
-  margin-top: 5px;
+  ${type.bodyLg}
+  margin-top: var(--space);
   border: 2px solid #f00;
-  padding: 5px;
+  padding: var(--space);
   text-align: center;
   text-transform: uppercase;
 `;
@@ -935,7 +929,7 @@ const MobileHeader = styled.div`
     background: #111;
     border-bottom: 1px solid #333;
     flex-shrink: 0;
-    gap: 12px;
+    gap: calc(var(--space) * 2);
   }
 `;
 
@@ -943,9 +937,9 @@ const MobileNavBtn = styled.button`
   background: #222;
   color: #ccc;
   border: 1px solid #444;
-  padding: 5px 10px;
+  padding: var(--space) var(--space);
   font-family: inherit;
-  font-size: var(--type-body);
+  ${type.body}
   cursor: pointer;
   &:hover { background: #333; }
 `;
@@ -954,9 +948,9 @@ const MobileProfileBtn = styled.button`
   background: #333;
   color: #fff;
   border: 1px solid #666;
-  padding: 5px 10px;
+  padding: var(--space) var(--space);
   font-family: inherit;
-  font-size: var(--type-small);
+  ${type.small}
   cursor: pointer;
 `;
 
@@ -968,7 +962,7 @@ const ModalOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: calc(var(--space) * 3);
 `;
 
 interface InterrogationProps {
@@ -1326,7 +1320,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
         duration: 5000,
         icon: '⌨️',
         position: 'bottom-center',
-        style: { marginBottom: '150px', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' },
+        style: { marginBottom: 'calc(var(--space) * 19)', marginLeft: 'auto', marginRight: 'auto', textAlign: 'center' },
       });
       return;
     }
@@ -1614,8 +1608,8 @@ const Interrogation: React.FC<InterrogationProps> = ({
             }}
             transition={{ delay: 0.2 }}
           >
-            <h4 style={{ margin: 0, color: '#0f0', textTransform: 'uppercase', fontFamily: "'VT323', monospace", fontSize: '1.5rem' }}>New Evidence!</h4>
-            <p style={{ margin: 0, fontSize: '1rem', lineHeight: 1.4, color: '#ccc' }}>Click on evidence to collect it and add it to your evidence board.</p>
+            <h4 style={{ margin: 0, color: '#0f0', textTransform: 'uppercase', fontFamily: "'VT323', monospace", fontSize: 'var(--type-h3)' }}>New Evidence!</h4>
+            <p style={{ margin: 0, fontSize: 'var(--type-body)', lineHeight: 1.4, color: '#ccc' }}>Click on evidence to collect it and add it to your evidence board.</p>
           </OnboardingTooltip>
         </OnboardingOverlay>
       )}
@@ -1653,11 +1647,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 style={{ border: '1px solid #333' }}
               />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#fff', fontSize: '2rem', fontWeight: 'bold' }}>{suspect.name}</div>
-              {!suspect.isDeceased && <div style={{ fontSize: '0.9rem', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0', flex: 1, minWidth: 0 }}>
+              <div style={{ color: '#fff', fontSize: 'var(--type-h2)', fontWeight: 'bold' }}>{suspect.name}</div>
+              {!suspect.isDeceased && <div style={{ fontSize: 'var(--type-small)', color: aggravationLevel > 50 ? 'red' : '#aaa' }}>ANGER: {aggravationLevel}%</div>}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch', flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space)', alignItems: 'stretch', flexShrink: 0 }}>
               <MobileProfileBtn id="mobile-profile-button" onClick={() => setShowMobileProfile(true)} style={{ width: '100%', textAlign: 'center' }}>PROFILE</MobileProfileBtn>
               <div style={{ display: 'flex' }}>
                 <MobileNavBtn onClick={() => cycleSuspect('prev')} style={{ borderRight: 'none', flex: 1 }}>&lt;</MobileNavBtn>
@@ -1677,7 +1671,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
           {canDebug && <DebugToggle onClick={() => setDebugMode(!debugMode)}>[DEBUG]</DebugToggle>}
           {debugMode && (
             <DebugMenu>
-              <div style={{ color: '#f00', borderBottom: '1px solid #500', marginBottom: '5px' }}>FORCE EVIDENCE</div>
+              <div style={{ color: '#f00', borderBottom: '1px solid #500', marginBottom: 'var(--space)' }}>FORCE EVIDENCE</div>
               {suspect.hiddenEvidence.map((ev) => (
                 <DebugItem key={ev.id} onClick={() => {
                   onForceEvidence(suspect.id, ev.title);
@@ -1689,7 +1683,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
             </DebugMenu>
           )}
 
-          <div style={{ textAlign: 'center', padding: '10px', color: '#555', borderBottom: '1px solid #222' }}>
+          <div style={{ textAlign: 'center', padding: 'var(--space)', color: '#555', borderBottom: '1px solid #222' }}>
             {formattedTime}
           </div>
           <ChatLog ref={scrollRef}>
@@ -1795,12 +1789,12 @@ const Interrogation: React.FC<InterrogationProps> = ({
                 {showEvidencePicker && (
                   <EvidenceMenu>
                     {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
-                      <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
+                      <div style={{ padding: 'var(--space)', color: '#555' }}>No evidence found yet.</div>
                     )}
 
                     {evidenceDiscovered.length > 0 && (
                       <>
-                        <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
+                        <div style={{ padding: '5px 10px', fontSize: 'var(--type-xs)', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
                         {[...evidenceDiscovered].reverse().map((ev) => {
                           const selected = isEvidenceSelected(ev);
                           return (
@@ -1809,7 +1803,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                               onClick={() => toggleEvidence(ev)}
                               style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
                             >
-                              <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: 'var(--space)' }}>
                                 {selected && <span>✓</span>}{ev.title}
                               </div>
                               <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
@@ -1821,7 +1815,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
 
                     {timelineStatementsDiscovered.length > 0 && (
                       <>
-                        <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
+                        <div style={{ padding: '8px 12px', fontSize: 'var(--type-xs)', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: 'var(--space)', letterSpacing: '1px' }}>Timeline Statements</div>
                         {(() => {
                           // Group timeline statements by day, sorted by dayOffset then time
                           const sorted = [...timelineStatementsDiscovered].sort((a, b) => {
@@ -1922,11 +1916,11 @@ const Interrogation: React.FC<InterrogationProps> = ({
                   {showEvidencePicker && (
                     <EvidenceMenu>
                       {evidenceDiscovered.length === 0 && timelineStatementsDiscovered.length === 0 && (
-                        <div style={{ padding: '10px', color: '#555' }}>No evidence found yet.</div>
+                        <div style={{ padding: 'var(--space)', color: '#555' }}>No evidence found yet.</div>
                       )}
                       {evidenceDiscovered.length > 0 && (
                         <>
-                          <div style={{ padding: '5px 10px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
+                          <div style={{ padding: '5px 10px', fontSize: 'var(--type-xs)', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase' }}>Physical Evidence</div>
                           {[...evidenceDiscovered].reverse().map((ev) => {
                             const selected = isEvidenceSelected(ev);
                             return (
@@ -1935,7 +1929,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                                 onClick={() => toggleEvidence(ev)}
                                 style={selected ? { background: '#1a2a1a', borderColor: '#0f0' } : undefined}
                               >
-                                <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ fontWeight: 'bold', color: selected ? '#0f0' : '#fff', display: 'flex', alignItems: 'center', gap: 'var(--space)' }}>
                                   {selected && <span>✓</span>}{ev.title}
                                 </div>
                                 <div style={{ fontSize: 'var(--type-small)', color: '#888', lineHeight: '1.2' }}>{ev.description}</div>
@@ -1946,7 +1940,7 @@ const Interrogation: React.FC<InterrogationProps> = ({
                       )}
                       {timelineStatementsDiscovered.length > 0 && (
                         <>
-                          <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
+                          <div style={{ padding: '8px 12px', fontSize: 'var(--type-xs)', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: 'var(--space)', letterSpacing: '1px' }}>Timeline Statements</div>
                           {(() => {
                             const sorted = [...timelineStatementsDiscovered].sort((a, b) => {
                               if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
@@ -2064,12 +2058,12 @@ const Interrogation: React.FC<InterrogationProps> = ({
           <AggravationMeter id="aggravation-meter">
             <h3>{suspect.isDeceased ? "Status" : "Aggravation"}</h3>
             {!suspect.isDeceased && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space)' }}>
                 <span>{`${aggravationLevel}%`}</span>
               </div>
             )}
             {!suspect.isDeceased && <ProgressBar $level={aggravationLevel} />}
-            {isLocked && <div style={{ color: 'red', marginTop: '5px', fontSize: '0.9rem' }}>LAWYER REQUESTED</div>}
+            {isLocked && <div style={{ color: 'red', marginTop: 'var(--space)', fontSize: 'var(--type-small)' }}>LAWYER REQUESTED</div>}
             {suspect.isDeceased && <DeceasedBadge>DECEASED</DeceasedBadge>}
           </AggravationMeter>
 

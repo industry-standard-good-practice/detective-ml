@@ -8,15 +8,14 @@
  */
 
 import styled from 'styled-components';
-import { media } from '../../theme';
+import { media, type } from '../../theme';
 
 export const GhostInput = styled.input`
+  ${type.bodyLg}
   flex: 1;
   background: transparent;
   border: none;
   color: var(--color-text-bright);
-  font-family: var(--font-main);
-  font-size: var(--type-body-lg);
   padding: 0 calc(var(--space) * 2);
   height: 100%;
   min-width: 0;
@@ -27,13 +26,12 @@ export const GhostInput = styled.input`
 `;
 
 export const TextInput = styled.input`
+  ${type.body}
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-bright);
-  font-family: var(--font-main);
   font-weight: bold;
-  font-size: var(--type-body);
   width: 100%;
   padding: 2px 0;
 
@@ -42,11 +40,10 @@ export const TextInput = styled.input`
 `;
 
 export const TextArea = styled.textarea`
+  ${type.small}
   background: transparent;
   border: none;
   color: var(--color-text-muted);
-  font-family: var(--font-main);
-  font-size: var(--type-small);
   resize: none;
   padding: 2px 0;
   field-sizing: content;
@@ -56,13 +53,12 @@ export const TextArea = styled.textarea`
 `;
 
 export const ChatInput = styled.input`
+  ${type.body}
   flex: 1;
   background: var(--color-surface-inset);
   border: 1px solid var(--color-border-strong);
   color: var(--color-text);
   padding: var(--space);
-  font-family: var(--font-main);
-  font-size: var(--type-body);
 
   &:focus { outline: none; border-color: var(--color-text-subtle); }
 `;

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 
 const scanline = keyframes`
@@ -35,7 +36,7 @@ const Container = styled.div`
   pointer-events: auto;
   cursor: pointer;
   flex-direction: column;
-  gap: 20px;
+  gap: calc(var(--space) * 3);
 `;
 
 const ScanlineLayer = styled.div`
@@ -62,7 +63,7 @@ const EvidenceBox = styled.div`
   max-width: 90%;
   border: 4px double #0f0;
   background: #001100;
-  padding: 30px;
+  padding: calc(var(--space) * 4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -91,7 +92,7 @@ const EvidenceBox = styled.div`
 const Header = styled.h1`
   color: #0f0;
   font-family: 'VT323', monospace;
-  font-size: var(--type-h1);
+  ${type.h1}
   margin: 0;
   text-transform: uppercase;
   text-shadow: 0 0 10px #0f0;
@@ -119,7 +120,7 @@ const IconWrapper = styled.div`
 `;
 
 const PixelIcon = styled.div`
-  font-size: 4rem;
+  ${type.h1}
   color: #0f0;
   text-shadow: 2px 2px 0 #030;
   animation: ${spin} 3s infinite linear;
@@ -128,7 +129,7 @@ const PixelIcon = styled.div`
 const EvidenceName = styled.h2`
   color: #fff;
   font-family: 'VT323', monospace;
-  font-size: var(--type-h2);
+  ${type.h2}
   margin: 0;
   text-transform: uppercase;
   text-align: center;
@@ -137,15 +138,15 @@ const EvidenceName = styled.h2`
 
 const SubText = styled.div`
   color: #0a0;
-  font-size: var(--type-body);
-  margin-top: 5px;
+  ${type.body}
+  margin-top: var(--space);
   text-transform: uppercase;
 `;
 
 const ContinueText = styled.div`
-  margin-top: 30px;
+  margin-top: calc(var(--space) * 4);
   color: #0f0;
-  font-size: var(--type-body-lg);
+  ${type.bodyLg}
   animation: ${flash} 1s infinite;
   cursor: pointer;
   

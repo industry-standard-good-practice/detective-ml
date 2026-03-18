@@ -9,7 +9,7 @@
  */
 
 import styled from 'styled-components';
-import { media } from '../../theme';
+import { media, type } from '../../theme';
 
 export const Overlay = styled.div`
   position: absolute;
@@ -40,17 +40,15 @@ export const ModalBox = styled.div<{ $borderColor?: string; $glowColor?: string 
 `;
 
 export const ModalTitle = styled.h2<{ $color?: string }>`
+  ${type.h2}
   color: ${props => props.$color || 'var(--color-danger)'};
   margin: 0;
-  text-transform: uppercase;
-  font-size: var(--type-h2);
   text-shadow: 0 0 10px ${props => props.$color || 'var(--color-danger)'};
 `;
 
 export const ModalText = styled.p`
+  ${type.bodyLg}
   color: var(--color-text);
-  font-size: var(--type-body-lg);
-  line-height: 1.5;
   margin: 0;
 `;
 

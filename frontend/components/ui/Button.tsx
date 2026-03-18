@@ -10,7 +10,7 @@
  */
 
 import styled, { css } from 'styled-components';
-import { media } from '../../theme';
+import { media, type } from '../../theme';
 
 export type ButtonVariant = 'ghost' | 'primary' | 'danger' | 'accent' | 'icon';
 
@@ -74,10 +74,9 @@ const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
 };
 
 export const Button = styled.button<{ $variant?: ButtonVariant }>`
-  font-family: var(--font-main);
-  font-size: var(--type-body-lg);
-  cursor: pointer;
+  ${type.bodyLg}
   text-transform: uppercase;
+  cursor: pointer;
   padding: calc(var(--space) * 1.25) calc(var(--space) * 2.5);
   transition: all 0.2s;
   white-space: nowrap;

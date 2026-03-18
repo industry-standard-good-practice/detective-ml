@@ -1,4 +1,5 @@
 import React, { useRef, useCallback } from 'react';
+import { type } from '../theme';
 import toast, { useToaster, Toast, ToastPosition } from 'react-hot-toast';
 
 interface SwipeableToastProps {
@@ -134,16 +135,16 @@ const SwipeableToaster: React.FC<{ containerStyle?: React.CSSProperties }> = ({
             <SwipeableToast t={t}>
               <div
                 style={{
-                  background: '#111',
-                  color: isError ? '#f55' : '#0f0',
-                  border: `1px solid ${isError ? '#500' : '#333'}`,
+                  background: 'var(--color-surface-raised)',
+                  color: isError ? 'var(--color-accent-red-bright)' : 'var(--color-accent-green)',
+                  border: `1px solid ${isError ? 'var(--color-danger-bg)' : 'var(--color-border)'}`,
                   fontFamily: "'VT323', monospace",
-                  fontSize: '1rem',
+                  fontSize: 'var(--type-body)',
                   boxShadow: `0 0 15px ${isError ? 'rgba(255,85,85,0.1)' : 'rgba(0,255,0,0.1)'}`,
                   padding: '10px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: 'var(--space)',
                   maxWidth: '400px',
                   ...customStyle,
                 }}

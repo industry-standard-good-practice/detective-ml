@@ -120,6 +120,78 @@ export const fonts = {
 } as const;
 
 /**
+ * Comprehensive typography tokens as styled-components CSS mixins.
+ * Each token bundles font-family, font-size, letter-spacing, line-height, and text-transform.
+ *
+ * Usage in styled-components:
+ *   import { type } from '../theme';
+ *   const Title = styled.h1`${type.h1}`;
+ *
+ * Headings (h1–h3) are uppercase with wide letter-spacing.
+ * Body text (bodyLg–xs) is normal case.
+ * Labels are uppercase small text.
+ */
+export const type = {
+  /** Display / Page heading — 3rem, uppercase, wide spacing */
+  h1: `
+    font-family: ${fonts.main};
+    font-size: var(--type-h1);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  `,
+  /** Section heading — 2rem, uppercase */
+  h2: `
+    font-family: ${fonts.main};
+    font-size: var(--type-h2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1.2;
+  `,
+  /** Subsection heading — 1.5rem, uppercase */
+  h3: `
+    font-family: ${fonts.main};
+    font-size: var(--type-h3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1.2;
+  `,
+  /** Large body text — 1.2rem */
+  bodyLg: `
+    font-family: ${fonts.main};
+    font-size: var(--type-body-lg);
+    line-height: 1.4;
+  `,
+  /** Base body text — 1rem */
+  body: `
+    font-family: ${fonts.main};
+    font-size: var(--type-body);
+    line-height: 1.4;
+  `,
+  /** Small text — 0.85rem */
+  small: `
+    font-family: ${fonts.main};
+    font-size: var(--type-small);
+    line-height: 1.3;
+  `,
+  /** Extra-small text — 0.75rem */
+  xs: `
+    font-family: ${fonts.main};
+    font-size: var(--type-xs);
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+  `,
+  /** Uppercase label — small, wide-spaced, uppercase */
+  label: `
+    font-family: ${fonts.main};
+    font-size: var(--type-xs);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1.3;
+  `,
+} as const;
+
+/**
  * CSS custom property declarations to inject into :root via GlobalStyle.
  * This string can be spread directly into a createGlobalStyle block.
  */
@@ -163,7 +235,41 @@ export const cssTokens = `
   --color-success: ${colors.success};
   --color-danger: ${colors.danger};
   --color-danger-bg: ${colors.dangerBg};
+  --color-danger-bg-subtle: ${colors.dangerBgSubtle};
   --color-warning: ${colors.warning};
+  --color-warning-bg: ${colors.warningBg};
+
+  /* Colors — Player / Partner / System */
+  --color-player-text: ${colors.playerText};
+  --color-player-bg: ${colors.playerBg};
+  --color-player-name: ${colors.playerName};
+  --color-partner-text: ${colors.partnerText};
+  --color-partner-bg: ${colors.partnerBg};
+  --color-partner-name: ${colors.partnerName};
+  --color-partner-border: ${colors.partnerBorder};
+  --color-system-text: ${colors.systemText};
+  --color-system-bg: ${colors.systemBg};
+  --color-suspect-name: ${colors.suspectName};
+
+  /* Colors — Officer / Secure Line */
+  --color-officer-bg: ${colors.officerBg};
+  --color-officer-surface: ${colors.officerSurface};
+  --color-officer-border: ${colors.officerBorder};
+  --color-officer-text: ${colors.officerText};
+  --color-officer-accent: ${colors.officerAccent};
+  --color-officer-button: ${colors.officerButton};
+  --color-officer-button-hover: ${colors.officerButtonHover};
+
+  /* Colors — Evidence / Polaroid */
+  --color-polaroid-bg: ${colors.polaroidBg};
+  --color-polaroid-shadow: ${colors.polaroidShadow};
+  --color-evidence-yellow: ${colors.evidenceYellow};
+  --color-evidence-border: ${colors.evidenceBorder};
+  --color-evidence-collected: ${colors.evidenceCollected};
+  --color-note-yellow: ${colors.noteYellow};
+
+  /* Colors — Accent extras */
+  --color-accent-green-dark: ${colors.accentGreenDark};
 
   /* Spacing */
   --space: ${SPACE}px;

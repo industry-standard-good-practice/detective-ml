@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { type } from '../theme';
 import styled, { keyframes } from 'styled-components';
 
 const blink = keyframes`
@@ -15,7 +16,7 @@ const Container = styled.div`
   background: #000;
   color: #33ff33;
   font-family: 'VT323', monospace;
-  font-size: 1.5rem;
+  ${type.h3}
   padding: calc(var(--screen-edge-top, 50px) + 20px) calc(var(--screen-edge-horizontal, 80px) + 20px) calc(var(--screen-edge-bottom, 30px) + 20px) calc(var(--screen-edge-horizontal, 80px) + 20px);
   z-index: 100;
   overflow: hidden;
@@ -28,7 +29,7 @@ const Container = styled.div`
 `;
 
 const Line = styled.div`
-  margin-bottom: 5px;
+  margin-bottom: var(--space);
   white-space: pre-wrap;
   text-shadow: 0 0 5px #33ff33;
 `;
@@ -40,11 +41,11 @@ const Cursor = styled.span`
   background: #33ff33;
   animation: ${blink} 0.5s step-end infinite;
   vertical-align: text-bottom;
-  margin-left: 5px;
+  margin-left: var(--space);
 `;
 
 const PressKeyPrompt = styled.div`
-  margin-top: 20px;
+  margin-top: calc(var(--space) * 3);
   color: #33ff33;
   text-shadow: 0 0 5px #33ff33;
   animation: ${blink} 1s step-end infinite;

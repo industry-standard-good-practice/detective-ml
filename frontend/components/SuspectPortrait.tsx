@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { type } from '../theme';
 import styled from 'styled-components';
 import { Suspect, Emotion } from '../types';
 import { getSuspectPortrait } from '../services/geminiService';
@@ -12,7 +13,7 @@ const Container = styled.div<{ $size?: number }>`
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
-  background-color: #000;
+  background-color: var(--color-bg);
 `;
 
 const Img = styled.img`
@@ -25,16 +26,16 @@ const Img = styled.img`
 const Placeholder = styled.div`
   width: 100%;
   height: 100%;
-  background: #111;
+  background: var(--color-surface-raised);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
+  color: var(--color-border);
   font-family: 'VT323', monospace;
-  font-size: var(--type-small);
+  ${type.small}
   text-transform: uppercase;
   text-align: center;
-  padding: 5px;
+  padding: var(--space);
 `;
 
 interface SuspectPortraitProps {
