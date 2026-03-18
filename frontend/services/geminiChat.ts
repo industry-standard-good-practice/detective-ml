@@ -191,10 +191,10 @@ export const getSuspectResponse = async (
         8. ALREADY KNOWN TO DETECTIVE (The detective has already discovered these through investigation — you don't need to reveal them again): ${revealedStr}
         
         Case Context: ${caseData.description}
-        The Victim: ${deceasedSuspect ? `${deceasedSuspect.name} (${deceasedSuspect.role})` : 'Unknown'}.
+        ${deceasedSuspect ? `The Victim: ${deceasedSuspect.name} (${deceasedSuspect.role}).` : ''}
         Other Suspects: ${(caseData.suspects || []).filter(s => !s.isDeceased).map(s => s.name).join(', ')}.
         
-        **VICTIM REFERENCE RULE:** NEVER call the victim "the victim". Use their actual name ("${deceasedSuspect?.name || 'the deceased'}") or your relationship to them (from your RELATIONSHIPS list). Speak naturally — real people don't call someone "the victim".
+        ${deceasedSuspect ? `**VICTIM REFERENCE RULE:** NEVER call the victim "the victim". Use their actual name ("${deceasedSuspect.name}") or your relationship to them (from your RELATIONSHIPS list). Speak naturally — real people don't call someone "the victim".` : ''}
         
         *** VALID NAMES ALLOWED IN DIALOGUE: ${validNamesList} ***
         

@@ -114,6 +114,7 @@ export interface CaseData {
   authorDisplayName?: string; // Display name from Google Auth
   createdAt?: number; // Epoch timestamp for when the case was first created
   updatedAt?: number; // Epoch timestamp for when the case was last edited
+  hasVictim?: boolean; // Whether the crime has a victim (auto-set by AI during creation/edit/consistency)
 }
 
 export interface CaseStats {

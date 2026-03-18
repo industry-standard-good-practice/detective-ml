@@ -300,6 +300,7 @@ export const enforceRelationships = (caseData: any) => {
         return caseData;
     }
 
+    const hasVictim = caseData.hasVictim !== false; // default true for backwards compat
     const victim = caseData.suspects.find((s: any) => s.isDeceased);
     const victimName = victim?.name.trim();
     const aliveSuspectNames = caseData.suspects.filter((s: any) => !s.isDeceased).map((s: any) => s.name.trim());
@@ -309,8 +310,8 @@ export const enforceRelationships = (caseData: any) => {
         const currentName = s.name.trim();
         const isDeceased = s.isDeceased;
 
-        // 1. Canonicalize "The Victim" relationship
-        if (!isDeceased && victimName) {
+        // 1. Canonicalize "The Victim" relationship (only if hasVictim)
+        if (hasVictim && !isDeceased && victimName) {
             // If they have a relationship with the victim's name, rename it to "The Victim"
             s.relationships.forEach((r: any) => {
                 if (r.targetName.trim() === victimName) {
@@ -319,17 +320,24 @@ export const enforceRelationships = (caseData: any) => {
             });
         }
 
+        // If hasVictim is false, strip any "The Victim" relationships that may have been generated
+        if (!hasVictim) {
+            s.relationships = s.relationships.filter((r: any) => r.targetName.trim() !== "The Victim");
+        }
+
         // 2. Define targets for this specific suspect
         const targets: string[] = [];
 
         if (!isDeceased) {
-            // Alive suspects need "The Victim" + other alive suspects
-            targets.push("The Victim");
+            // Alive suspects need "The Victim" (if applicable) + other alive suspects
+            if (hasVictim) {
+                targets.push("The Victim");
+            }
             aliveSuspectNames.forEach(name => {
                 if (name !== currentName) targets.push(name);
             });
         } else {
-            // The victim needs all alive suspects
+            // The victim has relationships with all ALIVE suspects
             aliveSuspectNames.forEach(name => targets.push(name));
         }
 
@@ -835,13 +843,14 @@ const PROMPT_RULES = {
 
     /** Victim generation rule — used in generation and edit */
     VICTIM_GENERATION: `**VICTIM GENERATION RULE:**
-If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERATE "THE VICTIM" AS A SUSPECT CARD.
+If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERATE "THE VICTIM" AS A SUSPECT CARD AND SET hasVictim to true.
 - Name: A realistic full name for the victim.
 - Role: "The Victim".
 - **isDeceased: true**.
 - hiddenEvidence: Must contain 2-3 physical clues found on the body (e.g. "Bruise on wrist", "Watch frozen at 9pm", "Pocket lint").
 - Alibi/Motive: Set to "N/A (Deceased)".
-- Bio: Description of the body's state and their life before death.`,
+- Bio: Description of the body's state and their life before death.
+If the crime does NOT involve a death or a body (e.g. Theft, Fraud, Arson, Espionage), set hasVictim to false. Do NOT generate a deceased suspect card.`,
 
     /** Suspect profile requirements — used in generation and consistency */
     SUSPECT_PROFILES: `**SUSPECT PROFILE REQUIREMENTS:**
@@ -850,9 +859,10 @@ If the crime involves a death or a body (e.g. Murder, Homicide), YOU MUST GENERA
 - SECRET: The hidden truth they are trying to hide.
 - ALIBI: Where they were, who with, and is it true?
 - RELATIONSHIPS: **MANDATORY**:
-  1. If the suspect is alive, they MUST have an entry for "The Victim" and every other alive suspect.
-  2. If the suspect is the victim, they MUST have an entry for every alive suspect by name.
-  3. **CONTEXTUAL**: If the crime is Theft/Larceny, include a relationship to the "Owner" or "Target" if they are not a suspect.
+  1. If hasVictim is true AND the suspect is alive, they MUST have an entry for "The Victim" and every other alive suspect.
+  2. If hasVictim is true AND the suspect is the victim, they MUST have an entry for every alive suspect by name.
+  3. If hasVictim is false (e.g. theft, fraud, arson with no body), suspects should NOT have a "The Victim" relationship entry. They should only have entries for other alive suspects.
+  4. **CONTEXTUAL**: If the crime is Theft/Larceny, include a relationship to the "Owner" or "Target" if they are not a suspect.
   *INSTRUCTION*: Descriptions must be detailed (2-3 sentences).
 - KNOWN FACTS: 2-3 specific facts they know about the crime.
 - MOTIVE: A clear reason they might be suspected.
@@ -951,6 +961,7 @@ const CASE_SCHEMA = {
         type: { type: Type.STRING },
         description: { type: Type.STRING },
         startTime: { type: Type.STRING },
+        hasVictim: { type: Type.BOOLEAN },
         officer: {
             type: Type.OBJECT,
             properties: {
@@ -1255,6 +1266,11 @@ ${userChangeLog}
         if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
         if (!hydratedCase.heroImageUrl && caseData.heroImageUrl) hydratedCase.heroImageUrl = caseData.heroImageUrl;
 
+        // Auto-compute hasVictim: if AI returned it, use it; otherwise derive from isDeceased suspects
+        if (hydratedCase.hasVictim === undefined) {
+            hydratedCase.hasVictim = hydratedCase.suspects?.some((s: any) => s.isDeceased) ?? false;
+        }
+
         // Ensure we don't lose non-narrative fields
 
         // Merge support characters — AI only returns {id, name, role, gender}
@@ -1472,6 +1488,11 @@ ${userChangeLog}
         // Prefer the AI's startTime if it returned one (it may have corrected alignment);
         // only fall back to original if AI returned nothing
         if (!hydratedCase.startTime && caseData.startTime) hydratedCase.startTime = caseData.startTime;
+
+        // Auto-compute hasVictim: if AI returned it, use it; otherwise derive from isDeceased suspects
+        if (hydratedCase.hasVictim === undefined) {
+            hydratedCase.hasVictim = hydratedCase.suspects?.some((s: any) => s.isDeceased) ?? false;
+        }
 
         const themeChanged = hydratedCase.type !== caseData.type;
         if (themeChanged) {
@@ -1711,6 +1732,7 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
                     type: { type: Type.STRING },
                     description: { type: Type.STRING },
                     startTime: { type: Type.STRING },
+                    hasVictim: { type: Type.BOOLEAN },
                     officer: {
                         type: Type.OBJECT, properties: {
                             id: { type: Type.STRING },
@@ -1825,6 +1847,12 @@ export const generateCaseFromPrompt = async (userPrompt: string, isLucky: boolea
     data.initialTimeline = data.initialTimeline || [];
     data.difficulty = calculateDifficulty(data);
     if (!data.startTime) data.startTime = '2030-09-12T23:30';
+
+    // Auto-compute hasVictim: if AI returned it, use it; otherwise derive from isDeceased suspects
+    if (data.hasVictim === undefined) {
+        data.hasVictim = (data.suspects || []).some((s: any) => s.isDeceased);
+    }
+
     if (!data.officer) data.officer = { id: 'officer', name: "Chief", gender: "Male", role: "Police Chief", personality: "Gruff" };
     data.officer.id = 'officer';
     data.officer.avatarSeed = Math.floor(Math.random() * 100000);

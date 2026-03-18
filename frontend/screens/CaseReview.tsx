@@ -721,8 +721,10 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const relationshipTargets: string[] = [];
   if (activeSuspect) {
     if (!isSupportChar && !(activeSuspect as Suspect).isDeceased) {
-      // Alive suspects always have a "The Victim" slot
-      relationshipTargets.push("The Victim");
+      // Only show "The Victim" slot if the case has a victim
+      if (draftCase.hasVictim !== false) {
+        relationshipTargets.push("The Victim");
+      }
       // Plus other ALIVE suspects
       otherSuspects.forEach(s => {
         if (!s.isDeceased) relationshipTargets.push(s.name);
