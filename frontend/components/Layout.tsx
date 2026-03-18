@@ -819,7 +819,7 @@ const Layout: React.FC<LayoutProps> = ({
                           <NavButton className="hide-on-mobile" onClick={onCheckConsistency}>[Check Consistency]</NavButton>
                         )}
                       </>
-                    ) : (
+                    ) : screenState !== ScreenState.ACCUSATION ? (
                       <HamburgerButton
                         id="hamburger-button"
                         $visible
@@ -838,7 +838,7 @@ const Layout: React.FC<LayoutProps> = ({
                           return menuOpen ? '[X]' : '[Menu]';
                         })()}
                       </HamburgerButton>
-                    )}
+                    ) : null}
                   </NavGroupLeft>
 
                   {/* MOBILE CUSTOM ACTION — always occupy grid-column 3 for consistent title width */}
@@ -888,7 +888,7 @@ const Layout: React.FC<LayoutProps> = ({
                         UNSAVED
                       </UnsavedBadge>
                     )}
-                    {isGameplay && screenState !== ScreenState.ENDGAME && (
+                    {isGameplay && screenState !== ScreenState.ENDGAME && screenState !== ScreenState.ACCUSATION && (
                       <NavButton id="hub-button" className="hide-on-mobile" onClick={() => onNavigate(ScreenState.CASE_HUB)}>[Case Hub]</NavButton>
                     )}
                     {/* Desktop CaseReview: Case Hub + Save on right */}
@@ -918,12 +918,6 @@ const Layout: React.FC<LayoutProps> = ({
                         <AccentNavButton onClick={() => handleMenuNav(onSaveCase)} $accentColor="var(--color-accent-green)">[Save Case]</AccentNavButton>
                       )}
                     </>
-                  )}
-
-                  {isGameplay && screenState !== ScreenState.ENDGAME && (
-                    <NavButton id="hub-button-mobile" className="hide-on-desktop" onClick={() => handleMenuNav(() => onNavigate(ScreenState.CASE_HUB))}>
-                      [Return to Case Hub]
-                    </NavButton>
                   )}
 
                   <AccentNavButton onClick={onToggleMute} $accentColor={isMuted ? 'var(--color-text-dim)' : 'var(--color-accent-green)'}>
@@ -975,6 +969,11 @@ const Layout: React.FC<LayoutProps> = ({
                       <MenuDivider>
                         <MenuSectionLabel>Case Editor</MenuSectionLabel>
                       </MenuDivider>
+                      {onTestInvestigation && (
+                        <AccentNavButton onClick={() => handleMenuNav(onTestInvestigation)} $accentColor="var(--color-accent-green)">
+                          [Play Case]
+                        </AccentNavButton>
+                      )}
                       {onSaveCase && (
                         <AccentNavButton onClick={() => handleMenuNav(onSaveCase)} $accentColor="var(--color-accent-green)">
                           [Save]
@@ -984,11 +983,6 @@ const Layout: React.FC<LayoutProps> = ({
                         <NavButton onClick={() => handleMenuNav(onCheckConsistency)}>
                           [Check Consistency]
                         </NavButton>
-                      )}
-                      {onTestInvestigation && (
-                        <AccentNavButton onClick={() => handleMenuNav(onTestInvestigation)} $accentColor="var(--color-accent-cyan)">
-                          [Case Hub]
-                        </AccentNavButton>
                       )}
                       {onCloseCase && (
                         <AccentNavButton onClick={() => handleMenuNav(onCloseCase)} $accentColor="var(--color-accent-red-bright)">

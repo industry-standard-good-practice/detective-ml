@@ -22,7 +22,8 @@ const Container = styled.div`
   padding: calc(var(--space) * 3) 0;
 
   @media (max-width: 768px) {
-    padding: calc(var(--space) * 5) 0;
+    padding: calc(var(--space) * 3) 0;
+    gap: var(--space);
   }
 `;
 
@@ -51,6 +52,7 @@ const SubTitle = styled.p`
 `;
 
 const ScrollContainer = styled.div`
+  position: relative;
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
@@ -74,30 +76,39 @@ const ScrollContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: #f00; 
   }
+
+  @media (max-width: 768px) {
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 const ScrollInner = styled.div`
+  position: relative;
+  height: 100%;
   display: flex;
   gap: calc(var(--space) * 5);
   margin: 0 auto;
-  align-items: center;
+  align-items: flex-start;
 
   @media (max-width: 768px) {
-    gap: calc(var(--space) * 3);
-    padding: 0 calc(var(--space) * 3);
+    gap: calc(var(--space) * 4);
+    padding: 0 calc(50vw - 100px - calc(var(--space) * 5));
   }
 `;
 
 const SuspectItem = styled.div<{ $selected?: boolean }>`
+  position: relative;
+  height: 100%;
+  width: 200px;
   cursor: pointer;
   text-align: center;
-  flex: 0 0 auto; /* Prevent shrinking, forces scroll */
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   transform: ${props => props.$selected ? 'scale(1.1)' : 'scale(1)'};
-  border: ${props => props.$selected ? '4px solid var(--color-accent-red)' : 'none'};
 
   @media (hover: hover) {
     &:hover {
@@ -107,13 +118,11 @@ const SuspectItem = styled.div<{ $selected?: boolean }>`
   }
   
   h3 {
-    margin-top: calc(var(--space) * 2);
+    margin: 0;
     color: var(--color-text-bright);
     text-transform: uppercase;
     ${type.h3}
-    text-shadow: 0 2px 4px #000;
-    background: rgba(0,0,0,0.5);
-    padding: 0 var(--space);
+    padding: var(--space);
   }
 `;
 
@@ -125,7 +134,6 @@ const CancelButton = styled.button`
   cursor: pointer;
   font-family: inherit;
   ${type.bodyLg}
-  margin-top: calc(var(--space) * 3);
   text-transform: uppercase;
   transition: all 0.2s;
 
@@ -174,7 +182,13 @@ const Accusation: React.FC<AccusationProps> = ({ suspects, onAccuse, onBack }) =
             >
               <SuspectPortrait
                 suspect={s}
-                size={250}
+                style={{ 
+                  height: 'auto', 
+                  minHeight: 'none', 
+                  flexShrink: 1, 
+                  borderRadius: '8px', 
+                  border: selectedSuspectIds.includes(s.id) ? '4px solid var(--color-accent-red)' : '4px solid var(--color-border-focus)' 
+                }}
               />
               <h3>{s.name}</h3>
             </SuspectItem>

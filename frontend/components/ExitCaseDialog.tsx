@@ -7,9 +7,11 @@ import { Overlay, ModalBox, ModalTitle, ModalText, ModalButtonRow, Button } from
 const FixedOverlay = styled(Overlay)`
   position: fixed;
   z-index: 999;
+  padding: calc(var(--space) * 2);
 `;
 
 const DialogBox = styled(ModalBox)`
+  width: 100%;
   max-width: 400px;
   border-color: var(--color-accent-red);
   box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);

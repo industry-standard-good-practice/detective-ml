@@ -43,6 +43,12 @@ const PromptInput = styled.textarea`
 const ButtonGroup = styled.div`
   display: flex;
   gap: calc(var(--space) * 3);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--space);
+  }
 `;
 
 const ActionButton = styled.button<{ $primary?: boolean }>`
@@ -115,6 +121,10 @@ const DescriptionText = styled.p`
   color: var(--color-text-subtle);
   max-width: 600px;
   text-align: center;
+
+  @media (max-width: 768px) {
+    ${type.small}
+  }
 `;
 
 const SmallCancelButton = styled(ActionButton)`

@@ -26,6 +26,10 @@ const Container = styled.div`
   cursor: default;
   user-select: none;
   -webkit-user-select: none;
+
+  @media (max-width: 768px) {
+    ${type.small}
+  }
 `;
 
 const Line = styled.div`
@@ -98,7 +102,7 @@ const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
         await new Promise(r => setTimeout(r, step.delay));
         setLines(prev => [...prev, step.text]);
         if (scrollRef.current) {
-             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
       }
       if (mounted) {
@@ -115,8 +119,8 @@ const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
     if (phase !== 'waiting') return;
 
     const handleInteract = () => {
-       // Notify parent immediately; parent handles the visual exit animation
-       onComplete();
+      // Notify parent immediately; parent handles the visual exit animation
+      onComplete();
     };
 
     window.addEventListener('keydown', handleInteract);
