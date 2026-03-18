@@ -227,9 +227,9 @@ interface ImageEditorModalProps {
   title?: string;
 }
 
-const ImageEditorModal: React.FC<ImageEditorModalProps> = ({ 
-  initialImageUrl, 
-  onSave, 
+const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
+  initialImageUrl,
+  onSave,
   onClose,
   aspectRatio = '3:4',
   title = "Edit Image"
@@ -269,7 +269,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
   const getBase64FromImage = (): string | null => {
     if (!imageRef.current) return null;
-    
+
     // If it's already a data URL, return it
     if (currentImageUrl.startsWith('data:')) return currentImageUrl;
 
@@ -279,7 +279,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       canvas.height = imageRef.current.naturalHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
-      
+
       ctx.drawImage(imageRef.current, 0, 0);
       // This might still fail if the image was loaded from a remote source without CORS
       return canvas.toDataURL('image/png');
@@ -376,11 +376,11 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           <Content>
             <ImageContainer style={{ aspectRatio }}>
               {currentImageUrl ? (
-                <PreviewImage 
+                <PreviewImage
                   ref={imageRef}
-                  src={currentImageUrl} 
-                  alt="Preview" 
-                  referrerPolicy="no-referrer" 
+                  src={currentImageUrl}
+                  alt="Preview"
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: 'rgba(255,255,255,0.3)', padding: '40px', textAlign: 'center' }}>
@@ -404,7 +404,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                         {savingProgress.current} / {savingProgress.total}
                       </span>
                       <ProgressBar>
-                        <ProgressFill 
+                        <ProgressFill
                           initial={{ width: 0 }}
                           animate={{ width: `${(savingProgress.current / savingProgress.total) * 100}%` }}
                         />
@@ -424,7 +424,7 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     disabled={isGenerating || isSaving}
-                    style={{ paddingBottom: '50px' }}
+                    style={{ paddingBottom: '70px' }}
                   />
                   <div style={{
                     position: 'absolute', bottom: '1px', left: '1px', right: '1px',
@@ -432,17 +432,17 @@ const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                     padding: '6px 8px',
                     borderRadius: '0 0 11px 11px'
                   }}>
-                    <Button 
-                      onClick={handleUndo} 
+                    <Button
+                      onClick={handleUndo}
                       disabled={isGenerating || isSaving || history.length <= 1}
                       style={{ flex: 'none', padding: '8px 14px', fontSize: '0.8rem' }}
                     >
                       <Undo size={14} />
                       Undo
                     </Button>
-                    <Button 
-                      $variant="primary" 
-                      onClick={handleEdit} 
+                    <Button
+                      $variant="primary"
+                      onClick={handleEdit}
                       disabled={isGenerating || isSaving || !prompt.trim()}
                       style={{ flex: 'none', width: '36px', height: '36px', padding: 0, borderRadius: '10px' }}
                       title="Generate Edit"

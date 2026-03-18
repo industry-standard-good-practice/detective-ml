@@ -258,6 +258,49 @@ const StartButton = styled.button`
   }
 `;
 
+// --- SUSPECT EDITOR LAYOUT ---
+
+const SuspectEditorRow = styled.div`
+  display: flex;
+  gap: 10px;
+
+  @media (max-width: 1080px) {
+    flex-direction: column;
+  }
+`;
+
+const PortraitCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 120px;
+  flex-shrink: 0;
+
+  @media (max-width: 1080px) {
+    width: 100%;
+  }
+`;
+
+const PortraitBtnGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  @media (max-width: 1080px) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+`;
+
+const InputsCol = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
 const RandomizeButton = styled.button`
   background: #333;
   color: #fff;
@@ -1791,28 +1834,43 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                <SuspectPortrait suspect={activeSuspect as any} size={80} style={{ border: '1px solid #555' }} />
-                <RandomizeButton onClick={handleRerollPortrait} disabled={loadingState.visible}>
-                  REROLL
-                </RandomizeButton>
-                <RandomizeButton
-                  onClick={() => setShowSuspectEditor(true)}
-                  disabled={loadingState.visible}
-                  style={{ background: '#3b82f6' }}
-                >
-                  {activeSuspect.portraits?.[Emotion.NEUTRAL] ? 'EDIT' : 'CREATE'}
-                </RandomizeButton>
-                <UploadButton onClick={triggerUpload} disabled={loadingState.visible}>
-                  UPLOAD REF
-                </UploadButton>
-                <CameraButton onClick={startCamera} disabled={loadingState.visible}>
-                  TAKE PHOTO
-                </CameraButton>
-              </div>
+            <SuspectEditorRow>
+              {/* Left: Portrait + action buttons */}
+              <PortraitCol>
+                <SuspectPortrait
+                  suspect={activeSuspect as any}
+                  size={120}
+                  style={{
+                    border: '1px solid #555',
+                    flex: 1,
+                    width: '100%',
+                    height: 'auto',
+                    minHeight: '120px',
+                    aspectRatio: '1',
+                  }}
+                />
+                <PortraitBtnGrid>
+                  <RandomizeButton onClick={handleRerollPortrait} disabled={loadingState.visible}>
+                    REROLL
+                  </RandomizeButton>
+                  <RandomizeButton
+                    onClick={() => setShowSuspectEditor(true)}
+                    disabled={loadingState.visible}
+                    style={{ background: '#3b82f6' }}
+                  >
+                    {activeSuspect.portraits?.[Emotion.NEUTRAL] ? 'EDIT' : 'CREATE'}
+                  </RandomizeButton>
+                  <UploadButton onClick={triggerUpload} disabled={loadingState.visible}>
+                    UPLOAD REF
+                  </UploadButton>
+                  <CameraButton onClick={startCamera} disabled={loadingState.visible}>
+                    TAKE PHOTO
+                  </CameraButton>
+                </PortraitBtnGrid>
+              </PortraitCol>
 
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Right: All the input fields */}
+              <InputsCol>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <InputGroup style={{ flex: 1 }}>
                     <label>Name</label>
@@ -1885,8 +1943,8 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     </button>
                   </div>
                 </InputGroup>
-              </div>
-            </div>
+              </InputsCol>
+            </SuspectEditorRow>
 
             {!isSupportChar && (
               <>
