@@ -1,7 +1,7 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { Evidence } from '../types';
+import { Evidence, Suspect } from '../types';
 
 const Container = styled.div`
   display: flex;
@@ -42,13 +42,18 @@ const EvidenceCard = styled.div`
   background: #151515;
   padding: 10px;
   display: flex;
-  gap: 10px;
-  position: relative;
+  flex-direction: column;
+  gap: 8px;
   border-bottom: 1px dashed #333;
   
   &:hover {
     background: #1a1a1a;
   }
+`;
+
+const CardTop = styled.div`
+  display: flex;
+  gap: 10px;
 `;
 
 const ImageSlot = styled.div<{ $src?: string }>`
@@ -84,27 +89,80 @@ const ContentCol = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
 `;
 
-const DeleteButton = styled.button`
-  position: absolute;
-  top: 5px;
-  right: 5px;
+const TitleInput = styled.input`
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #333;
+  color: #fff;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: var(--type-body);
+  width: 100%;
+  padding: 2px 0;
+  
+  &:focus { outline: none; border-bottom-color: #0f0; }
+  &::placeholder { color: #444; }
+`;
+
+const DescInput = styled.textarea`
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-family: inherit;
+  font-size: var(--type-small);
+  resize: none;
+  padding: 2px 0;
+  field-sizing: content;
+  
+  &:focus { outline: none; color: #ddd; }
+  &::placeholder { color: #444; }
+`;
+
+const CardBottom = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+`;
+
+const OwnerSelect = styled.select`
+  background: #0a0a0a;
+  color: #888;
+  border: 1px solid #333;
+  font-family: inherit;
+  font-size: var(--type-small);
+  padding: 3px 22px 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  max-width: 180px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23888888' d='M4 5L0 0h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 8px;
+
+  &:focus { outline: none; border-color: #0f0; color: #ccc; }
+`;
+
+const RemoveButton = styled.button`
   background: transparent;
   color: #555;
   border: 1px solid #333;
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--type-body);
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  font-size: var(--type-small);
+  padding: 4px 10px;
   border-radius: 4px;
-  line-height: 0;
   transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-transform: uppercase;
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
   
   &:hover {
     color: #f55;
@@ -118,71 +176,32 @@ const DeleteButton = styled.button`
   }
 `;
 
-const XIcon = styled.span`
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  position: relative;
-  flex-shrink: 0;
-  
-  &::before, &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    height: 2px;
-    background: currentColor;
-    border-radius: 1px;
-  }
-  &::before { transform: translate(-50%, -50%) rotate(45deg); }
-  &::after { transform: translate(-50%, -50%) rotate(-45deg); }
-`;
-
-const TitleInput = styled.input`
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #333;
-  color: #fff;
-  font-family: inherit;
-  font-weight: bold;
-  font-size: var(--type-body);
-  width: 90%;
-  padding: 2px 0;
-  
-  &:focus { outline: none; border-bottom-color: #0f0; }
-  &::placeholder { color: #444; }
-`;
-
-const DescInput = styled.textarea`
-  background: transparent;
-  border: none;
-  color: #aaa;
-  font-family: inherit;
-  font-size: var(--type-small);
-  resize: vertical;
-  min-height: 40px;
-  padding: 2px 0;
-  
-  &:focus { outline: none; color: #ddd; }
-  &::placeholder { color: #444; }
-
-  @media (max-width: 1080px) {
-    resize: none;
-    overflow: hidden;
-    min-height: unset;
-  }
-`;
+/** Ownership key: 'initial' for initial evidence, or the suspect's ID */
+type OwnerKey = 'initial' | string;
 
 interface EvidenceEditorProps {
   label: string;
   evidenceList: Evidence[];
   onChange: (newList: Evidence[]) => void;
   onRerollImage?: (ev: Evidence) => void;
+  /** Current owner key – 'initial' or a suspect ID */
+  ownerKey?: OwnerKey;
+  /** All suspects (for ownership dropdown options) */
+  suspects?: Suspect[];
+  /** Callback when evidence should be transferred to a different owner */
+  onTransferEvidence?: (evidence: Evidence, fromOwner: OwnerKey, toOwner: OwnerKey) => void;
 }
 
-const EvidenceEditor: React.FC<EvidenceEditorProps> = ({ label, evidenceList = [], onChange, onRerollImage }) => {
-  
+const EvidenceEditor: React.FC<EvidenceEditorProps> = ({
+  label,
+  evidenceList = [],
+  onChange,
+  onRerollImage,
+  ownerKey,
+  suspects,
+  onTransferEvidence,
+}) => {
+
   const handleChange = (index: number, field: 'title' | 'description', value: string) => {
     const newList = [...evidenceList];
     newList[index] = { ...newList[index], [field]: value };
@@ -204,6 +223,8 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({ label, evidenceList = [
     onChange(newList);
   };
 
+  const showOwnership = ownerKey !== undefined && suspects && onTransferEvidence;
+
   return (
     <Container>
       <Header>
@@ -212,28 +233,55 @@ const EvidenceEditor: React.FC<EvidenceEditorProps> = ({ label, evidenceList = [
       </Header>
       {evidenceList.map((ev, i) => (
         <EvidenceCard key={ev.id || i}>
-          <DeleteButton onClick={() => handleDelete(i)} title="Remove Item"><XIcon /></DeleteButton>
-          
-          <ImageSlot $src={ev.imageUrl}>
-             {onRerollImage && (
-               <RerollButton onClick={() => onRerollImage(ev)} title="Generate new pixel art">
-                 REROLL
-               </RerollButton>
-             )}
-          </ImageSlot>
+          <CardTop>
+            <ImageSlot $src={ev.imageUrl}>
+               {onRerollImage && (
+                 <RerollButton onClick={() => onRerollImage(ev)} title="Generate new pixel art">
+                   REROLL
+                 </RerollButton>
+               )}
+            </ImageSlot>
 
-          <ContentCol>
-            <TitleInput 
-              value={ev.title} 
-              onChange={(e) => handleChange(i, 'title', e.target.value)} 
-              placeholder="Title"
-            />
-            <DescInput 
-              value={ev.description} 
-              onChange={(e) => handleChange(i, 'description', e.target.value)}
-              placeholder="Description..."
-            />
-          </ContentCol>
+            <ContentCol>
+              <TitleInput 
+                value={ev.title} 
+                onChange={(e) => handleChange(i, 'title', e.target.value)} 
+                placeholder="Title"
+              />
+              <DescInput 
+                value={ev.description} 
+                onChange={(e) => handleChange(i, 'description', e.target.value)}
+                placeholder="Description..."
+              />
+            </ContentCol>
+          </CardTop>
+
+          <CardBottom>
+            {showOwnership ? (
+              <OwnerSelect
+                value={ownerKey}
+                onChange={(e) => {
+                  const newOwner = e.target.value as OwnerKey;
+                  if (newOwner !== ownerKey) {
+                    onTransferEvidence(ev, ownerKey!, newOwner);
+                  }
+                }}
+                title="Evidence owner"
+              >
+                <option value="initial">Initial Evidence</option>
+                {suspects!.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.isDeceased ? ' (Victim)' : ''}{s.isGuilty ? ' ★' : ''}
+                  </option>
+                ))}
+              </OwnerSelect>
+            ) : (
+              <span />
+            )}
+            <RemoveButton onClick={() => handleDelete(i)} title="Remove Item">
+              REMOVE
+            </RemoveButton>
+          </CardBottom>
         </EvidenceCard>
       ))}
       {evidenceList.length === 0 && (

@@ -155,9 +155,8 @@ const InputGroup = styled.div`
 
   textarea {
     resize: none;
-    overflow: hidden;
     padding: 10px;
-    padding-bottom: 4px;
+    field-sizing: content;
   }
 `;
 
@@ -189,8 +188,8 @@ const StyledTextArea = styled.textarea`
   padding: 8px;
   font-size: var(--type-body);
   resize: none;
-  overflow: hidden;
   width: 100%;
+  field-sizing: content;
   
   &:focus {
     border-bottom-color: #0f0;
@@ -636,16 +635,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
   const baselineRef = useRef<CaseData>(JSON.parse(JSON.stringify(draftCase)));
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Auto-resize all textareas to hug their content
-  useEffect(() => {
-    if (!containerRef.current) return;
 
-    const textareas = containerRef.current.querySelectorAll('textarea');
-    textareas.forEach((ta) => {
-      ta.style.height = 'auto';
-      ta.style.height = (ta.scrollHeight + 10) + 'px';
-    });
-  });
 
   useEffect(() => {
     const changed = JSON.stringify(draftCase) !== JSON.stringify(initialDraftCase.current);
@@ -829,6 +819,36 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
       updateImage(newUrl);
     }
     setLoadingState({ visible: false, message: '' });
+  };
+
+  /** Transfer a single evidence item between owners (initial ↔ suspect) */
+  const handleTransferEvidence = (evidence: Evidence, fromOwner: string, toOwner: string) => {
+    let newInitial = [...(draftCase.initialEvidence || [])];
+    let newSuspects = (draftCase.suspects || []).map(s => ({ ...s, hiddenEvidence: [...(s.hiddenEvidence || [])] }));
+
+    // Remove from old owner
+    if (fromOwner === 'initial') {
+      newInitial = newInitial.filter(e => e.id !== evidence.id);
+    } else {
+      newSuspects = newSuspects.map(s =>
+        s.id === fromOwner
+          ? { ...s, hiddenEvidence: s.hiddenEvidence.filter(e => e.id !== evidence.id) }
+          : s
+      );
+    }
+
+    // Add to new owner
+    if (toOwner === 'initial') {
+      newInitial.push(evidence);
+    } else {
+      newSuspects = newSuspects.map(s =>
+        s.id === toOwner
+          ? { ...s, hiddenEvidence: [...s.hiddenEvidence, evidence] }
+          : s
+      );
+    }
+
+    onUpdateDraft({ ...draftCase, initialEvidence: newInitial, suspects: newSuspects });
   };
 
   const handleRetryAI = async () => {
@@ -1600,6 +1620,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
             evidenceList={draftCase.initialEvidence}
             onChange={(newList) => handleCaseChange('initialEvidence', newList)}
             onRerollImage={(ev) => handleRerollEvidence(ev, 'initial')}
+            ownerKey="initial"
+            suspects={draftCase.suspects}
+            onTransferEvidence={handleTransferEvidence}
           />
 
           <Fieldset>
@@ -1962,7 +1985,6 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                             placeholder={`How does ${activeSuspect.name} feel about ${targetName}?`}
                             value={rel.description}
                             onChange={e => handleRelationshipChange(targetName, 'description', e.target.value)}
-                            style={{ height: '80px' }}
                           />
                         </ModuleItem>
                       );
@@ -2031,7 +2053,6 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                         <StyledTextArea
                           value={f}
                           onChange={(e) => updateFact(i, e.target.value)}
-                          style={{ flex: 1, minHeight: '50px' }}
                         />
                         <DeleteButton
                           onClick={() => removeFact(i)}
@@ -2059,6 +2080,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                   evidenceList={(activeSuspect as Suspect).hiddenEvidence}
                   onChange={(newList) => handleSuspectChange(activeSuspect.id, 'hiddenEvidence', newList)}
                   onRerollImage={(ev) => handleRerollEvidence(ev, 'hidden', activeSuspect.id)}
+                  ownerKey={activeSuspect.id}
+                  suspects={draftCase.suspects}
+                  onTransferEvidence={handleTransferEvidence}
                 />
 
                 <InputGroup>
