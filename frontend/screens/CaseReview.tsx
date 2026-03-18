@@ -586,6 +586,7 @@ const Spinner = styled.div`
   height: 50px;
   border: 4px solid var(--color-border);
   border-top-color: var(--color-accent-green);
+  border-radius: 50%;
   animation: ${rotate} 1s linear infinite;
 `;
 
