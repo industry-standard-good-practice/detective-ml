@@ -1341,6 +1341,98 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                 onClick={() => {
                   const picker = document.getElementById('startTimePicker') as HTMLInputElement;
                   if (picker) {
+                    // Attempt to pre-populate the datetime picker from the freeform startTime text
+                    const raw = draftCase.startTime || '';
+                    if (raw) {
+                      // Helper: convert a Date to the "YYYY-MM-DDTHH:MM" format datetime-local expects
+                      const toLocal = (d: Date) => {
+                        const y = d.getFullYear();
+                        const mo = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const h = String(d.getHours()).padStart(2, '0');
+                        const mi = String(d.getMinutes()).padStart(2, '0');
+                        return `${y}-${mo}-${day}T${h}:${mi}`;
+                      };
+
+                      let parsed: Date | null = null;
+
+                      // Strategy 1: Direct Date.parse (handles ISO, standard formats)
+                      const direct = new Date(raw);
+                      if (!isNaN(direct.getTime()) && direct.getFullYear() > 0) {
+                        parsed = direct;
+                      }
+
+                      // Strategy 2: Strip common separators like "at" and retry
+                      //   e.g. "Friday, September 12, 1924 at 11:30 PM" → "Friday, September 12, 1924 11:30 PM"
+                      if (!parsed) {
+                        const stripped = raw.replace(/\bat\b/gi, '').replace(/\s+/g, ' ').trim();
+                        const d2 = new Date(stripped);
+                        if (!isNaN(d2.getTime()) && d2.getFullYear() > 0) {
+                          parsed = d2;
+                        }
+                      }
+
+                      // Strategy 3: Try to extract a date-like portion via regex patterns
+                      if (!parsed) {
+                        // Look for patterns like "Month DD, YYYY" or "YYYY-MM-DD" embedded in the string
+                        const datePatterns = [
+                          // "September 12, 1924" or "Sep 12, 1924"
+                          /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{1,4}/i,
+                          // "12 September 1924"
+                          /\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,4}/i,
+                          // "YYYY-MM-DD"
+                          /\d{4}-\d{2}-\d{2}/,
+                          // "MM/DD/YYYY" or "DD/MM/YYYY"
+                          /\d{1,2}\/\d{1,2}\/\d{2,4}/,
+                        ];
+                        // Look for time portions: "11:30 PM", "23:30", "11:30pm"
+                        const timePatterns = [
+                          /(\d{1,2}:\d{2}\s*(?:AM|PM))/i,
+                          /(\d{1,2}:\d{2})/,
+                        ];
+
+                        let dateStr = '';
+                        let timeStr = '';
+                        for (const pattern of datePatterns) {
+                          const match = raw.match(pattern);
+                          if (match) { dateStr = match[0]; break; }
+                        }
+                        for (const pattern of timePatterns) {
+                          const match = raw.match(pattern);
+                          if (match) { timeStr = match[1] || match[0]; break; }
+                        }
+
+                        if (dateStr) {
+                          const combined = timeStr ? `${dateStr} ${timeStr}` : dateStr;
+                          const d3 = new Date(combined);
+                          if (!isNaN(d3.getTime()) && d3.getFullYear() > 0) {
+                            parsed = d3;
+                          }
+                        }
+                      }
+
+                      // Strategy 4: If all else fails but we have a time-like string, use today's date with that time
+                      if (!parsed) {
+                        const timeOnly = raw.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+                        if (timeOnly) {
+                          const now = new Date();
+                          let h = parseInt(timeOnly[1]);
+                          const m = parseInt(timeOnly[2]);
+                          const meridiem = timeOnly[3];
+                          if (meridiem) {
+                            if (meridiem.toUpperCase() === 'PM' && h < 12) h += 12;
+                            if (meridiem.toUpperCase() === 'AM' && h === 12) h = 0;
+                          }
+                          now.setHours(h, m, 0, 0);
+                          parsed = now;
+                        }
+                      }
+
+                      if (parsed) {
+                        picker.value = toLocal(parsed);
+                      }
+                    }
+
                     // Stash current value so onChange can detect if the user actually changed something
                     picker.dataset.prevValue = picker.value;
                     picker.showPicker?.();
