@@ -489,6 +489,32 @@ const TimelineEvidenceOption = styled.button`
   }
 `;
 
+const TimelineDayHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 4px;
+  margin-top: 4px;
+  
+  &::before, &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #0f0;
+    opacity: 0.25;
+  }
+  
+  span {
+    font-family: 'VT323', monospace;
+    color: #0f0;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 0 0 6px rgba(0, 255, 0, 0.2);
+  }
+`;
+
 const EvidenceOption = styled.button`
   background: transparent;
   color: #ccc;
@@ -1796,23 +1822,53 @@ const Interrogation: React.FC<InterrogationProps> = ({
                     {timelineStatementsDiscovered.length > 0 && (
                       <>
                         <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
-                        {timelineStatementsDiscovered.map((ts) => {
-                          const selected = isEvidenceSelected(ts);
-                          return (
-                            <TimelineEvidenceOption
-                              key={ts.id}
-                              onClick={() => toggleEvidence(ts)}
-                              style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
-                            >
-                              <div className="header">
-                                {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
-                                <span className="time">{ts.day && ts.day !== 'Today' ? `${ts.day} — ` : ''}{ts.time}</span>
-                                <span className="suspect">BY {ts.suspectName}</span>
-                              </div>
-                              <div className="statement">"{ts.statement}"</div>
-                            </TimelineEvidenceOption>
-                          );
-                        })}
+                        {(() => {
+                          // Group timeline statements by day, sorted by dayOffset then time
+                          const sorted = [...timelineStatementsDiscovered].sort((a, b) => {
+                            if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
+                            const parseT = (t: string) => {
+                              const m12 = t.trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i);
+                              if (m12) { let h = parseInt(m12[1]); const m = parseInt(m12[2]); const pm = m12[3].toLowerCase() === 'pm'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; return h * 60 + m; }
+                              const m24 = t.trim().match(/^(\d{1,2}):(\d{2})/);
+                              if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+                              return -1;
+                            };
+                            return parseT(a.time) - parseT(b.time);
+                          });
+                          const dayGroups: { day: string; dayOffset: number; items: typeof sorted }[] = [];
+                          sorted.forEach(ts => {
+                            const last = dayGroups[dayGroups.length - 1];
+                            if (last && last.dayOffset === ts.dayOffset) { last.items.push(ts); }
+                            else { dayGroups.push({ day: ts.day || 'Today', dayOffset: ts.dayOffset, items: [ts] }); }
+                          });
+                          const showDayHeaders = dayGroups.length > 1 || (dayGroups.length === 1 && dayGroups[0].day !== 'Today');
+                          return dayGroups.map(group => (
+                            <React.Fragment key={`day-${group.dayOffset}`}>
+                              {showDayHeaders && (
+                                <TimelineDayHeader>
+                                  <span>{group.day}</span>
+                                </TimelineDayHeader>
+                              )}
+                              {group.items.map(ts => {
+                                const selected = isEvidenceSelected(ts);
+                                return (
+                                  <TimelineEvidenceOption
+                                    key={ts.id}
+                                    onClick={() => toggleEvidence(ts)}
+                                    style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
+                                  >
+                                    <div className="header">
+                                      {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
+                                      <span className="time">{ts.time}</span>
+                                      <span className="suspect">BY {ts.suspectName}</span>
+                                    </div>
+                                    <div className="statement">"{ts.statement}"</div>
+                                  </TimelineEvidenceOption>
+                                );
+                              })}
+                            </React.Fragment>
+                          ));
+                        })()}
                       </>
                     )}
                   </EvidenceMenu>
@@ -1891,23 +1947,52 @@ const Interrogation: React.FC<InterrogationProps> = ({
                       {timelineStatementsDiscovered.length > 0 && (
                         <>
                           <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#555', borderBottom: '1px solid #222', textTransform: 'uppercase', marginTop: '5px', letterSpacing: '1px' }}>Timeline Statements</div>
-                          {timelineStatementsDiscovered.map((ts) => {
-                            const selected = isEvidenceSelected(ts);
-                            return (
-                              <TimelineEvidenceOption
-                                key={ts.id}
-                                onClick={() => toggleEvidence(ts)}
-                                style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
-                              >
-                                <div className="header">
-                                  {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
-                                  <span className="time">{ts.day && ts.day !== 'Today' ? `${ts.day} — ` : ''}{ts.time}</span>
-                                  <span className="suspect">BY {ts.suspectName}</span>
-                                </div>
-                                <div className="statement">"{ts.statement}"</div>
-                              </TimelineEvidenceOption>
-                            );
-                          })}
+                          {(() => {
+                            const sorted = [...timelineStatementsDiscovered].sort((a, b) => {
+                              if (a.dayOffset !== b.dayOffset) return a.dayOffset - b.dayOffset;
+                              const parseT = (t: string) => {
+                                const m12 = t.trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)/i);
+                                if (m12) { let h = parseInt(m12[1]); const m = parseInt(m12[2]); const pm = m12[3].toLowerCase() === 'pm'; if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; return h * 60 + m; }
+                                const m24 = t.trim().match(/^(\d{1,2}):(\d{2})/);
+                                if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+                                return -1;
+                              };
+                              return parseT(a.time) - parseT(b.time);
+                            });
+                            const dayGroups: { day: string; dayOffset: number; items: typeof sorted }[] = [];
+                            sorted.forEach(ts => {
+                              const last = dayGroups[dayGroups.length - 1];
+                              if (last && last.dayOffset === ts.dayOffset) { last.items.push(ts); }
+                              else { dayGroups.push({ day: ts.day || 'Today', dayOffset: ts.dayOffset, items: [ts] }); }
+                            });
+                            const showDayHeaders = dayGroups.length > 1 || (dayGroups.length === 1 && dayGroups[0].day !== 'Today');
+                            return dayGroups.map(group => (
+                              <React.Fragment key={`day-${group.dayOffset}`}>
+                                {showDayHeaders && (
+                                  <TimelineDayHeader>
+                                    <span>{group.day}</span>
+                                  </TimelineDayHeader>
+                                )}
+                                {group.items.map(ts => {
+                                  const selected = isEvidenceSelected(ts);
+                                  return (
+                                    <TimelineEvidenceOption
+                                      key={ts.id}
+                                      onClick={() => toggleEvidence(ts)}
+                                      style={selected ? { background: '#1a2e3e', borderColor: '#0ff' } : undefined}
+                                    >
+                                      <div className="header">
+                                        {selected && <span style={{ color: '#0ff', fontWeight: 'bold' }}>✓</span>}
+                                        <span className="time">{ts.time}</span>
+                                        <span className="suspect">BY {ts.suspectName}</span>
+                                      </div>
+                                      <div className="statement">"{ts.statement}"</div>
+                                    </TimelineEvidenceOption>
+                                  );
+                                })}
+                              </React.Fragment>
+                            ));
+                          })()}
                         </>
                       )}
                     </EvidenceMenu>
