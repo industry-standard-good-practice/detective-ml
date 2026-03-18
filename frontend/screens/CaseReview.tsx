@@ -1102,7 +1102,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
     setSuspectToDelete(null);
   };
 
-  const [consistencyModal, setConsistencyModal] = useState<{ visible: boolean, report: any, updatedCase: CaseData | null }>({ visible: false, report: null, updatedCase: null });
+  const [consistencyModal, setConsistencyModal] = useState<{ visible: boolean, report: any, updatedCase: CaseData | null, editReport?: any, editPrompt?: string }>({ visible: false, report: null, updatedCase: null });
 
   const handleSave = async () => {
     if (!userId) {
@@ -1185,8 +1185,9 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
         setLoadingState({ visible: true, message: msg, step: 'Step 2/2', stepDetail: 'Consistency Check' });
       }, draftCase, editPrompt);
 
-      // Use the consistency report for the modal — it has the expected shape (issuesFound, changesMade, conclusion)
-      setConsistencyModal({ visible: true, report: consistencyReport, updatedCase });
+      // Pass both reports to the modal — editReport for the primary "what changed" view,
+      // consistencyReport as a secondary addendum
+      setConsistencyModal({ visible: true, report: consistencyReport, updatedCase, editReport, editPrompt });
       setEditPrompt(''); // Clear prompt after success
     } catch (e) {
       console.error("Case Transformation Failed:", e);
@@ -2186,7 +2187,7 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               borderBottom: '1px solid #333', padding: '20px 25px',
               fontSize: 'var(--type-h3)', flexShrink: 0,
               background: '#111', position: 'relative', zIndex: 1,
-            }}>Narrative Audit Report</h2>
+            }}>{consistencyModal.editReport ? 'Case Transformation Report' : 'Narrative Audit Report'}</h2>
 
             <div style={{
               flex: 1,
@@ -2194,19 +2195,30 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
               padding: '20px 25px',
               minHeight: 0,
             }}>
-              {consistencyModal.report && typeof consistencyModal.report === 'object' ? (
+              {/* === EDIT-TRIGGERED MODAL: Show edit changes as primary content === */}
+              {consistencyModal.editReport && typeof consistencyModal.editReport === 'object' ? (
                 <>
+                  {/* User's original request */}
                   <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
-                    <h3 style={{ color: '#f55', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Issues Detected</h3>
-                    <div style={{ color: '#bbb', fontSize: 'var(--type-body)' }}>
-                      <Markdown>{consistencyModal.report.issuesFound || 'No issues detected.'}</Markdown>
+                    <h3 style={{ color: '#3b82f6', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Your Request</h3>
+                    <div style={{
+                      background: 'rgba(59,130,246,0.08)',
+                      border: '1px solid rgba(59,130,246,0.2)',
+                      padding: 'calc(var(--space) * 2)',
+                      color: '#ccc',
+                      fontSize: 'var(--type-body)',
+                      fontStyle: 'italic',
+                      lineHeight: '1.5'
+                    }}>
+                      "{consistencyModal.editPrompt}"
                     </div>
                   </section>
 
+                  {/* Changes made by the edit */}
                   <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
-                    <h3 style={{ color: '#0f0', fontSize: 'var(--type-body-lg)', marginBottom: 'calc(var(--space) * 2)', textTransform: 'uppercase', letterSpacing: '1px' }}>Proposed Repairs</h3>
+                    <h3 style={{ color: '#0f0', fontSize: 'var(--type-body-lg)', marginBottom: 'calc(var(--space) * 2)', textTransform: 'uppercase', letterSpacing: '1px' }}>Changes Applied</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space) * 2)' }}>
-                      {(consistencyModal.report.changesMade || []).map((change: any, idx: number) => {
+                      {(consistencyModal.editReport.changesMade || []).map((change: any, idx: number) => {
                         const evidence = change.evidenceId ?
                           [...(consistencyModal.updatedCase?.initialEvidence || []), ...(consistencyModal.updatedCase?.suspects || []).flatMap(s => s.hiddenEvidence || [])]
                             .find(e => e.id === change.evidenceId) : null;
@@ -2243,13 +2255,118 @@ const CaseReview: React.FC<CaseReviewProps> = ({ draftCase, onUpdateDraft, onSta
                     </div>
                   </section>
 
-                  <section>
-                    <h3 style={{ color: '#aaa', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Conclusion</h3>
-                    <p style={{ color: '#999', fontSize: 'var(--type-body)', lineHeight: '1.5' }}>{consistencyModal.report.conclusion}</p>
-                  </section>
+                  {/* Edit conclusion */}
+                  {consistencyModal.editReport.conclusion && (
+                    <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
+                      <p style={{ color: '#aaa', fontSize: 'var(--type-body)', lineHeight: '1.5', margin: 0 }}>{consistencyModal.editReport.conclusion}</p>
+                    </section>
+                  )}
+
+                  {/* Consistency as secondary addendum */}
+                  {consistencyModal.report && typeof consistencyModal.report === 'object' && (
+                    <details style={{ marginTop: 'calc(var(--space) * 2)', borderTop: '1px solid #222', paddingTop: 'calc(var(--space) * 2)' }}>
+                      <summary style={{
+                        color: '#666',
+                        fontSize: 'var(--type-small)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        padding: 'var(--space) 0',
+                      }}>Consistency Audit Details</summary>
+                      <div style={{ marginTop: 'calc(var(--space) * 2)' }}>
+                        {consistencyModal.report.issuesFound && consistencyModal.report.issuesFound !== 'No issues detected.' && (
+                          <section style={{ marginBottom: 'calc(var(--space) * 2)' }}>
+                            <h4 style={{ color: '#f55', fontSize: 'var(--type-body)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Issues Detected</h4>
+                            <div style={{ color: '#888', fontSize: 'var(--type-small)' }}>
+                              <Markdown>{consistencyModal.report.issuesFound}</Markdown>
+                            </div>
+                          </section>
+                        )}
+                        {(consistencyModal.report.changesMade || []).length > 0 && (
+                          <section style={{ marginBottom: 'calc(var(--space) * 2)' }}>
+                            <h4 style={{ color: '#888', fontSize: 'var(--type-body)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Additional Repairs</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space)' }}>
+                              {(consistencyModal.report.changesMade || []).map((change: any, idx: number) => (
+                                <div key={idx} style={{
+                                  background: '#1a1a1a',
+                                  padding: 'var(--space) calc(var(--space) * 2)',
+                                  borderLeft: '2px solid #444',
+                                  color: '#999',
+                                  fontSize: 'var(--type-small)'
+                                }}>
+                                  {change.description}
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+                        {consistencyModal.report.conclusion && (
+                          <p style={{ color: '#666', fontSize: 'var(--type-small)', lineHeight: '1.5' }}>{consistencyModal.report.conclusion}</p>
+                        )}
+                      </div>
+                    </details>
+                  )}
                 </>
               ) : (
-                <div style={{ color: '#ddd' }}>{String(consistencyModal.report)}</div>
+                /* === STANDALONE CONSISTENCY CHECK: Original layout === */
+                consistencyModal.report && typeof consistencyModal.report === 'object' ? (
+                  <>
+                    <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
+                      <h3 style={{ color: '#f55', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Issues Detected</h3>
+                      <div style={{ color: '#bbb', fontSize: 'var(--type-body)' }}>
+                        <Markdown>{consistencyModal.report.issuesFound || 'No issues detected.'}</Markdown>
+                      </div>
+                    </section>
+
+                    <section style={{ marginBottom: 'calc(var(--space) * 3)' }}>
+                      <h3 style={{ color: '#0f0', fontSize: 'var(--type-body-lg)', marginBottom: 'calc(var(--space) * 2)', textTransform: 'uppercase', letterSpacing: '1px' }}>Proposed Repairs</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space) * 2)' }}>
+                        {(consistencyModal.report.changesMade || []).map((change: any, idx: number) => {
+                          const evidence = change.evidenceId ?
+                            [...(consistencyModal.updatedCase?.initialEvidence || []), ...(consistencyModal.updatedCase?.suspects || []).flatMap(s => s.hiddenEvidence || [])]
+                              .find(e => e.id === change.evidenceId) : null;
+
+                          const isNewEvidence = evidence &&
+                            !(draftCase.initialEvidence || []).find(e => e.id === evidence.id) &&
+                            !(draftCase.suspects || []).flatMap(s => s.hiddenEvidence || []).find(e => e.id === evidence.id);
+
+                          return (
+                            <div key={idx} style={{
+                              background: '#1a1a1a',
+                              padding: 'calc(var(--space) * 2)',
+                              borderLeft: '3px solid #0f0',
+                              display: 'flex',
+                              gap: 'calc(var(--space) * 2)',
+                              alignItems: 'flex-start'
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ color: '#eee', fontSize: 'var(--type-body)', fontWeight: 500 }}>{change.description}</div>
+                                {evidence && (
+                                  <div style={{ marginTop: 'var(--space)', fontSize: 'var(--type-small)', color: '#888', fontStyle: 'italic' }}>
+                                    Linked to: {evidence.title}
+                                  </div>
+                                )}
+                              </div>
+                              {isNewEvidence && evidence?.imageUrl && (
+                                <div style={{ width: '80px', height: '80px', flexShrink: 0, overflow: 'hidden', border: '1px solid #333' }}>
+                                  <img src={evidence.imageUrl} alt={evidence.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 style={{ color: '#aaa', fontSize: 'var(--type-body-lg)', marginBottom: 'var(--space)', textTransform: 'uppercase', letterSpacing: '1px' }}>Conclusion</h3>
+                      <p style={{ color: '#999', fontSize: 'var(--type-body)', lineHeight: '1.5' }}>{consistencyModal.report.conclusion}</p>
+                    </section>
+                  </>
+                ) : (
+                  <div style={{ color: '#ddd' }}>{String(consistencyModal.report)}</div>
+                )
               )}
             </div>
 
