@@ -167,9 +167,10 @@ export async function playAudioFromUrl(blobUrl: string, volume: number = 1): Pro
     };
   }
 
-  // Strategy 2: Direct blob URL with HTMLAudioElement (non-Safari browsers)
+  // Strategy 2: Direct blob URL with HTMLAudioElement — reuse warm element on iOS
   console.warn('[Audio] No PCM cache, using HTMLAudioElement fallback');
-  const audio = new Audio(blobUrl);
+  const audio = warmAudio || new Audio();
+  audio.src = blobUrl;
   audio.volume = volume;
 
   const finished = new Promise<void>((resolve) => {
